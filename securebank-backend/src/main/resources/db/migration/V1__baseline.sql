@@ -1,0 +1,3 @@
+-- Baseline do schema SecureBank.
+-- As tabelas de domínio entram nas migrations das fases seguintes (customers, accounts, ...).
+-- Dinheiro: sempre NUMERIC(19,2), nunca float/double.

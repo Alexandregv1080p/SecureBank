@@ -1,0 +1,15 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Build
+target/
+node_modules/
+dist/
+
+# IDE / SO
+.idea/
+.vscode/
+*.iml
+.DS_Store

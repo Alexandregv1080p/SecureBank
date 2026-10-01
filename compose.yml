@@ -1,0 +1,47 @@
+name: securebank
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: securebank
+      POSTGRES_USER: ${DB_USER:-securebank}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?copie .env.example para .env e defina DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5439}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-securebank} -d securebank"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  securebank-api:
+    build: ./securebank-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/securebank
+      DB_USER: ${DB_USER:-securebank}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${API_PORT:-8100}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/v1/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  securebank-web:
+    build: ./securebank-web
+    depends_on:
+      securebank-api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3500}:8080"
+
+volumes:
+  pgdata:

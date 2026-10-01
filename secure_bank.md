@@ -1,0 +1,2163 @@
+# SecureBank
+
+> Plataforma bancária fictícia desenvolvida com foco em **Engenharia de Software, Segurança de Aplicações, Arquitetura de Sistemas, DevOps e Cloud**.
+
+O SecureBank é um sistema bancário completo composto por um **Core Banking** responsável pelas regras e operações financeiras e por uma aplicação de **Internet Banking** responsável pela experiência do usuário.
+
+O projeto tem como objetivo simular, em ambiente controlado, os principais desafios encontrados em sistemas financeiros modernos: consistência transacional, segurança, autenticação, autorização, auditoria, idempotência, processamento assíncrono, observabilidade, escalabilidade e entrega contínua.
+
+---
+
+# 1. Objetivos do projeto
+
+O objetivo principal não é apenas construir uma aplicação bancária.
+
+O projeto deve demonstrar capacidade de:
+
+* projetar sistemas complexos;
+* aplicar princípios de orientação a objetos;
+* utilizar SOLID;
+* aplicar Clean Architecture;
+* aplicar conceitos de DDD;
+* construir APIs REST;
+* implementar autenticação e autorização;
+* proteger APIs contra ataques comuns;
+* escrever testes unitários e de integração;
+* trabalhar com PostgreSQL;
+* utilizar Redis;
+* utilizar mensageria com Kafka;
+* criar aplicações containerizadas;
+* construir pipelines CI/CD;
+* implementar observabilidade;
+* trabalhar com infraestrutura Cloud;
+* documentar decisões arquiteturais;
+* identificar e mitigar ameaças de segurança.
+
+---
+
+# 2. Escopo
+
+O SecureBank será dividido em dois grandes componentes:
+
+```text
+SecureBank
+│
+├── Core Banking
+│   ├── Customers
+│   ├── Accounts
+│   ├── Transactions
+│   ├── Transfers
+│   ├── Payments
+│   ├── Limits
+│   ├── Notifications
+│   └── Audit
+│
+└── Internet Banking
+    ├── Authentication
+    ├── Dashboard
+    ├── Accounts
+    ├── Statement
+    ├── Transfers
+    ├── Payments
+    ├── Profile
+    └── Security
+```
+
+---
+
+# 3. Stack
+
+## Backend
+
+* Java 21+
+* Spring Boot
+* Spring Web
+* Spring Security
+* Spring Data JPA
+* Hibernate
+* Bean Validation
+* Spring Actuator
+* Spring Kafka
+* Spring Cache
+* Flyway
+* PostgreSQL
+* Redis
+* Apache Kafka
+* OpenAPI / Swagger
+
+## Frontend
+
+* React
+* TypeScript
+* Vite
+* React Router
+* TanStack Query
+* Zustand
+* React Hook Form
+* Zod
+* Tailwind CSS
+
+## Testes
+
+* JUnit 5
+* Mockito
+* AssertJ
+* Spring Boot Test
+* Testcontainers
+* REST Assured
+
+## Segurança
+
+* OAuth 2.1 / OpenID Connect
+* JWT
+* Spring Security
+* BCrypt ou Argon2
+* OWASP Dependency-Check
+* Trivy
+* SAST
+* Secret scanning
+
+## DevOps
+
+* Docker
+* Docker Compose
+* GitHub Actions
+* Kubernetes
+* Helm
+* Terraform
+
+## Observabilidade
+
+* Spring Boot Actuator
+* Micrometer
+* Prometheus
+* Grafana
+* OpenTelemetry
+* Jaeger
+* Loki
+
+## Cloud
+
+Possível infraestrutura:
+
+* AWS ECS ou EKS
+* AWS RDS
+* ElastiCache
+* MSK
+* S3
+* CloudWatch
+* IAM
+* Secrets Manager
+* VPC
+
+---
+
+# 4. Arquitetura
+
+A arquitetura inicial será baseada em **Clean Architecture + DDD + princípios de Hexagonal Architecture**.
+
+```text
+                    ┌───────────────────────┐
+                    │       React           │
+                    │    Internet Banking   │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │      REST API         │
+                    │     Spring Boot       │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │   Application Layer   │
+                    │                       │
+                    │ Use Cases              │
+                    │ Commands               │
+                    │ Queries                │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │      Domain           │
+                    │                       │
+                    │ Entities               │
+                    │ Value Objects          │
+                    │ Domain Services        │
+                    │ Domain Events          │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ Infrastructure        │
+                    │                       │
+                    │ PostgreSQL             │
+                    │ Redis                  │
+                    │ Kafka                  │
+                    │ External Services      │
+                    └───────────────────────┘
+```
+
+---
+
+# 5. Organização do Backend
+
+```text
+securebank-backend/
+│
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/securebank/
+│   │   │       │
+│   │   │       ├── account/
+│   │   │       ├── customer/
+│   │   │       ├── transaction/
+│   │   │       ├── transfer/
+│   │   │       ├── payment/
+│   │   │       ├── authentication/
+│   │   │       ├── authorization/
+│   │   │       ├── notification/
+│   │   │       ├── audit/
+│   │   │       ├── security/
+│   │   │       ├── shared/
+│   │   │       └── infrastructure/
+│   │   │
+│   │   └── resources/
+│   │       ├── application.yml
+│   │       └── db/
+│   │           └── migration/
+│   │
+│   └── test/
+│
+├── Dockerfile
+├── compose.yml
+├── pom.xml
+└── README.md
+```
+
+---
+
+# 6. Organização do Frontend
+
+```text
+securebank-web/
+│
+├── src/
+│   ├── app/
+│   │
+│   ├── components/
+│   │
+│   ├── features/
+│   │   ├── authentication/
+│   │   ├── dashboard/
+│   │   ├── accounts/
+│   │   ├── transfers/
+│   │   ├── payments/
+│   │   ├── statement/
+│   │   └── profile/
+│   │
+│   ├── services/
+│   ├── hooks/
+│   ├── stores/
+│   ├── routes/
+│   ├── types/
+│   ├── schemas/
+│   └── utils/
+│
+├── public/
+├── Dockerfile
+├── package.json
+└── README.md
+```
+
+---
+
+# 7. Domínio
+
+Os principais agregados serão:
+
+```text
+Customer
+Account
+Transaction
+Transfer
+Payment
+Limit
+```
+
+---
+
+# 8. Customer
+
+Representa o cliente do banco.
+
+Exemplo:
+
+```text
+Customer
+│
+├── id
+├── name
+├── document
+├── email
+├── phone
+├── status
+├── createdAt
+└── updatedAt
+```
+
+Estados possíveis:
+
+```text
+ACTIVE
+BLOCKED
+SUSPENDED
+CLOSED
+```
+
+---
+
+# 9. Account
+
+Representa uma conta bancária.
+
+```text
+Account
+│
+├── id
+├── customerId
+├── accountNumber
+├── branch
+├── type
+├── status
+├── balance
+├── createdAt
+└── updatedAt
+```
+
+Tipos:
+
+```text
+CHECKING
+SAVINGS
+```
+
+Estados:
+
+```text
+ACTIVE
+BLOCKED
+CLOSED
+```
+
+---
+
+# 10. Dinheiro
+
+Nunca utilizar `double` ou `float` para representar dinheiro.
+
+Utilizar:
+
+```java
+BigDecimal
+```
+
+Exemplo:
+
+```java
+private BigDecimal balance;
+```
+
+Ou utilizar um Value Object:
+
+```java
+public record Money(
+    BigDecimal amount,
+    Currency currency
+) {}
+```
+
+O domínio deve impedir operações inválidas.
+
+Exemplo:
+
+```text
+balance < amount
+        ↓
+InsufficientFundsException
+```
+
+---
+
+# 11. Transações
+
+Uma transação representa uma movimentação financeira.
+
+Tipos:
+
+```text
+DEPOSIT
+WITHDRAW
+TRANSFER
+PAYMENT
+REFUND
+```
+
+Exemplo:
+
+```text
+Transaction
+│
+├── id
+├── accountId
+├── type
+├── amount
+├── status
+├── reference
+├── createdAt
+└── metadata
+```
+
+Estados:
+
+```text
+PENDING
+PROCESSING
+COMPLETED
+FAILED
+REVERSED
+```
+
+---
+
+# 12. Transferências
+
+Uma transferência possui:
+
+```text
+sourceAccount
+destinationAccount
+amount
+description
+idempotencyKey
+```
+
+Fluxo:
+
+```text
+Client
+  │
+  ▼
+POST /transfers
+  │
+  ▼
+Authentication
+  │
+  ▼
+Authorization
+  │
+  ▼
+Validation
+  │
+  ▼
+Idempotency Check
+  │
+  ▼
+Balance Check
+  │
+  ▼
+Debit Source Account
+  │
+  ▼
+Credit Destination Account
+  │
+  ▼
+Create Transaction
+  │
+  ▼
+Publish Event
+  │
+  ▼
+Return Response
+```
+
+---
+
+# 13. Idempotência
+
+Operações financeiras críticas devem ser idempotentes.
+
+O cliente deverá enviar:
+
+```http
+Idempotency-Key: 8e3b7f1c-...
+```
+
+Exemplo:
+
+```http
+POST /api/v1/transfers
+Idempotency-Key: abc123
+```
+
+Se a mesma requisição for enviada novamente:
+
+```text
+Request #1
+    ↓
+Transfer created
+    ↓
+201 Created
+
+
+Request #2
+    ↓
+Same Idempotency-Key
+    ↓
+Existing operation
+    ↓
+Return previous result
+```
+
+O objetivo é impedir que uma mesma operação financeira seja executada duas vezes devido a:
+
+* retry;
+* timeout;
+* queda de conexão;
+* duplicação de requisição;
+* falha do cliente.
+
+---
+
+# 14. Concorrência
+
+O sistema deve impedir problemas como:
+
+```text
+Balance = R$ 1.000
+
+Request A:
+Transfer R$ 800
+
+Request B:
+Transfer R$ 800
+```
+
+Ambas as requisições não podem simplesmente ler:
+
+```text
+Balance = R$ 1.000
+```
+
+e depois realizar a operação.
+
+Devem ser estudados:
+
+* database transactions;
+* isolation levels;
+* optimistic locking;
+* pessimistic locking;
+* versioning;
+* race conditions.
+
+Exemplo:
+
+```java
+@Version
+private Long version;
+```
+
+O projeto deverá possuir testes que demonstrem o comportamento sob concorrência.
+
+---
+
+# 15. Autenticação
+
+O sistema utilizará:
+
+```text
+OAuth2
++
+OpenID Connect
++
+JWT
+```
+
+Fluxo simplificado:
+
+```text
+User
+ │
+ ▼
+Login
+ │
+ ▼
+Identity Provider
+ │
+ ▼
+Authentication
+ │
+ ▼
+Access Token
+ │
+ ▼
+React
+ │
+ ▼
+Spring Boot
+ │
+ ▼
+Spring Security
+```
+
+---
+
+# 16. Access Token
+
+Exemplo conceitual:
+
+```json
+{
+  "sub": "user-id",
+  "iss": "securebank",
+  "aud": "securebank-api",
+  "roles": [
+    "CUSTOMER"
+  ],
+  "iat": 123456,
+  "exp": 123999
+}
+```
+
+O JWT não deve conter informações sensíveis desnecessárias.
+
+---
+
+# 17. Refresh Token
+
+O access token terá vida curta.
+
+Exemplo:
+
+```text
+Access Token
+15 minutos
+```
+
+O refresh token será utilizado para obter novos access tokens.
+
+Deve existir mecanismo para:
+
+* revogar sessão;
+* invalidar refresh token;
+* detectar reutilização;
+* controlar sessões;
+* logout.
+
+---
+
+# 18. MFA
+
+Implementar autenticação multifator.
+
+Possível fluxo:
+
+```text
+Email + Password
+       │
+       ▼
+Password Valid
+       │
+       ▼
+MFA Challenge
+       │
+       ▼
+OTP
+       │
+       ▼
+Authentication Complete
+```
+
+O projeto pode utilizar TOTP.
+
+---
+
+# 19. Autorização
+
+Não basta saber:
+
+> "O usuário está autenticado."
+
+Também precisamos saber:
+
+> "Esse usuário pode realizar essa operação?"
+
+Exemplo:
+
+```text
+CUSTOMER
+ ├── VIEW_ACCOUNT
+ ├── VIEW_STATEMENT
+ ├── CREATE_TRANSFER
+ └── CREATE_PAYMENT
+
+SUPPORT
+ ├── VIEW_CUSTOMER
+ └── VIEW_AUDIT
+
+ADMIN
+ ├── MANAGE_USERS
+ ├── MANAGE_LIMITS
+ └── VIEW_AUDIT
+```
+
+---
+
+# 20. Resource Authorization
+
+O sistema deve impedir IDOR/Broken Access Control.
+
+Exemplo:
+
+```http
+GET /accounts/123
+```
+
+Mesmo autenticado, o usuário não poderá acessar uma conta que não pertence a ele.
+
+Fluxo:
+
+```text
+JWT
+ │
+ ▼
+User ID
+ │
+ ▼
+Account ID
+ │
+ ▼
+Ownership Check
+ │
+ ├── Owner → Allow
+ │
+ └── Not Owner → Deny
+```
+
+Resposta:
+
+```http
+403 Forbidden
+```
+
+ou `404 Not Found`, conforme a estratégia adotada para evitar exposição da existência do recurso.
+
+---
+
+# 21. Segurança de senha
+
+Nunca armazenar:
+
+```text
+password = "123456"
+```
+
+A senha deverá ser armazenada utilizando um algoritmo apropriado de hashing de senha, como:
+
+```text
+Argon2id
+```
+
+ou:
+
+```text
+BCrypt
+```
+
+O sistema nunca deverá armazenar a senha original.
+
+---
+
+# 22. Rate Limiting
+
+Endpoints sensíveis devem possuir limitação de requisições.
+
+Exemplo:
+
+```text
+POST /login
+
+5 attempts
+↓
+temporarily blocked
+```
+
+Aplicar especialmente em:
+
+```text
+/login
+/mfa
+/password-reset
+/transfer
+/payment
+```
+
+Redis poderá ser utilizado para armazenar contadores distribuídos.
+
+---
+
+# 23. Proteção contra ataques
+
+O projeto deverá considerar pelo menos:
+
+* SQL Injection;
+* XSS;
+* CSRF;
+* SSRF;
+* IDOR;
+* Broken Access Control;
+* Brute Force;
+* Credential Stuffing;
+* Session Fixation;
+* Replay Attacks;
+* JWT attacks;
+* Mass Assignment;
+* Rate Limit Bypass;
+* Sensitive Data Exposure;
+* Security Misconfiguration.
+
+---
+
+# 24. OWASP
+
+Criar uma documentação relacionando as proteções implementadas ao:
+
+```text
+OWASP Top 10
+```
+
+Exemplo:
+
+```text
+A01 Broken Access Control
+        ↓
+Resource Authorization
+
+A02 Cryptographic Failures
+        ↓
+Password Hashing
+Encryption
+TLS
+
+A03 Injection
+        ↓
+Parameterized Queries
+Validation
+
+A07 Identification and Authentication Failures
+        ↓
+MFA
+Rate Limiting
+Session Management
+```
+
+---
+
+# 25. Auditoria
+
+Operações críticas devem gerar eventos de auditoria.
+
+Exemplo:
+
+```json
+{
+  "event": "TRANSFER_CREATED",
+  "userId": "123",
+  "accountId": "456",
+  "transactionId": "789",
+  "ip": "masked",
+  "timestamp": "2026-10-01T10:00:00Z"
+}
+```
+
+Eventos:
+
+```text
+LOGIN_SUCCESS
+LOGIN_FAILED
+PASSWORD_CHANGED
+MFA_ENABLED
+MFA_FAILED
+TRANSFER_CREATED
+TRANSFER_FAILED
+PAYMENT_CREATED
+ACCOUNT_BLOCKED
+ACCOUNT_UNBLOCKED
+```
+
+O audit log não deverá ser simplesmente editável pelo usuário.
+
+---
+
+# 26. Kafka
+
+Kafka será utilizado para eventos assíncronos.
+
+Exemplo:
+
+```text
+TransferCompleted
+       │
+       ▼
+     Kafka
+       │
+       ├───────────────┐
+       ▼               ▼
+Notification       Audit Service
+   Service
+```
+
+Eventos:
+
+```text
+TransferCreated
+TransferCompleted
+TransferFailed
+PaymentCompleted
+AccountBlocked
+UserLoggedIn
+```
+
+---
+
+# 27. Transactional Outbox
+
+Para evitar o problema:
+
+```text
+Database commit
+      ↓
+Kafka publish
+      ↓
+Kafka failure
+```
+
+poderemos utilizar o padrão:
+
+```text
+Transactional Outbox
+```
+
+Fluxo:
+
+```text
+Database Transaction
+       │
+       ├── Update Account
+       │
+       ├── Create Transaction
+       │
+       └── Create Outbox Event
+                 │
+                 ▼
+              Commit
+                 │
+                 ▼
+          Outbox Publisher
+                 │
+                 ▼
+               Kafka
+```
+
+---
+
+# 28. Redis
+
+Redis poderá ser utilizado para:
+
+* rate limiting;
+* cache;
+* sessões;
+* controle de idempotência;
+* locks distribuídos;
+* dados temporários.
+
+Não utilizar Redis como fonte principal de verdade para saldo bancário.
+
+A fonte de verdade das informações financeiras deverá ser o banco transacional.
+
+---
+
+# 29. Banco de dados
+
+PostgreSQL será o banco principal.
+
+Entidades iniciais:
+
+```text
+users
+customers
+accounts
+account_holders
+transactions
+transfers
+payments
+limits
+refresh_tokens
+mfa_devices
+audit_logs
+outbox_events
+idempotency_keys
+```
+
+---
+
+# 30. Integridade financeira
+
+Algumas regras:
+
+```text
+Saldo não pode ficar negativo
+        ↓
+exceto quando existir uma regra explícita de crédito/limite.
+```
+
+```text
+Transferência deve possuir origem
+e destino válidos.
+```
+
+```text
+Conta bloqueada não pode realizar operações.
+```
+
+```text
+Transação concluída não pode ser simplesmente apagada.
+```
+
+```text
+Operações financeiras devem possuir rastreabilidade.
+```
+
+---
+
+# 31. API
+
+Prefixo:
+
+```text
+/api/v1
+```
+
+## Authentication
+
+```http
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+POST /api/v1/auth/mfa/verify
+```
+
+## Customers
+
+```http
+GET    /api/v1/customers/me
+PATCH  /api/v1/customers/me
+```
+
+## Accounts
+
+```http
+GET /api/v1/accounts
+GET /api/v1/accounts/{id}
+GET /api/v1/accounts/{id}/balance
+GET /api/v1/accounts/{id}/statement
+```
+
+## Transfers
+
+```http
+POST /api/v1/transfers
+GET  /api/v1/transfers
+GET  /api/v1/transfers/{id}
+```
+
+## Payments
+
+```http
+POST /api/v1/payments
+GET  /api/v1/payments
+GET  /api/v1/payments/{id}
+```
+
+## Security
+
+```http
+GET  /api/v1/security/sessions
+DELETE /api/v1/security/sessions/{id}
+POST /api/v1/security/mfa
+DELETE /api/v1/security/mfa
+```
+
+---
+
+# 32. Tratamento de erros
+
+A API deverá possuir formato padronizado.
+
+Exemplo:
+
+```json
+{
+  "timestamp": "2026-10-01T15:30:00Z",
+  "status": 422,
+  "code": "INSUFFICIENT_FUNDS",
+  "message": "Insufficient funds",
+  "path": "/api/v1/transfers",
+  "traceId": "abc123"
+}
+```
+
+Não retornar:
+
+```text
+stack trace
+SQL query
+password
+JWT
+internal credentials
+```
+
+para o cliente.
+
+---
+
+# 33. Frontend
+
+Dashboard:
+
+```text
+┌─────────────────────────────────────────┐
+│ SecureBank                              │
+├─────────────────────────────────────────┤
+│                                         │
+│ Saldo disponível                        │
+│ R$ 8.420,50                             │
+│                                         │
+├─────────────────────────────────────────┤
+│                                         │
+│ Últimas movimentações                   │
+│                                         │
+│ PIX enviado       - R$ 100,00           │
+│ Depósito          + R$ 500,00           │
+│ Pagamento         - R$ 80,00            │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+Telas:
+
+```text
+Login
+MFA
+Dashboard
+Conta
+Extrato
+Transferências
+Pagamentos
+Perfil
+Segurança
+Sessões
+```
+
+---
+
+# 34. Segurança no React
+
+O frontend não deve ser considerado uma barreira de segurança.
+
+Toda autorização importante deve existir no backend.
+
+No frontend:
+
+```text
+Route Protection
+UI Permissions
+Token Management
+Input Validation
+Error Handling
+```
+
+No backend:
+
+```text
+Authentication
+Authorization
+Ownership
+Business Rules
+Validation
+Security Policies
+```
+
+---
+
+# 35. Testes
+
+O projeto deverá possuir diferentes níveis de testes.
+
+## Unitários
+
+Testar:
+
+```text
+Account
+Transfer
+Money
+Payment
+Limits
+Authorization
+```
+
+Exemplo:
+
+```text
+should not allow transfer when balance is insufficient
+```
+
+---
+
+## Integração
+
+Testar:
+
+```text
+Spring Boot
++
+PostgreSQL
++
+Redis
++
+Kafka
+```
+
+Preferencialmente utilizando:
+
+```text
+Testcontainers
+```
+
+---
+
+## API
+
+Testar:
+
+```text
+POST /transfers
+GET /accounts
+POST /payments
+```
+
+Validar:
+
+```text
+HTTP status
+response body
+authorization
+security
+business rules
+```
+
+---
+
+# 36. Testes de segurança
+
+Criar testes para garantir que:
+
+```text
+Anonymous user
+    ↓
+Protected endpoint
+    ↓
+401
+```
+
+```text
+Authenticated user
+    ↓
+Unauthorized resource
+    ↓
+403/404
+```
+
+```text
+User A
+    ↓
+Account B
+    ↓
+Denied
+```
+
+```text
+Repeated login attempts
+    ↓
+Rate Limit
+```
+
+```text
+Duplicate Idempotency-Key
+    ↓
+No duplicate transaction
+```
+
+---
+
+# 37. Docker
+
+O ambiente local deverá poder ser iniciado com:
+
+```bash
+docker compose up -d
+```
+
+Serviços:
+
+```text
+securebank-api
+securebank-web
+postgres
+redis
+kafka
+prometheus
+grafana
+jaeger
+```
+
+---
+
+# 38. CI/CD
+
+Pipeline:
+
+```text
+Git Push
+   │
+   ▼
+Build
+   │
+   ▼
+Unit Tests
+   │
+   ▼
+Integration Tests
+   │
+   ▼
+Static Analysis
+   │
+   ▼
+Dependency Scan
+   │
+   ▼
+Security Scan
+   │
+   ▼
+Docker Build
+   │
+   ▼
+Container Scan
+   │
+   ▼
+Push Registry
+   │
+   ▼
+Deploy
+```
+
+---
+
+# 39. GitHub Actions
+
+Pipeline conceitual:
+
+```yaml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - checkout
+
+      - setup-java
+
+      - run:
+          ./mvnw test
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - checkout
+
+      - dependency-scan
+
+      - sast
+
+  docker:
+    needs:
+      - test
+      - security
+
+    steps:
+      - build-image
+
+      - scan-image
+
+      - push-image
+```
+
+O arquivo real será implementado posteriormente.
+
+---
+
+# 40. Container Security
+
+As imagens Docker deverão seguir princípios de segurança:
+
+* utilizar imagens oficiais;
+* utilizar imagens pequenas;
+* não executar como root;
+* não colocar secrets na imagem;
+* utilizar `.dockerignore`;
+* fixar versões;
+* realizar vulnerability scanning;
+* reduzir dependências;
+* utilizar multi-stage builds.
+
+Exemplo:
+
+```text
+Build Image
+     ↓
+Application Image
+     ↓
+Trivy
+     ↓
+Vulnerability Report
+```
+
+---
+
+# 41. Secrets
+
+Nunca colocar:
+
+```text
+DB_PASSWORD=123456
+JWT_SECRET=...
+AWS_SECRET=...
+```
+
+diretamente no Git.
+
+Desenvolvimento:
+
+```text
+.env
+```
+
+Produção:
+
+```text
+AWS Secrets Manager
+```
+
+ou:
+
+```text
+Kubernetes Secrets
+```
+
+com estratégia adequada de proteção e gerenciamento.
+
+---
+
+# 42. Observabilidade
+
+A aplicação deverá possuir:
+
+```text
+Logs
+Metrics
+Traces
+```
+
+Os três pilares:
+
+```text
+              Observability
+                   │
+        ┌──────────┼──────────┐
+        ▼          ▼          ▼
+       Logs      Metrics     Traces
+```
+
+---
+
+# 43. Metrics
+
+Exemplos:
+
+```text
+http_server_requests
+transfer_success_total
+transfer_failure_total
+payment_success_total
+login_failure_total
+database_connection_pool
+kafka_consumer_lag
+```
+
+---
+
+# 44. Tracing
+
+Cada requisição deverá possuir:
+
+```text
+traceId
+```
+
+Exemplo:
+
+```text
+React
+ │
+ ▼
+API
+ │ traceId=abc
+ ▼
+Transfer Service
+ │
+ ▼
+PostgreSQL
+ │
+ ▼
+Kafka
+ │
+ ▼
+Notification Service
+```
+
+Isso permitirá investigar uma operação distribuída.
+
+---
+
+# 45. Logs
+
+Logs estruturados em JSON.
+
+Exemplo:
+
+```json
+{
+  "timestamp": "...",
+  "level": "INFO",
+  "service": "securebank-api",
+  "traceId": "abc123",
+  "event": "TRANSFER_COMPLETED",
+  "transactionId": "tx123"
+}
+```
+
+Nunca registrar:
+
+```text
+password
+access token
+refresh token
+CVV
+dados financeiros desnecessários
+secrets
+```
+
+---
+
+# 46. Alertas
+
+Criar alertas para:
+
+```text
+High error rate
+High latency
+Database unavailable
+Kafka consumer lag
+Repeated authentication failures
+High number of failed transfers
+Application unavailable
+```
+
+---
+
+# 47. Kubernetes
+
+Após a versão Docker Compose, criar ambiente Kubernetes.
+
+Estrutura:
+
+```text
+k8s/
+│
+├── namespace.yaml
+├── configmap.yaml
+├── secret.yaml
+├── deployment.yaml
+├── service.yaml
+├── ingress.yaml
+├── hpa.yaml
+└── network-policy.yaml
+```
+
+---
+
+# 48. Kubernetes Security
+
+Implementar:
+
+* non-root containers;
+* resource limits;
+* readiness probes;
+* liveness probes;
+* NetworkPolicy;
+* RBAC;
+* secrets;
+* namespaces;
+* securityContext;
+* pod security standards.
+
+---
+
+# 49. Terraform
+
+Infraestrutura AWS deverá ser declarada utilizando Infrastructure as Code.
+
+Estrutura:
+
+```text
+terraform/
+│
+├── modules/
+│   ├── network/
+│   ├── database/
+│   ├── cache/
+│   └── compute/
+│
+├── environments/
+│   ├── dev/
+│   ├── staging/
+│   └── production/
+│
+└── main.tf
+```
+
+---
+
+# 50. Ambientes
+
+Existirão três ambientes:
+
+```text
+Development
+     ↓
+Staging
+     ↓
+Production
+```
+
+Cada ambiente deverá possuir configuração própria.
+
+---
+
+# 51. Estratégia de Deploy
+
+Inicialmente:
+
+```text
+Rolling Update
+```
+
+Posteriormente estudar:
+
+```text
+Blue/Green
+```
+
+e:
+
+```text
+Canary
+```
+
+---
+
+# 52. Disaster Recovery
+
+Documentar:
+
+```text
+RTO
+RPO
+Backup
+Restore
+Failure Scenarios
+```
+
+Simular:
+
+```text
+Database Failure
+Kafka Failure
+Redis Failure
+Application Crash
+Container Crash
+Network Failure
+```
+
+---
+
+# 53. Threat Modeling
+
+Antes de implementar funcionalidades críticas, criar threat models.
+
+Utilizar:
+
+```text
+STRIDE
+```
+
+Exemplo:
+
+```text
+Transfer API
+
+Spoofing
+Tampering
+Repudiation
+Information Disclosure
+Denial of Service
+Elevation of Privilege
+```
+
+Cada ameaça deverá possuir:
+
+```text
+Threat
+Impact
+Likelihood
+Mitigation
+Test
+```
+
+---
+
+# 54. Documentação arquitetural
+
+Criar:
+
+```text
+docs/
+│
+├── architecture/
+│   ├── overview.md
+│   ├── decisions/
+│   └── diagrams/
+│
+├── security/
+│   ├── threat-model.md
+│   ├── authentication.md
+│   ├── authorization.md
+│   └── incident-response.md
+│
+├── devops/
+│   ├── ci-cd.md
+│   ├── deployment.md
+│   └── infrastructure.md
+│
+└── api/
+    └── openapi.yaml
+```
+
+---
+
+# 55. ADR — Architecture Decision Records
+
+Toda decisão arquitetural relevante deverá ser documentada.
+
+Exemplo:
+
+```text
+ADR-001
+
+Title:
+Use PostgreSQL as the transactional database
+
+Context:
+Financial transactions require strong consistency.
+
+Decision:
+Use PostgreSQL as the system of record.
+
+Consequences:
+Strong transactional guarantees are available,
+but horizontal scaling of writes becomes more complex.
+```
+
+Outros ADRs:
+
+```text
+ADR-002 — JWT/OIDC
+ADR-003 — Redis
+ADR-004 — Kafka
+ADR-005 — Transactional Outbox
+ADR-006 — Idempotency
+ADR-007 — Optimistic Locking
+ADR-008 — Clean Architecture
+ADR-009 — Kubernetes
+ADR-010 — Observability
+```
+
+---
+
+# 56. Roadmap
+
+## Fase 1 — Fundação
+
+* [x] Criar repositórios
+* [x] Configurar Spring Boot
+* [x] Configurar React
+* [x] Configurar PostgreSQL
+* [x] Configurar Docker
+* [x] Configurar Flyway
+* [x] Configurar CI
+
+**Decisões da Fase 1:**
+
+* Monorepo: `securebank-backend/` e `securebank-web/` na mesma raiz; `compose.yml` na raiz (sobe API + web + Postgres).
+* Spring Boot **4.0.8** / Java 21 (Initializr já só oferece 4.x). Starters do Boot 4: `webmvc`, `flyway`, testes por slice.
+* Actuator sob `/api/v1/actuator` (só `health,info`, sem detalhes) — o proxy do web só precisa conhecer `/api`. Prometheus (Fase 10) deve ir para porta de management separada.
+* Erros nunca expõem stack trace/mensagem interna (`server.error.*`); formato padronizado da seção 32 entra na Fase 3.
+* Flyway é dono do schema (`ddl-auto=validate`); `V1__baseline.sql` é só o marco inicial — tabelas entram com cada fase.
+* Segredos só por ambiente: `.env` (ignorado) lido pelo compose e, no dev local, via `spring.config.import: optional:file:../.env`. `DB_PASSWORD` não tem default.
+* Testes de integração com Testcontainers (`TestcontainersConfig` reaproveitável); ainda sem split surefire/failsafe (Fase 8).
+* Web: Vite + React + TS + Tailwind 4 + React Router + TanStack Query. Zustand, React Hook Form e Zod entram quando houver uso (Fase 7).
+* Containers: multi-stage, imagens oficiais com versão fixa, usuário não-root (`app` / `nginx`), Postgres exposto só em `127.0.0.1`. nginx faz proxy de `/api` (mesma origem → sem CORS) e adiciona headers de segurança básicos.
+* Portas no host (evitam conflito com outros projetos locais): web 3500, API 8100, Postgres 5439. Redis (6380) e Kafka entram nas Fases 5/6.
+* CI (GitHub Actions): `./mvnw verify` (Testcontainers no Docker do runner) + `npm run lint` e `build`. Scans, imagem e deploy ficam para a Fase 9.
+
+---
+
+## Fase 2 — Domínio
+
+* [ ] Customer
+* [ ] Account
+* [ ] Money
+* [ ] Transaction
+* [ ] Transfer
+* [ ] Payment
+* [ ] Limits
+
+---
+
+## Fase 3 — Core Banking
+
+* [ ] Criar conta
+* [ ] Consultar saldo
+* [ ] Depósito
+* [ ] Saque
+* [ ] Transferência
+* [ ] Pagamento
+* [ ] Extrato
+* [ ] Limites
+
+---
+
+## Fase 4 — Segurança
+
+* [ ] Spring Security
+* [ ] OAuth2/OIDC
+* [ ] JWT
+* [ ] Refresh Token
+* [ ] MFA
+* [ ] RBAC
+* [ ] Resource Authorization
+* [ ] Rate Limiting
+* [ ] Audit Log
+* [ ] Session Management
+
+---
+
+## Fase 5 — Consistência
+
+* [ ] Idempotency
+* [ ] Optimistic Locking
+* [ ] Transaction Isolation
+* [ ] Concurrent Transactions
+* [ ] Transactional Outbox
+
+---
+
+## Fase 6 — Mensageria
+
+* [ ] Kafka
+* [ ] Domain Events
+* [ ] Event Consumers
+* [ ] Retry
+* [ ] Dead Letter Topic
+* [ ] Consumer Idempotency
+
+---
+
+## Fase 7 — Frontend
+
+* [ ] Login
+* [ ] MFA
+* [ ] Dashboard
+* [ ] Accounts
+* [ ] Statement
+* [ ] Transfers
+* [ ] Payments
+* [ ] Security Center
+
+---
+
+## Fase 8 — Testes
+
+* [ ] Unit Tests
+* [ ] Integration Tests
+* [ ] API Tests
+* [ ] Testcontainers
+* [ ] Security Tests
+* [ ] Concurrency Tests
+
+---
+
+## Fase 9 — DevOps
+
+* [ ] Docker
+* [ ] Docker Compose
+* [ ] GitHub Actions
+* [ ] SAST
+* [ ] Dependency Scan
+* [ ] Container Scan
+* [ ] Registry
+
+---
+
+## Fase 10 — Observabilidade
+
+* [ ] Actuator
+* [ ] Prometheus
+* [ ] Grafana
+* [ ] OpenTelemetry
+* [ ] Jaeger
+* [ ] Loki
+* [ ] Alerts
+
+---
+
+## Fase 11 — Kubernetes
+
+* [ ] Deployments
+* [ ] Services
+* [ ] Ingress
+* [ ] ConfigMaps
+* [ ] Secrets
+* [ ] HPA
+* [ ] Network Policies
+* [ ] RBAC
+
+---
+
+## Fase 12 — Cloud
+
+* [ ] AWS VPC
+* [ ] RDS
+* [ ] ElastiCache
+* [ ] Kafka
+* [ ] Container Registry
+* [ ] Compute
+* [ ] Secrets Manager
+* [ ] Terraform
+
+---
+
+# 57. Definition of Done
+
+Uma funcionalidade só será considerada concluída quando possuir:
+
+```text
+Implementation
+     +
+Unit Tests
+     +
+Integration Tests
+     +
+Security Considerations
+     +
+Documentation
+     +
+Logging
+     +
+Metrics
+     +
+Error Handling
+```
+
+Para funcionalidades críticas:
+
+```text
+Threat Model
++
+Concurrency Analysis
++
+Audit
++
+Idempotency
+```
+
+---
+
+# 58. Critérios de qualidade
+
+O projeto deverá buscar:
+
+### Código
+
+* Clean Code;
+* SOLID;
+* baixo acoplamento;
+* alta coesão;
+* interfaces bem definidas;
+* tratamento explícito de erros.
+
+### Arquitetura
+
+* separação de responsabilidades;
+* domínio independente de infraestrutura;
+* dependências direcionadas para dentro;
+* baixo acoplamento entre módulos.
+
+### Segurança
+
+* least privilege;
+* defense in depth;
+* secure by default;
+* zero trust;
+* secrets management;
+* auditabilidade.
+
+### DevOps
+
+* automação;
+* reproducibility;
+* immutable artifacts;
+* CI/CD;
+* observabilidade.
+
+---
+
+# 59. O que este projeto deverá demonstrar
+
+Ao finalizar o SecureBank, o projeto deverá demonstrar conhecimento em:
+
+```text
+Java
+Spring Boot
+Spring Security
+REST
+JPA/Hibernate
+PostgreSQL
+Redis
+Kafka
+DDD
+Clean Architecture
+Hexagonal Architecture
+SOLID
+Design Patterns
+OAuth2
+OpenID Connect
+JWT
+MFA
+RBAC
+OWASP
+Threat Modeling
+Testing
+Docker
+CI/CD
+GitHub Actions
+Kubernetes
+Terraform
+AWS
+Prometheus
+Grafana
+OpenTelemetry
+Distributed Systems
+Observability
+```
+
+---
+
+# 60. Regra principal do projeto
+
+O SecureBank não deve ser tratado como:
+
+> "Um CRUD de banco."
+
+Ele deve ser tratado como um exercício de:
+
+> **Engenharia de Software aplicada a um sistema financeiro distribuído e orientado à segurança.**
+
+Sempre que uma funcionalidade for adicionada, responder:
+
+```text
+1. Qual é o problema de negócio?
+
+2. Qual é a regra de domínio?
+
+3. Qual é o agregado responsável?
+
+4. Quais invariantes precisam ser preservadas?
+
+5. Como essa operação será transacional?
+
+6. O que acontece se a requisição for repetida?
+
+7. O que acontece se houver concorrência?
+
+8. Quem pode executar essa operação?
+
+9. Como impedir acesso indevido?
+
+10. O que será auditado?
+
+11. Quais eventos serão publicados?
+
+12. Como detectar uma falha?
+
+13. Como testar?
+
+14. Como observar em produção?
+
+15. Como fazer deploy?
+
+16. Como recuperar de uma falha?
+```
+
+Essa lista será utilizada como guia de engenharia para o projeto inteiro.

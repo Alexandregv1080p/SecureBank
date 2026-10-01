@@ -28,17 +28,17 @@ public final class Account {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Account(CustomerId customerId, AccountNumber accountNumber, Branch branch, AccountType type,
-            Currency currency, Instant now) {
-        this.id = AccountId.newId();
+    private Account(AccountId id, CustomerId customerId, AccountNumber accountNumber, Branch branch, AccountType type,
+            AccountStatus status, Money balance, Instant createdAt, Instant updatedAt) {
+        this.id = id;
         this.customerId = customerId;
         this.accountNumber = accountNumber;
         this.branch = branch;
         this.type = type;
-        this.status = AccountStatus.ACTIVE;
-        this.balance = Money.zero(currency);
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.status = status;
+        this.balance = balance;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public static Account open(CustomerId customerId, AccountNumber accountNumber, Branch branch, AccountType type,
@@ -47,7 +47,14 @@ public final class Account {
                 || now == null) {
             throw new InvalidValueException("Account requires customer, number, branch, type, currency and time");
         }
-        return new Account(customerId, accountNumber, branch, type, currency, now);
+        return new Account(AccountId.newId(), customerId, accountNumber, branch, type, AccountStatus.ACTIVE,
+                Money.zero(currency), now, now);
+    }
+
+    /** Reconstitui uma conta já persistida, sem passar pelas regras de abertura. */
+    public static Account restore(AccountId id, CustomerId customerId, AccountNumber accountNumber, Branch branch,
+            AccountType type, AccountStatus status, Money balance, Instant createdAt, Instant updatedAt) {
+        return new Account(id, customerId, accountNumber, branch, type, status, balance, createdAt, updatedAt);
     }
 
     public Transaction deposit(Money amount, String reference, Instant now) {

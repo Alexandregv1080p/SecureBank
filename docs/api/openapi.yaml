@@ -1,0 +1,675 @@
+openapi: 3.1.0
+info:
+  title: SecureBank Core Banking API
+  description: "Clientes, contas, depósitos, saques, transferências, pagamentos, extrato\
+    \ e limites. Valores monetários trafegam como string (\"100.00\"). Transferências\
+    \ e pagamentos exigem o header Idempotency-Key."
+  version: v1
+servers:
+- url: http://localhost:8100
+  description: Generated server url
+security:
+- devIdentity: []
+paths:
+  /api/v1/transfers:
+    get:
+      tags:
+      - transfer-controller
+      operationId: list
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TransferPage"
+    post:
+      tags:
+      - transfer-controller
+      operationId: create
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TransferResponse"
+  /api/v1/payments:
+    get:
+      tags:
+      - payment-controller
+      operationId: list_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentPage"
+    post:
+      tags:
+      - payment-controller
+      operationId: create_1
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+  /api/v1/customers:
+    post:
+      tags:
+      - customer-controller
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+  /api/v1/accounts:
+    get:
+      tags:
+      - account-controller
+      operationId: list_2
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountResponse"
+    post:
+      tags:
+      - account-controller
+      operationId: open
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAccountRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+  /api/v1/accounts/{id}/withdrawals:
+    post:
+      tags:
+      - account-controller
+      operationId: withdraw
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmountRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+  /api/v1/accounts/{id}/deposits:
+    post:
+      tags:
+      - account-controller
+      operationId: deposit
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmountRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+  /api/v1/customers/me:
+    get:
+      tags:
+      - customer-controller
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+    patch:
+      tags:
+      - customer-controller
+      operationId: updateMe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+  /api/v1/transfers/{id}:
+    get:
+      tags:
+      - transfer-controller
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TransferResponse"
+  /api/v1/payments/{id}:
+    get:
+      tags:
+      - payment-controller
+      operationId: get_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+  /api/v1/accounts/{id}:
+    get:
+      tags:
+      - account-controller
+      operationId: get_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+  /api/v1/accounts/{id}/statement:
+    get:
+      tags:
+      - account-controller
+      operationId: statement
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StatementResponse"
+  /api/v1/accounts/{id}/limits:
+    get:
+      tags:
+      - account-controller
+      operationId: limits
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LimitResponse"
+  /api/v1/accounts/{id}/balance:
+    get:
+      tags:
+      - account-controller
+      operationId: balance
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+components:
+  schemas:
+    TransferRequest:
+      type: object
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        destinationBranch:
+          type: string
+          maxLength: 4
+          minLength: 0
+        destinationAccountNumber:
+          type: string
+          maxLength: 14
+          minLength: 0
+        amount:
+          type: number
+          minimum: 0.01
+        description:
+          type: string
+          maxLength: 140
+          minLength: 0
+      required:
+      - amount
+      - destinationAccountNumber
+      - destinationBranch
+      - sourceAccountId
+    MoneyResponse:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+    TransferResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceAccountId:
+          type: string
+          format: uuid
+        destinationAccountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        description:
+          type: string
+        status:
+          type: string
+        debitTransactionId:
+          type: string
+          format: uuid
+        creditTransactionId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    PaymentRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0.01
+        barcode:
+          type: string
+          maxLength: 48
+          minLength: 0
+        description:
+          type: string
+          maxLength: 140
+          minLength: 0
+      required:
+      - accountId
+      - amount
+      - barcode
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        barcode:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        transactionId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 0
+        document:
+          type: string
+          maxLength: 14
+          minLength: 0
+        email:
+          type: string
+          maxLength: 254
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 16
+          minLength: 0
+      required:
+      - document
+      - email
+      - name
+      - phone
+    CustomerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        document:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    OpenAccountRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CHECKING
+          - SAVINGS
+      required:
+      - type
+    AccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        branch:
+          type: string
+        accountNumber:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        balance:
+          $ref: "#/components/schemas/MoneyResponse"
+        createdAt:
+          type: string
+          format: date-time
+    AmountRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+      required:
+      - amount
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        direction:
+          type: string
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        balanceAfter:
+          $ref: "#/components/schemas/MoneyResponse"
+        status:
+          type: string
+        reference:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    UpdateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 16
+          minLength: 0
+    TransferPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransferResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    PaymentPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    StatementResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    LimitResponse:
+      type: object
+      properties:
+        type:
+          type: string
+        perOperation:
+          $ref: "#/components/schemas/MoneyResponse"
+        daily:
+          $ref: "#/components/schemas/MoneyResponse"
+        usedToday:
+          $ref: "#/components/schemas/MoneyResponse"
+        remainingToday:
+          $ref: "#/components/schemas/MoneyResponse"
+    BalanceResponse:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        balance:
+          $ref: "#/components/schemas/MoneyResponse"
+        asOf:
+          type: string
+          format: date-time
+  securitySchemes:
+    devIdentity:
+      type: apiKey
+      description: Id do cliente (UUID). Apenas desenvolvimento; substituído por JWT
+        na Fase 4.
+      name: X-Customer-Id
+      in: header

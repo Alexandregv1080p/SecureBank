@@ -30,17 +30,29 @@ public final class Transfer {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Transfer(AccountId source, AccountId destination, Money amount, String description,
-            IdempotencyKey key, Instant now) {
-        this.id = TransferId.newId();
+    private Transfer(TransferId id, AccountId source, AccountId destination, Money amount, String description,
+            IdempotencyKey key, TransferStatus status, Instant createdAt, Instant updatedAt) {
+        this.id = id;
         this.sourceAccountId = source;
         this.destinationAccountId = destination;
         this.amount = amount;
         this.description = description;
         this.idempotencyKey = key;
-        this.status = TransferStatus.PENDING;
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    /** Reconstitui uma transferência já persistida. */
+    public static Transfer restore(TransferId id, AccountId source, AccountId destination, Money amount,
+            String description, IdempotencyKey key, TransferStatus status, TransactionId debitTransactionId,
+            TransactionId creditTransactionId, String failureReason, Instant createdAt, Instant updatedAt) {
+        Transfer transfer = new Transfer(id, source, destination, amount, description, key, status, createdAt,
+                updatedAt);
+        transfer.debitTransactionId = debitTransactionId;
+        transfer.creditTransactionId = creditTransactionId;
+        transfer.failureReason = failureReason;
+        return transfer;
     }
 
     public static Transfer request(AccountId source, AccountId destination, Money amount, String description,
@@ -58,7 +70,8 @@ public final class Transfer {
         if (text != null && text.length() > MAX_DESCRIPTION) {
             throw new InvalidValueException("Description must have at most " + MAX_DESCRIPTION + " characters");
         }
-        return new Transfer(source, destination, amount, text, key, now);
+        return new Transfer(TransferId.newId(), source, destination, amount, text, key, TransferStatus.PENDING, now,
+                now);
     }
 
     public void ensurePending() {

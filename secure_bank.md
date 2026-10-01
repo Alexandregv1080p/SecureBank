@@ -1891,14 +1891,30 @@ ADR-010 — Observability
 
 ## Fase 3 — Core Banking
 
-* [ ] Criar conta
-* [ ] Consultar saldo
-* [ ] Depósito
-* [ ] Saque
-* [ ] Transferência
-* [ ] Pagamento
-* [ ] Extrato
-* [ ] Limites
+* [x] Criar conta
+* [x] Consultar saldo
+* [x] Depósito
+* [x] Saque
+* [x] Transferência
+* [x] Pagamento
+* [x] Extrato
+* [x] Limites
+
+**Decisões da Fase 3** (contrato em [`docs/api/`](docs/api/README.md)):
+
+* Camadas por módulo: `domain` → `application` (casos de uso + portas) → `infrastructure` (`persistence` JPA, `web` REST). `ArchitectureTest` agora também proíbe `application` de depender de JPA/web/adapters e isola `persistence` (só os adapters do pacote a enxergam).
+* Persistência separada do domínio: `*Entity` (JPA) com `apply`/`toDomain` e aggregates com `restore`. Adapters usam `EntityManager` + JPQL (sem Spring Data repositories).
+* Schema V2: dinheiro `NUMERIC(19,2)`, `CHECK (balance >= 0)`, livro-razão **append-only por trigger** (sem DELETE, só `status` muda), `UNIQUE (conta, idempotency_key)` em transferências/pagamentos.
+* Concorrência: `@Version` em `accounts`; duas escritas no mesmo saldo → a perdedora recebe `409 CONCURRENT_UPDATE`. Teste com 8 saques paralelos prova que não há saldo negativo; sem o `@Version` esse teste falha.
+* **Identidade provisória** (`X-Customer-Id`, forjável) só com `securebank.devidentity.enabled=true` — desligada por padrão (fail closed: sem ela toda rota protegida dá 401). A Fase 4 troca por JWT; os casos de uso já recebem o cliente que age e só enxergam contas dele.
+* IDOR: conta/transferência/pagamento de outro dono responde `404`, igual a inexistente. Destino de transferência por agência + número da conta.
+* Erro padronizado (seção 32) com `traceId` (filtro próprio; Fase 10 troca por OpenTelemetry); 500 sempre genérico.
+* Dinheiro na API como string (`"100.00"`); "dia" do limite/extrato é o de `America/Sao_Paulo` (`BankTime`).
+* Limites: criados com a conta; `GET /accounts/{id}/limits` mostra o consumo do dia. **Alterar limite (ADMIN) fica na Fase 4** (precisa de papéis).
+* `Idempotency-Key`: obrigatório em transferência/pagamento e gravado com índice único; chave repetida → `409 IDEMPOTENCY_KEY_IN_USE`. Replay do resultado e cobertura de depósito/saque ficam na Fase 5. Transferência/pagamento recusados não gravam registro `FAILED` (auditoria de falhas: Fase 4).
+* `POST /customers` é provisório (vira registro de usuário na Fase 4). CPF sai mascarado nas respostas.
+* OpenAPI via springdoc 3.1.1 (Swagger UI só com `API_DOCS_ENABLED=true`); contrato exportado em `docs/api/openapi.yaml`.
+* Testes: 94 no total — `CoreBankingApiTest` (Postgres real via Testcontainers) cobre jornada, erros, IDOR, limites, cliente bloqueado, razão append-only e concorrência.
 
 ---
 

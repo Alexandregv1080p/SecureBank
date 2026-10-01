@@ -23,9 +23,9 @@ public final class Transaction {
     private final String reference;
     private final Instant createdAt;
 
-    private Transaction(TransactionType type, TransactionDirection direction, AccountId accountId, Money amount,
-            Money balanceAfter, TransactionStatus status, String reference, Instant createdAt) {
-        this.id = TransactionId.newId();
+    private Transaction(TransactionId id, TransactionType type, TransactionDirection direction, AccountId accountId,
+            Money amount, Money balanceAfter, TransactionStatus status, String reference, Instant createdAt) {
+        this.id = id;
         this.accountId = accountId;
         this.type = type;
         this.direction = direction;
@@ -49,8 +49,15 @@ public final class Transaction {
         if (reference != null && reference.isBlank()) {
             throw new InvalidValueException("Reference must not be blank");
         }
-        return new Transaction(type, direction, accountId, amount, balanceAfter, TransactionStatus.COMPLETED,
-                reference, now);
+        return new Transaction(TransactionId.newId(), type, direction, accountId, amount, balanceAfter,
+                TransactionStatus.COMPLETED, reference, now);
+    }
+
+    /** Reconstitui um lançamento já persistido. */
+    public static Transaction restore(TransactionId id, AccountId accountId, TransactionType type,
+            TransactionDirection direction, Money amount, Money balanceAfter, TransactionStatus status,
+            String reference, Instant createdAt) {
+        return new Transaction(id, type, direction, accountId, amount, balanceAfter, status, reference, createdAt);
     }
 
     public void markProcessing() {

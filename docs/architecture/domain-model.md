@@ -49,10 +49,13 @@ então um pagamento recusado continua `PENDING` e pode ser marcado `FAILED` pela
 
 ## Fica para as próximas fases
 
-* **Fase 3** — persistência (tabelas, mapeamento domínio ↔ JPA, `restore` dos aggregates), casos de uso, API, erro padrão,
-  cálculo de "usado hoje" (dia em `America/Sao_Paulo`), criação dos `Limit` padrão ao abrir conta, `account_holders`.
-* **Fase 4** — autorização: `Account.isOwnedBy` é a base da checagem de dono; papéis/permissões vivem na camada de segurança.
-* **Fase 5** — concorrência e consistência: o domínio é single-thread; atomicidade entre requisições vem de lock/`@Version`
-  na linha da conta + transação de banco, idempotência por `IdempotencyKey` (hoje só validada), outbox.
+* ~~**Fase 3**~~ — feita: persistência (`*Entity` + adapters + `restore`), casos de uso na camada `application`, API e erro
+  padrão ([`docs/api/`](../api/README.md)), "usado hoje" por `LimitUsage`/`BankTime`, limites padrão criados com a conta.
+  Fora do escopo até agora: `account_holders` (conta conjunta) e alteração de limite (precisa de papel ADMIN).
+* **Fase 4** — autorização: `Account.isOwnedBy` já é usada pelos casos de uso (404 para recurso alheio); a Fase 4 troca a
+  identidade provisória por JWT e adiciona papéis/permissões (`MANAGE_LIMITS`...).
+* **Fase 5** — consistência: o domínio é single-thread; a atomicidade entre requisições vem do `@Version` em `accounts` +
+  transação de banco (já ativo, com teste de saques paralelos). Falta: replay de `IdempotencyKey` (hoje 409), cobertura de
+  depósito/saque, retry em `CONCURRENT_UPDATE`, análise de isolamento, outbox.
 * **Fase 6** — domain events (`TransferCompleted`...), publicados via outbox.
 * `Transaction.metadata` (spec §11) não foi modelado: sem uso ainda; entra quando o extrato precisar de descrição.

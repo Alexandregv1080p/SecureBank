@@ -16,6 +16,13 @@ spring:
   flyway:
     enabled: true
 
+# Documentação da API (Swagger UI) desligada por padrão; ligue com API_DOCS_ENABLED=true (só dev).
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}
+
 server:
   # Erros nunca vazam stack trace nem mensagem interna para o cliente.
   error:

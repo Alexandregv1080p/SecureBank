@@ -20,6 +20,20 @@ class ArchitectureTest {
                     "org.springframework..", "jakarta..", "org.hibernate..", "org.postgresql..",
                     "com.fasterxml..", "tools.jackson..", "..infrastructure..", "..application..");
 
+    /** Casos de uso dependem de portas (interfaces), nunca de JPA, web ou dos adapters. */
+    @ArchTest
+    static final ArchRule applicationDoesNotDependOnInfrastructure = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..infrastructure..", "jakarta.persistence..", "org.hibernate..", "org.springframework.data..",
+                    "org.springframework.web..", "jakarta.servlet..");
+
+    /** O modelo de persistência é detalhe: só os adapters do próprio pacote o enxergam. */
+    @ArchTest
+    static final ArchRule persistenceIsOnlyUsedByItsAdapters = noClasses()
+            .that().resideOutsideOfPackage("..persistence..")
+            .should().dependOnClassesThat().resideInAPackage("..persistence..");
+
     @ArchTest
     static final ArchRule noFloatingPointInTheDomain = fields()
             .that().areDeclaredInClassesThat().resideInAPackage("..domain..")

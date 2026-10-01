@@ -17,15 +17,22 @@ public final class Customer {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Customer(CustomerId id, String name, Cpf document, Email email, Phone phone, Instant now) {
+    private Customer(CustomerId id, String name, Cpf document, Email email, Phone phone, CustomerStatus status,
+            Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.name = name;
         this.document = document;
         this.email = email;
         this.phone = phone;
-        this.status = CustomerStatus.ACTIVE;
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    /** Reconstitui um cliente já persistido (dados já validados na origem), sem passar pelas regras de criação. */
+    public static Customer restore(CustomerId id, String name, Cpf document, Email email, Phone phone,
+            CustomerStatus status, Instant createdAt, Instant updatedAt) {
+        return new Customer(id, name, document, email, phone, status, createdAt, updatedAt);
     }
 
     public static Customer register(String name, Cpf document, Email email, Phone phone, Instant now) {
@@ -36,7 +43,7 @@ public final class Customer {
         if (document == null || email == null || phone == null || now == null) {
             throw new InvalidValueException("Document, email and phone are required");
         }
-        return new Customer(CustomerId.newId(), trimmed, document, email, phone, now);
+        return new Customer(CustomerId.newId(), trimmed, document, email, phone, CustomerStatus.ACTIVE, now, now);
     }
 
     public void updateContact(Email email, Phone phone, Instant now) {

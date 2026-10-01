@@ -26,6 +26,9 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/securebank
       DB_USER: ${DB_USER:-securebank}
       DB_PASSWORD: ${DB_PASSWORD}
+      # PROVISÓRIO até a Fase 4 (JWT): identidade via header X-Customer-Id, forjável. Só para desenvolvimento local.
+      SECUREBANK_DEVIDENTITY_ENABLED: "true"
+      API_DOCS_ENABLED: "true"
     ports:
       - "127.0.0.1:${API_PORT:-8100}:8080"
     healthcheck:

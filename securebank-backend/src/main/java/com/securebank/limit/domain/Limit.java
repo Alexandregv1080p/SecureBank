@@ -38,6 +38,12 @@ public final class Limit {
         };
     }
 
+    /** Reconstitui um limite já persistido. */
+    public static Limit restore(AccountId accountId, LimitType type, Money perOperation, Money daily,
+            Instant updatedAt) {
+        return new Limit(accountId, type, perOperation, daily, updatedAt);
+    }
+
     public void change(Money perOperation, Money daily, Instant now) {
         if (perOperation == null || daily == null || !perOperation.isPositive()) {
             throw new InvalidValueException("Per-operation limit must be greater than zero");

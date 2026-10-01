@@ -14,6 +14,22 @@ public record AccountNumber(String value) {
         }
     }
 
+    /** Número a partir da sequence do banco: 6+ dígitos e dígito verificador (módulo 11, pesos 2..9 da direita). */
+    public static AccountNumber generate(long sequence) {
+        if (sequence < 0) {
+            throw new InvalidValueException("Sequence must not be negative");
+        }
+        String digits = String.format("%06d", sequence);
+        int sum = 0;
+        int weight = 2;
+        for (int i = digits.length() - 1; i >= 0; i--) {
+            sum += (digits.charAt(i) - '0') * weight;
+            weight = weight == 9 ? 2 : weight + 1;
+        }
+        int remainder = sum % 11;
+        return new AccountNumber(digits + "-" + (remainder < 2 ? 0 : 11 - remainder));
+    }
+
     @Override
     public String toString() {
         return value;

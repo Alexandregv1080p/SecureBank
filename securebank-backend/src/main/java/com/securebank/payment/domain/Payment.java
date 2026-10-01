@@ -26,17 +26,28 @@ public final class Payment {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Payment(AccountId accountId, Money amount, String barcode, String description, IdempotencyKey key,
-            Instant now) {
-        this.id = PaymentId.newId();
+    private Payment(PaymentId id, AccountId accountId, Money amount, String barcode, String description,
+            IdempotencyKey key, PaymentStatus status, Instant createdAt, Instant updatedAt) {
+        this.id = id;
         this.accountId = accountId;
         this.amount = amount;
         this.barcode = barcode;
         this.description = description;
         this.idempotencyKey = key;
-        this.status = PaymentStatus.PENDING;
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    /** Reconstitui um pagamento já persistido. */
+    public static Payment restore(PaymentId id, AccountId accountId, Money amount, String barcode,
+            String description, IdempotencyKey key, PaymentStatus status, TransactionId transactionId,
+            String failureReason, Instant createdAt, Instant updatedAt) {
+        Payment payment = new Payment(id, accountId, amount, barcode, description, key, status, createdAt,
+                updatedAt);
+        payment.transactionId = transactionId;
+        payment.failureReason = failureReason;
+        return payment;
     }
 
     /** @param barcode código de barras (44) ou linha digitável (47/48), só dígitos */
@@ -55,7 +66,7 @@ public final class Payment {
         if (text != null && text.length() > MAX_DESCRIPTION) {
             throw new InvalidValueException("Description must have at most " + MAX_DESCRIPTION + " characters");
         }
-        return new Payment(accountId, amount, barcode, text, key, now);
+        return new Payment(PaymentId.newId(), accountId, amount, barcode, text, key, PaymentStatus.PENDING, now, now);
     }
 
     public void markProcessing(Instant now) {

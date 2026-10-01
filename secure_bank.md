@@ -1865,13 +1865,27 @@ ADR-010 — Observability
 
 ## Fase 2 — Domínio
 
-* [ ] Customer
-* [ ] Account
-* [ ] Money
-* [ ] Transaction
-* [ ] Transfer
-* [ ] Payment
-* [ ] Limits
+* [x] Customer
+* [x] Account
+* [x] Money
+* [x] Transaction
+* [x] Transfer
+* [x] Payment
+* [x] Limits
+
+**Decisões da Fase 2** (detalhes em [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) e [ADR-008](docs/architecture/decisions/ADR-008-clean-architecture.md)):
+
+* Só a camada `domain` de cada módulo (`com.securebank.<módulo>.domain`), Java puro e sem anotações de framework. Persistência/JPA, casos de uso e API são da Fase 3.
+* `ArchitectureTest` (ArchUnit) impõe: domínio sem Spring/JPA/Jackson, sem `double`/`float`, módulos sem ciclo.
+* `Money` rejeita casas decimais a mais em vez de arredondar; moeda por conta (BRL por padrão).
+* `Account` não permite saldo negativo (limites da seção 19/30 são tetos de operação, não crédito) e devolve o `Transaction` de cada movimentação, então saldo e lançamento nascem juntos.
+* `Transaction` ganhou `direction` (CREDIT/DEBIT) e `balanceAfter` — `TRANSFER` sozinho não diz se o dinheiro entrou ou saiu, e o extrato precisa disso. `metadata` ficou de fora até haver uso.
+* Transferência e pagamento são serviços de domínio que validam tudo **antes** de mutar; falha não deixa conta alterada.
+* Limite: um registro por (conta, tipo) com teto por operação e diário; "usado hoje" vem da camada de aplicação.
+* Ids tipados (`AccountId`, `CustomerId`, ...) em `shared`; aggregates se referenciam só por id.
+* Cliente é pessoa física (CPF com dígito verificador); CNPJ fica para quando houver conta PJ.
+* Cada violação é uma `DomainException` com `code` estável, para o erro padronizado da Fase 3.
+* Testes: 64 unitários de domínio (sem Spring/Docker) + `ArchitectureTest`.
 
 ---
 

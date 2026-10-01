@@ -1,0 +1,154 @@
+package com.securebank.account.domain;
+
+import com.securebank.shared.domain.AccountId;
+import com.securebank.shared.domain.CustomerId;
+import com.securebank.shared.domain.InvalidStateTransitionException;
+import com.securebank.shared.domain.InvalidValueException;
+import com.securebank.shared.domain.Money;
+import com.securebank.transaction.domain.Transaction;
+import com.securebank.transaction.domain.TransactionDirection;
+import com.securebank.transaction.domain.TransactionType;
+import java.time.Instant;
+import java.util.Currency;
+
+/**
+ * Conta bancária. Dona das invariantes do saldo: nunca negativo, só movimenta se ACTIVE, só na sua moeda,
+ * só valor positivo. Cada movimentação devolve o {@link Transaction} correspondente, então saldo e lançamento
+ * nascem juntos (e são persistidos na mesma transação de banco).
+ */
+public final class Account {
+
+    private final AccountId id;
+    private final CustomerId customerId;
+    private final AccountNumber accountNumber;
+    private final Branch branch;
+    private final AccountType type;
+    private AccountStatus status;
+    private Money balance;
+    private final Instant createdAt;
+    private Instant updatedAt;
+
+    private Account(CustomerId customerId, AccountNumber accountNumber, Branch branch, AccountType type,
+            Currency currency, Instant now) {
+        this.id = AccountId.newId();
+        this.customerId = customerId;
+        this.accountNumber = accountNumber;
+        this.branch = branch;
+        this.type = type;
+        this.status = AccountStatus.ACTIVE;
+        this.balance = Money.zero(currency);
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public static Account open(CustomerId customerId, AccountNumber accountNumber, Branch branch, AccountType type,
+            Currency currency, Instant now) {
+        if (customerId == null || accountNumber == null || branch == null || type == null || currency == null
+                || now == null) {
+            throw new InvalidValueException("Account requires customer, number, branch, type, currency and time");
+        }
+        return new Account(customerId, accountNumber, branch, type, currency, now);
+    }
+
+    public Transaction deposit(Money amount, String reference, Instant now) {
+        return credit(TransactionType.DEPOSIT, amount, reference, now);
+    }
+
+    public Transaction withdraw(Money amount, String reference, Instant now) {
+        return debit(TransactionType.WITHDRAW, amount, reference, now);
+    }
+
+    public Transaction transferOut(Money amount, String reference, Instant now) {
+        return debit(TransactionType.TRANSFER, amount, reference, now);
+    }
+
+    public Transaction transferIn(Money amount, String reference, Instant now) {
+        return credit(TransactionType.TRANSFER, amount, reference, now);
+    }
+
+    public Transaction pay(Money amount, String reference, Instant now) {
+        return debit(TransactionType.PAYMENT, amount, reference, now);
+    }
+
+    public Transaction refund(Money amount, String reference, Instant now) {
+        return credit(TransactionType.REFUND, amount, reference, now);
+    }
+
+    /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
+    public void ensureCanCredit(Money amount) {
+        ensureActive();
+        requirePositive(amount);
+        balance.requireSameCurrency(amount);
+    }
+
+    public void ensureCanDebit(Money amount) {
+        ensureCanCredit(amount);
+        if (balance.isLessThan(amount)) {
+            throw new InsufficientFundsException();
+        }
+    }
+
+    public void block(Instant now) {
+        transitionTo(AccountStatus.BLOCKED, now);
+    }
+
+    public void unblock(Instant now) {
+        transitionTo(AccountStatus.ACTIVE, now);
+    }
+
+    public void close(Instant now) {
+        if (!balance.isZero()) {
+            throw new AccountHasBalanceException();
+        }
+        transitionTo(AccountStatus.CLOSED, now);
+    }
+
+    /** Base da autorização por recurso (IDOR): a conta só é acessível pelo dono. */
+    public boolean isOwnedBy(CustomerId customerId) {
+        return this.customerId.equals(customerId);
+    }
+
+    private Transaction credit(TransactionType type, Money amount, String reference, Instant now) {
+        ensureCanCredit(amount);
+        balance = balance.plus(amount);
+        updatedAt = now;
+        return Transaction.completed(id, type, TransactionDirection.CREDIT, amount, balance, reference, now);
+    }
+
+    private Transaction debit(TransactionType type, Money amount, String reference, Instant now) {
+        ensureCanDebit(amount);
+        balance = balance.minus(amount);
+        updatedAt = now;
+        return Transaction.completed(id, type, TransactionDirection.DEBIT, amount, balance, reference, now);
+    }
+
+    private void ensureActive() {
+        if (status != AccountStatus.ACTIVE) {
+            throw new AccountNotActiveException(status);
+        }
+    }
+
+    private static void requirePositive(Money amount) {
+        if (amount == null || !amount.isPositive()) {
+            throw new InvalidValueException("Amount must be greater than zero");
+        }
+    }
+
+    private void transitionTo(AccountStatus target, Instant now) {
+        if (!status.canTransitionTo(target)) {
+            throw new InvalidStateTransitionException("Account", status, target);
+        }
+        this.status = target;
+        this.updatedAt = now;
+    }
+
+    public AccountId id() { return id; }
+    public CustomerId customerId() { return customerId; }
+    public AccountNumber accountNumber() { return accountNumber; }
+    public Branch branch() { return branch; }
+    public AccountType type() { return type; }
+    public AccountStatus status() { return status; }
+    public Money balance() { return balance; }
+    public Instant createdAt() { return createdAt; }
+    public Instant updatedAt() { return updatedAt; }
+}

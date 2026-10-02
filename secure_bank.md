@@ -1851,7 +1851,7 @@ ADR-010 — Observability
 
 * Monorepo: `securebank-backend/` e `securebank-web/` na mesma raiz; `compose.yml` na raiz (sobe API + web + Postgres).
 * Spring Boot **4.0.8** / Java 21 (Initializr já só oferece 4.x). Starters do Boot 4: `webmvc`, `flyway`, testes por slice.
-* Actuator sob `/api/v1/actuator` (só `health,info`, sem detalhes) — o proxy do web só precisa conhecer `/api`. Prometheus (Fase 10) deve ir para porta de management separada.
+* Actuator sob `/api/v1/actuator` (só `health,info`, sem detalhes) — o proxy do web só precisa conhecer `/api`. Na Fase 10 o Prometheus passou para a porta de management separada (9090).
 * Erros nunca expõem stack trace/mensagem interna (`server.error.*`); formato padronizado da seção 32 entra na Fase 3.
 * Flyway é dono do schema (`ddl-auto=validate`); `V1__baseline.sql` é só o marco inicial — tabelas entram com cada fase.
 * Segredos só por ambiente: `.env` (ignorado) lido pelo compose e, no dev local, via `spring.config.import: optional:file:../.env`. `DB_PASSWORD` não tem default.
@@ -2050,13 +2050,17 @@ Decisões e detalhes em [docs/devops/ci-cd.md](docs/devops/ci-cd.md).
 
 ## Fase 10 — Observabilidade
 
-* [ ] Actuator
-* [ ] Prometheus
-* [ ] Grafana
-* [ ] OpenTelemetry
-* [ ] Jaeger
-* [ ] Loki
-* [ ] Alerts
+* [x] Actuator — health/info/prometheus numa porta de management separada (9090, só na rede interna)
+* [x] Prometheus — métricas técnicas (HTTP com histograma, JVM, Hikari, Kafka) e de negócio (`securebank_events_published_total`, `securebank_audit_events_total`)
+* [x] Grafana — datasources e dashboard "visão geral" provisionados
+* [x] OpenTelemetry — traces por OTLP; o `traceId` OTel é o do header, do erro, da auditoria e dos logs; o trace atravessa o outbox e o Kafka (`traceparent` em `outbox_events`, V6)
+* [x] Jaeger — all-in-one em memória (dev)
+* [x] Loki — logs JSON da API coletados pelo Alloy, com link `traceId` → Jaeger
+* [x] Alerts — 8 regras no Prometheus (disponibilidade, erro, latência, banco, lag Kafka, outbox, falhas de login e de transferência)
+
+Compose: `compose.observability.yml`; detalhes e limites em [docs/observability/observability.md](docs/observability/observability.md).
+
+**Validação (honesta):** stack no ar com tráfego real; métricas, trace completo HTTP→Kafka e logs no Loki conferidos; `./mvnw verify` verde. **Pendente:** nenhum alerta foi disparado de propósito, falta Alertmanager (destino real: Fase 12), o dashboard não foi inspecionado visualmente e não há spans de JDBC.
 
 ---
 

@@ -1,0 +1,45 @@
+// Coleta os logs dos containers do SecureBank (só os do compose desta stack) e envia ao Loki.
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=securebank"]
+  }
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.json.receiver]
+}
+
+// A API loga JSON (formato logstash): extrai nível e traceId. Linhas que não são JSON passam intactas.
+loki.process "json" {
+  stage.match {
+    selector = "{service=\"securebank-api\"}"
+    stage.json {
+      expressions = { level = "level", trace_id = "traceId" }
+    }
+    stage.labels {
+      values = { level = "" }
+    }
+    stage.structured_metadata {
+      values = { trace_id = "" }
+    }
+  }
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

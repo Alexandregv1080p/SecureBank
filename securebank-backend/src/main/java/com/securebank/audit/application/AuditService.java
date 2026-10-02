@@ -8,6 +8,7 @@ import com.securebank.shared.application.ActorContext;
 import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
 import com.securebank.shared.domain.UserId;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -19,11 +20,13 @@ public class AuditService {
     private final AuditLogRepository logs;
     private final ActorContext actors;
     private final BankTime time;
+    private final MeterRegistry metrics;
 
-    public AuditService(AuditLogRepository logs, ActorContext actors, BankTime time) {
+    public AuditService(AuditLogRepository logs, ActorContext actors, BankTime time, MeterRegistry metrics) {
         this.logs = logs;
         this.actors = actors;
         this.time = time;
+        this.metrics = metrics;
     }
 
     /**
@@ -33,6 +36,7 @@ public class AuditService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(AuditEntry entry) {
         logs.save(toLog(entry));
+        metrics.counter("securebank.audit.events", "event", entry.event().name()).increment();
     }
 
     /**
@@ -42,6 +46,7 @@ public class AuditService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordIndependently(AuditEntry entry) {
         logs.save(toLog(entry));
+        metrics.counter("securebank.audit.events", "event", entry.event().name()).increment();
     }
 
     @Transactional(readOnly = true)

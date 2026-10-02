@@ -27,8 +27,12 @@ spring:
       group-id: securebank-notifications
       auto-offset-reset: earliest
       enable-auto-commit: false
+    # o traceId viaja nos headers da mensagem: o consumidor continua o mesmo trace da requisição que gerou o evento
+    template:
+      observation-enabled: true
     listener:
-      ack-mode: record                # offset só avança depois de processar (e gravar) cada mensagem
+      observation-enabled: true
+      ack-mode: record               # offset só avança depois de processar (e gravar) cada mensagem
   jpa:
     hibernate:
       ddl-auto: validate   # Flyway é o dono do schema; JPA só valida
@@ -75,13 +79,44 @@ server:
   shutdown: graceful
 
 management:
+  # Porta própria (não publicada no host nem roteada pelo nginx): só o Prometheus, dentro da rede, a alcança.
+  server:
+    port: ${MANAGEMENT_PORT:9090}
   endpoints:
     web:
       base-path: /api/v1/actuator
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
         enabled: true
       show-details: never
+  metrics:
+    tags:
+      application: securebank-api
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  # Traces: 100% amostrados (dev); em produção reduzir. Só exporta se TRACING_EXPORT=true (Jaeger no compose de observabilidade).
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
+    export:
+      enabled: ${TRACING_EXPORT:false}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+          transport: http
+  otlp:
+    metrics:
+      export:
+        enabled: false   # métricas vão por scrape do Prometheus, não por push
+
+logging:
+  structured:
+    json:
+      add:
+        service: securebank-api

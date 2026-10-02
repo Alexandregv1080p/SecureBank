@@ -116,12 +116,9 @@ class CoreBankingApiIT {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).doesNotContain("Exception", "at com.", "org.springframework", "select ", "stackTrace");
-        // trace id do cliente é aceito se tiver formato seguro, e ecoado
-        mvc.perform(as(c, get("/api/v1/accounts")).header("X-Trace-Id", "trace-abc-12345678"))
-                .andExpect(header().string("X-Trace-Id", "trace-abc-12345678"));
-        // formato inseguro (log injection) é descartado
+        // o trace id é o do span OpenTelemetry (32 hex); o valor mandado pelo cliente nunca é ecoado (log injection)
         mvc.perform(as(c, get("/api/v1/accounts")).header("X-Trace-Id", "bad\r\nvalue"))
-                .andExpect(header().string("X-Trace-Id", not("bad\r\nvalue")));
+                .andExpect(header().string("X-Trace-Id", org.hamcrest.Matchers.matchesPattern("[0-9a-f]{32}")));
     }
 
     // ---------- conta, depósito, saque, extrato ----------

@@ -1,0 +1,70 @@
+groups:
+  - name: securebank
+    rules:
+      - alert: ApplicationDown
+        expr: up{job="securebank-api"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: API fora do ar
+          description: O Prometheus não consegue coletar métricas da API há 1 minuto.
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: Mais de 5% das requisições terminando em 5xx
+          description: Taxa de erro 5xx acima de 5% por 5 minutos.
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{uri!~"/api/v1/actuator.*"}[5m]))) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Latência p95 acima de 1s
+          description: O p95 das requisições da API passou de 1 segundo por 5 minutos.
+
+      - alert: DatabaseUnavailable
+        expr: |
+          hikaricp_connections{pool="HikariPool-1"} == 0
+            or increase(hikaricp_connections_timeout_total[2m]) > 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: Banco de dados indisponível
+          description: O pool de conexões está vazio ou estourando o timeout.
+
+      - alert: KafkaConsumerLag
+        expr: max(kafka_consumer_fetch_manager_records_lag_max) > 1000
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Consumidor Kafka atrasado
+          description: Mais de 1000 mensagens de atraso por 5 minutos (notificações atrasadas).
+
+      - alert: OutboxBacklog
+        expr: sum(rate(securebank_events_published_total[10m])) == 0 and sum(rate(http_server_requests_seconds_count{method="POST",status=~"2.."}[10m])) > 0.1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Há operações, mas nenhum evento está sendo publicado
+          description: O relay do outbox pode estar parado (Kafka fora?).
+
+      - alert: RepeatedAuthenticationFailures
+        expr: sum(increase(securebank_audit_events_total{event="LOGIN_FAILED"}[5m])) > 20
+        labels: {severity: warning}
+        annotations:
+          summary: Muitas falhas de login
+          description: Mais de 20 logins falhos em 5 minutos (possível força bruta ou credential stuffing).
+
+      - alert: HighNumberOfFailedTransfers
+        expr: sum(increase(securebank_events_published_total{type="TransferFailed"}[10m])) > 10
+        labels: {severity: warning}
+        annotations:
+          summary: Muitas transferências falhando
+          description: Mais de 10 transferências recusadas em 10 minutos.

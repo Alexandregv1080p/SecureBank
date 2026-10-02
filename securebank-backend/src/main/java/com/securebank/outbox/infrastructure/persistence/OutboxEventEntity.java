@@ -19,4 +19,5 @@ class OutboxEventEntity {
     Instant occurredAt;
     Instant publishedAt;
     int attempts;
+    String traceparent;
 }

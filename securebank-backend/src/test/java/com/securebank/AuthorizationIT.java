@@ -56,7 +56,6 @@ class AuthorizationIT {
         for (String path : posts) {
             mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
         }
-        mvc.perform(get("/api/v1/actuator/health")).andExpect(status().isOk()); // só o health é público
         mvc.perform(get("/api/v1/actuator/env")).andExpect(status().isUnauthorized());
     }
 

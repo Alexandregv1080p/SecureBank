@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Import;
 class HttpApiIT {
 
     @LocalServerPort int port;
+    @LocalManagementPort int managementPort;
 
     @BeforeEach
     void configure() {
@@ -49,12 +51,31 @@ class HttpApiIT {
 
     @Test
     void healthIsPublicAndExposesNothingSensitive() {
-        given().get("/api/v1/actuator/health").then().statusCode(200).body("status", equalTo("UP"))
+        given().port(managementPort).get("/api/v1/actuator/health").then().statusCode(200).body("status", equalTo("UP"))
                 .body("components", org.hamcrest.Matchers.nullValue()); // show-details: never
-        given().get("/api/v1/actuator/env").then().statusCode(401);
-        given().get("/api/v1/actuator/heapdump").then().statusCode(401);
+        given().port(managementPort).get("/api/v1/actuator/env").then().statusCode(401);
+        given().port(managementPort).get("/api/v1/actuator/heapdump").then().statusCode(401);
+        // as métricas e a saúde só existem na porta de management, nunca na da API
+        given().get("/api/v1/actuator/prometheus").then().statusCode(404);
     }
 
+
+    @Test
+    void prometheusExposesTechnicalAndBusinessMetrics() {
+        String email = register();
+        given().contentType(ContentType.JSON).body("{\"email\":\"" + email + "\",\"password\":\"Wrong-Password-1!\"}")
+                .post("/api/v1/auth/login").then().statusCode(401);
+
+        String metrics = given().port(managementPort).get("/api/v1/actuator/prometheus").then().statusCode(200).extract().asString();
+
+        org.assertj.core.api.Assertions.assertThat(metrics)
+                .contains("http_server_requests_seconds_count")
+                .contains("jvm_memory_used_bytes")
+                .contains("hikaricp_connections_active")
+                .contains("securebank_audit_events_total{application=\"securebank-api\",event=\"LOGIN_FAILED\"")
+                .contains("application=\"securebank-api\"")
+                .doesNotContain(email);
+    }
     @Test
     void protectedResponsesCarrySecurityHeadersAndAreNeverCached() {
         String token = login(register());
@@ -90,7 +111,7 @@ class HttpApiIT {
     @Test
     void thereIsNoCorsForOtherOrigins() {
         // sem CORS configurado, uma origem estranha não ganha permissão alguma
-        given().header("Origin", "https://evil.example").get("/api/v1/actuator/health").then()
+        given().header("Origin", "https://evil.example").get("/api/v1/accounts").then()
                 .header("Access-Control-Allow-Origin", emptyOrNullString());
         given().header("Origin", "https://evil.example").header("Access-Control-Request-Method", "POST")
                 .options("/api/v1/auth/login").then().header("Access-Control-Allow-Origin", emptyOrNullString());

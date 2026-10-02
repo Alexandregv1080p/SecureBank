@@ -2,6 +2,7 @@ package com.securebank.outbox.application;
 
 import com.securebank.outbox.domain.OutboxEvent;
 import com.securebank.shared.application.BankTime;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +24,13 @@ public class OutboxRelay {
     private final OutboxRepository events;
     private final EventPublisher publisher;
     private final BankTime time;
+    private final MeterRegistry metrics;
 
-    public OutboxRelay(OutboxRepository events, EventPublisher publisher, BankTime time) {
+    public OutboxRelay(OutboxRepository events, EventPublisher publisher, BankTime time, MeterRegistry metrics) {
         this.events = events;
         this.publisher = publisher;
         this.time = time;
+        this.metrics = metrics;
     }
 
     /** Devolve quantos eventos foram publicados neste lote. */
@@ -46,6 +49,7 @@ public class OutboxRelay {
             }
             events.markPublished(event.id(), time.now());
             published++;
+            metrics.counter("securebank.events.published", "type", event.eventType()).increment();
         }
         return published;
     }

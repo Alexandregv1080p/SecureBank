@@ -19,10 +19,13 @@ docker compose up -d --build
 | Serviço    | URL                                                |
 | ---------- | -------------------------------------------------- |
 | Web        | http://localhost:3500                              |
-| API health | http://localhost:8100/api/v1/actuator/health       |
 | PostgreSQL | `127.0.0.1:5439` (db/usuário `securebank`)         |
 
 Portas configuráveis em `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`).
+Saúde e métricas da API ficam numa porta interna (9090), fora do host: veja `docker compose ps`.
+
+**Observabilidade** (Grafana, Prometheus, Jaeger, Loki): `docker compose -f compose.yml -f compose.observability.yml up -d`
+(defina `GRAFANA_PASSWORD` no `.env`); detalhes em [`docs/observability/observability.md`](docs/observability/observability.md).
 
 ## Desenvolvimento
 

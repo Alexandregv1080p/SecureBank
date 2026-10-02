@@ -16,6 +16,6 @@ WORKDIR /app
 COPY --from=build --chown=app:app /src/target/securebank-backend-*.jar app.jar
 USER app
 EXPOSE 8080
-HEALTHCHECK --interval=15s --timeout=3s --start-period=40s --retries=5   CMD wget -q --spider http://localhost:8080/api/v1/actuator/health/readiness || exit 1
+HEALTHCHECK --interval=15s --timeout=3s --start-period=40s --retries=5   CMD wget -q --spider http://localhost:9090/api/v1/actuator/health/readiness || exit 1
 # ExitOnOutOfMemoryError: morrer rápido e ser reiniciado é melhor que ficar meio vivo
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]

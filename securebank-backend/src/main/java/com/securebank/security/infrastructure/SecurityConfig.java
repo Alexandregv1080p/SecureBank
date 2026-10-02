@@ -53,7 +53,8 @@ class SecurityConfig {
                                 org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(auth -> auth
                         // públicos
-                        .requestMatchers(GET, "/api/v1/actuator/health/**", "/api/v1/actuator/info").permitAll()
+                        .requestMatchers(GET, "/api/v1/actuator/health/**", "/api/v1/actuator/info",
+                                "/api/v1/actuator/prometheus").permitAll()
                         .requestMatchers(GET, "/.well-known/jwks.json").permitAll()
                         .requestMatchers(POST, "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/mfa/verify").permitAll()

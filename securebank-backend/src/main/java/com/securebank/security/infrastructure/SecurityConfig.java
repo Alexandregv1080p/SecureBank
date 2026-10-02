@@ -8,6 +8,8 @@ import static org.springframework.http.HttpMethod.PUT;
 
 import com.securebank.authorization.domain.Permission;
 import com.securebank.authorization.domain.Role;
+import com.securebank.shared.application.BankTime;
+import com.securebank.shared.application.IdempotencyStore;
 import com.securebank.shared.application.RateLimiter;
 import com.securebank.shared.infrastructure.web.ErrorWriter;
 import java.util.LinkedHashSet;
@@ -37,7 +39,8 @@ class SecurityConfig {
     @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http, JwtDecoder accessTokenDecoder,
             JwtAuthenticationConverter jwtAuthenticationConverter, SecurityHandlers handlers, RateLimiter limiter,
-            RateLimitProperties rateLimit, ErrorWriter errors) throws Exception {
+            RateLimitProperties rateLimit, ErrorWriter errors, IdempotencyStore idempotency,
+            BankTime time) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -92,6 +95,9 @@ class SecurityConfig {
             http.addFilterAfter(new RateLimitFilter(RateLimitFilter.rulesFrom(rateLimit), limiter, errors),
                     BearerTokenAuthenticationFilter.class);
         }
+        // depois da autorização: só quem pode executar a operação reserva uma Idempotency-Key
+        http.addFilterAfter(new IdempotencyFilter(idempotency, errors, time),
+                org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         return http.build();
     }
 

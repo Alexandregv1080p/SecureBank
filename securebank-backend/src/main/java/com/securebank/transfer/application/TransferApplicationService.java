@@ -11,9 +11,11 @@ import com.securebank.audit.domain.AuditEvent;
 import com.securebank.customer.application.CustomerApplicationService;
 import com.securebank.limit.application.LimitUsage;
 import com.securebank.limit.domain.LimitType;
+import com.securebank.outbox.application.OutboxService;
 import com.securebank.shared.application.ApplicationException;
 import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
+import com.securebank.shared.application.TransactionalRetry;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.DomainException;
@@ -26,11 +28,10 @@ import com.securebank.transfer.domain.TransferService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -46,12 +47,13 @@ public class TransferApplicationService {
     private final TransactionRepository transactions;
     private final BankTime time;
     private final AuditService audit;
-    private final TransactionTemplate tx;
+    private final OutboxService outbox;
+    private final TransactionalRetry retry;
 
     public TransferApplicationService(TransferRepository transfers, AccountApplicationService accountService,
             AccountRepository accounts, CustomerApplicationService customers, LimitUsage limitUsage,
             TransactionRepository transactions, BankTime time, AuditService audit,
-            PlatformTransactionManager transactionManager) {
+            OutboxService outbox, TransactionalRetry retry) {
         this.transfers = transfers;
         this.accountService = accountService;
         this.accounts = accounts;
@@ -60,30 +62,35 @@ public class TransferApplicationService {
         this.transactions = transactions;
         this.time = time;
         this.audit = audit;
-        this.tx = new TransactionTemplate(transactionManager);
+        this.outbox = outbox;
+        this.retry = retry;
     }
 
     /**
      * Débito na origem e crédito no destino numa única transação de banco; o evento TRANSFER_CREATED entra nela.
      * Se uma regra recusar, a transação desfaz tudo e o TRANSFER_FAILED é gravado depois, numa transação à parte
-     * (por isso este método roda sem transação e abre a sua própria).
+     * (por isso este método roda sem transação e abre a sua própria, repetida em caso de conflito de versão).
      * Duas requisições concorrentes sobre a mesma conta: a segunda a gravar perde na versão otimista (409).
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Transfer transfer(CustomerId requester, AccountId sourceAccountId, String destinationBranch,
             String destinationNumber, BigDecimal amount, String description, String idempotencyKey) {
         try {
-            return tx.execute(status -> doTransfer(requester, sourceAccountId, destinationBranch, destinationNumber,
+            return retry.execute(() -> doTransfer(requester, sourceAccountId, destinationBranch, destinationNumber,
                     amount, description, idempotencyKey));
         } catch (DomainException e) {
-            audit.recordIndependently(AuditEntry.of(AuditEvent.TRANSFER_FAILED).account(sourceAccountId)
-                    .detail(e.code()));
+            failed(sourceAccountId, e.code());
             throw e;
         } catch (ApplicationException e) {
-            audit.recordIndependently(AuditEntry.of(AuditEvent.TRANSFER_FAILED).account(sourceAccountId)
-                    .detail(e.code()));
+            failed(sourceAccountId, e.code());
             throw e;
         }
+    }
+
+    private void failed(AccountId sourceAccountId, String code) {
+        audit.recordIndependently(AuditEntry.of(AuditEvent.TRANSFER_FAILED).account(sourceAccountId).detail(code));
+        outbox.recordIndependently("TransferFailed", "Account", sourceAccountId.toString(),
+                Map.of("sourceAccountId", sourceAccountId.toString(), "reason", code));
     }
 
     private Transfer doTransfer(CustomerId requester, AccountId sourceAccountId, String destinationBranch,
@@ -115,6 +122,10 @@ public class TransferApplicationService {
         transfers.save(transfer);
         audit.record(AuditEntry.of(AuditEvent.TRANSFER_CREATED).account(source.id())
                 .transaction(result.debit().id()).detail(transfer.id().toString()));
+        outbox.record("TransferCompleted", "Transfer", transfer.id().toString(), Map.of(
+                "transferId", transfer.id().toString(), "sourceAccountId", source.id().toString(),
+                "destinationAccountId", destination.id().toString(), "amount", money.amount().toPlainString(),
+                "currency", money.currency().getCurrencyCode()));
         return transfer;
     }
 

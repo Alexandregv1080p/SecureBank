@@ -194,11 +194,11 @@ class CoreBankingApiTest {
         String account = openAccount(c);
 
         for (String bad : List.of("0", "-5", "10.001", "\"abc\"", "null")) {
-            mvc.perform(as(c, post("/api/v1/accounts/" + account + "/deposits")).contentType(MediaType.APPLICATION_JSON)
+            mvc.perform(as(c, post("/api/v1/accounts/" + account + "/deposits")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
                             .content("{\"amount\":" + bad + "}"))
                     .andExpect(status().isBadRequest());
         }
-        mvc.perform(as(c, post("/api/v1/accounts/" + account + "/deposits")).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(as(c, post("/api/v1/accounts/" + account + "/deposits")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
                         .content("{not json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
@@ -251,10 +251,13 @@ class CoreBankingApiTest {
         deposit(alice, from, "1000.00").andExpect(status().isCreated());
         String key = "idem-" + UUID.randomUUID();
 
-        transfer(alice, from, to, "100.00", key).andExpect(status().isCreated());
+        String first = transfer(alice, from, to, "100.00", key).andExpect(status().isCreated()).andReturn()
+                .getResponse().getContentAsString();
+        // retry com a mesma chave: mesma resposta (replay), sem novo débito
         transfer(alice, from, to, "100.00", key)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_IN_USE"));
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Idempotency-Replayed", "true"))
+                .andExpect(jsonPath("$.id").value((String) com.jayway.jsonpath.JsonPath.read(first, "$.id")));
 
         assertThat(balance(alice, from)).isEqualTo("900.00");
     }
@@ -343,7 +346,8 @@ class CoreBankingApiTest {
         mvc.perform(as(c, get("/api/v1/accounts/" + account + "/statement")))
                 .andExpect(jsonPath("$.items[0].type").value("PAYMENT"));
 
-        pay(c, account, "120.50", BARCODE, key).andExpect(status().isConflict()); // mesma chave
+        pay(c, account, "120.50", BARCODE, key).andExpect(status().isCreated()) // mesma chave: replay, sem novo débito
+                .andExpect(header().string("Idempotency-Replayed", "true"));
         pay(c, account, "10.00", "123", "idem-" + UUID.randomUUID()).andExpect(status().isBadRequest()); // boleto inválido
         pay(c, account, "9999.00", BARCODE, "idem-" + UUID.randomUUID())
                 .andExpect(status().isUnprocessableEntity())
@@ -450,14 +454,15 @@ class CoreBankingApiTest {
         int succeeded = 0;
         for (Future<Integer> result : results) {
             int code = result.get();
-            assertThat(code).isIn(201, 409, 422); // 409 = perdeu a corrida de versão; 422 = saldo insuficiente
+            // Com retry em conflito de versão, ninguém fica com 409: ou sacou (201) ou, relendo o saldo, 422.
+            assertThat(code).isIn(201, 422);
             if (code == 201) {
                 succeeded++;
             }
         }
         pool.shutdown();
 
-        assertThat(succeeded).isBetween(1, 3); // 1000 / 300 = no máximo 3 saques
+        assertThat(succeeded).isEqualTo(3); // 1000 / 300 = exatamente 3 saques cabem
         String expected = new java.math.BigDecimal("1000.00").subtract(new java.math.BigDecimal("300.00")
                 .multiply(java.math.BigDecimal.valueOf(succeeded))).toPlainString();
         assertThat(balance(c, account)).isEqualTo(expected);
@@ -488,12 +493,12 @@ class CoreBankingApiTest {
     }
 
     private ResultActions deposit(String customerId, String account, String amount) throws Exception {
-        return mvc.perform(as(customerId, post("/api/v1/accounts/" + account + "/deposits"))
+        return mvc.perform(as(customerId, post("/api/v1/accounts/" + account + "/deposits")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"" + amount + "\"}"));
     }
 
     private ResultActions withdraw(String customerId, String account, String amount) throws Exception {
-        return mvc.perform(as(customerId, post("/api/v1/accounts/" + account + "/withdrawals"))
+        return mvc.perform(as(customerId, post("/api/v1/accounts/" + account + "/withdrawals")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"" + amount + "\"}"));
     }
 

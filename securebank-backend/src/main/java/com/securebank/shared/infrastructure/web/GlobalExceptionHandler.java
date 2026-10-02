@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -60,8 +60,8 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler(OptimisticLockingFailureException.class)
-    ResponseEntity<Object> concurrentUpdate(OptimisticLockingFailureException e, HttpServletRequest request) {
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    ResponseEntity<Object> concurrentUpdate(ConcurrencyFailureException e, HttpServletRequest request) {
         return body(HttpStatus.CONFLICT, "CONCURRENT_UPDATE", "The resource was modified by another request; retry",
                 request.getRequestURI(), null);
     }

@@ -11,9 +11,11 @@ import com.securebank.limit.application.LimitRepository;
 import com.securebank.limit.application.LimitUsage;
 import com.securebank.limit.domain.Limit;
 import com.securebank.limit.domain.LimitType;
+import com.securebank.outbox.application.OutboxService;
 import com.securebank.shared.application.ApplicationException;
 import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
+import com.securebank.shared.application.TransactionalRetry;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.InvalidValueException;
@@ -25,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -46,10 +49,12 @@ public class AccountApplicationService {
     private final TransactionRepository transactions;
     private final BankTime time;
     private final AuditService audit;
+    private final TransactionalRetry retry;
+    private final OutboxService outbox;
 
     public AccountApplicationService(AccountRepository accounts, AccountNumberGenerator numbers,
             CustomerApplicationService customers, LimitRepository limits, LimitUsage limitUsage,
-            TransactionRepository transactions, BankTime time, AuditService audit) {
+            TransactionRepository transactions, BankTime time, AuditService audit, TransactionalRetry retry, OutboxService outbox) {
         this.accounts = accounts;
         this.numbers = numbers;
         this.customers = customers;
@@ -58,6 +63,8 @@ public class AccountApplicationService {
         this.transactions = transactions;
         this.time = time;
         this.audit = audit;
+        this.retry = retry;
+        this.outbox = outbox;
     }
 
     public Account open(CustomerId requester, AccountType type) {
@@ -84,7 +91,18 @@ public class AccountApplicationService {
                 .orElseThrow(() -> ApplicationException.notFound("Account"));
     }
 
+    /** Roda sem transação própria: abre uma por tentativa e repete em conflito de versão. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Transaction deposit(CustomerId requester, AccountId id, BigDecimal amount) {
+        return retry.execute(() -> doDeposit(requester, id, amount));
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Transaction withdraw(CustomerId requester, AccountId id, BigDecimal amount) {
+        return retry.execute(() -> doWithdraw(requester, id, amount));
+    }
+
+    private Transaction doDeposit(CustomerId requester, AccountId id, BigDecimal amount) {
         customers.requireActive(requester);
         Account account = findOwned(requester, id);
         Transaction transaction = account.deposit(moneyOf(account, amount), null, time.now());
@@ -93,7 +111,7 @@ public class AccountApplicationService {
         return transaction;
     }
 
-    public Transaction withdraw(CustomerId requester, AccountId id, BigDecimal amount) {
+    private Transaction doWithdraw(CustomerId requester, AccountId id, BigDecimal amount) {
         customers.requireActive(requester);
         Account account = findOwned(requester, id);
         Money money = moneyOf(account, amount);
@@ -124,6 +142,7 @@ public class AccountApplicationService {
         account.block(time.now());
         accounts.save(account);
         audit.record(AuditEntry.of(AuditEvent.ACCOUNT_BLOCKED).account(id));
+        outbox.record("AccountBlocked", "Account", id.toString(), java.util.Map.of("accountId", id.toString()));
         return account;
     }
 
@@ -132,6 +151,7 @@ public class AccountApplicationService {
         account.unblock(time.now());
         accounts.save(account);
         audit.record(AuditEntry.of(AuditEvent.ACCOUNT_UNBLOCKED).account(id));
+        outbox.record("AccountUnblocked", "Account", id.toString(), java.util.Map.of("accountId", id.toString()));
         return account;
     }
 

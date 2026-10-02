@@ -19,6 +19,9 @@ spring:
     hibernate:
       ddl-auto: validate   # Flyway é o dono do schema; JPA só valida
     open-in-view: false
+    properties:
+      # UPDATEs em ordem de chave primária: transferências em sentidos opostos travam as linhas na mesma ordem (sem deadlock)
+      hibernate.order_updates: true
   flyway:
     enabled: true
 

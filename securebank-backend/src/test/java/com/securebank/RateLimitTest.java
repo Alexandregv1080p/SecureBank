@@ -82,7 +82,7 @@ class RateLimitTest {
     private String openAndFund(String token) throws Exception {
         String account = read(mvc.perform(bearer(token, post("/api/v1/accounts")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"type\":\"CHECKING\"}")).andExpect(status().isCreated()).andReturn(), "$.id");
-        mvc.perform(bearer(token, post("/api/v1/accounts/" + account + "/deposits")).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(bearer(token, post("/api/v1/accounts/" + account + "/deposits")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"amount\":\"500.00\"}")).andExpect(status().isCreated());
         return account;
     }

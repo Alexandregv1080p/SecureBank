@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -118,13 +119,15 @@ class AccountController {
 
     @PostMapping("/{id}/deposits")
     @ResponseStatus(HttpStatus.CREATED)
-    TransactionResponse deposit(@PathVariable String id, @Valid @RequestBody AmountRequest request) {
+    TransactionResponse deposit(@PathVariable String id, @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody AmountRequest request) {
         return TransactionResponse.of(accounts.deposit(current.customerId(), AccountId.of(id), request.amount()));
     }
 
     @PostMapping("/{id}/withdrawals")
     @ResponseStatus(HttpStatus.CREATED)
-    TransactionResponse withdraw(@PathVariable String id, @Valid @RequestBody AmountRequest request) {
+    TransactionResponse withdraw(@PathVariable String id, @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody AmountRequest request) {
         return TransactionResponse.of(accounts.withdraw(current.customerId(), AccountId.of(id), request.amount()));
     }
 }

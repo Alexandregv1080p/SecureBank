@@ -14,6 +14,7 @@ import com.securebank.authentication.domain.Totp;
 import com.securebank.authentication.domain.User;
 import com.securebank.customer.application.CustomerApplicationService;
 import com.securebank.customer.domain.Customer;
+import com.securebank.outbox.application.OutboxService;
 import com.securebank.shared.application.Actor;
 import com.securebank.shared.application.ActorContext;
 import com.securebank.shared.application.ApplicationException;
@@ -47,6 +48,7 @@ public class AuthApplicationService {
     private final CustomerApplicationService customers;
     private final SessionRevoker revoker;
     private final AuditService audit;
+    private final OutboxService outbox;
     private final ActorContext actors;
     private final BankTime time;
     private final AuthSettings settings;
@@ -56,7 +58,7 @@ public class AuthApplicationService {
     public AuthApplicationService(UserRepository users, SessionRepository sessions,
             RefreshTokenRepository refreshTokens, MfaDeviceRepository mfaDevices, PasswordHasher hasher,
             TokenIssuer tokens, SecretCipher cipher, RateLimiter limiter, CustomerApplicationService customers,
-            SessionRevoker revoker, AuditService audit, ActorContext actors, BankTime time, AuthSettings settings) {
+            SessionRevoker revoker, AuditService audit, OutboxService outbox, ActorContext actors, BankTime time, AuthSettings settings) {
         this.users = users;
         this.sessions = sessions;
         this.refreshTokens = refreshTokens;
@@ -68,6 +70,7 @@ public class AuthApplicationService {
         this.customers = customers;
         this.revoker = revoker;
         this.audit = audit;
+        this.outbox = outbox;
         this.actors = actors;
         this.time = time;
         this.settings = settings;
@@ -126,6 +129,7 @@ public class AuthApplicationService {
         }
         TokenPair pair = startSession(user, false);
         audit.record(AuditEntry.of(AuditEvent.LOGIN_SUCCESS).user(user.id()));
+        loggedIn(user, false);
         return new LoginResult.Authenticated(pair);
     }
 
@@ -157,6 +161,7 @@ public class AuthApplicationService {
 
         TokenPair pair = startSession(user, true);
         audit.record(AuditEntry.of(AuditEvent.LOGIN_SUCCESS).user(userId).detail("mfa"));
+        loggedIn(user, true);
         return pair;
     }
 
@@ -189,6 +194,11 @@ public class AuthApplicationService {
         refreshTokens.save(next.record());
         TokenIssuer.AccessToken access = tokens.issueAccessToken(user, session);
         return new TokenPair(access.value(), access.expiresInSeconds(), next.rawValue());
+    }
+
+    private void loggedIn(User user, boolean mfa) {
+        outbox.record("UserLoggedIn", "User", user.id().toString(),
+                java.util.Map.of("userId", user.id().toString(), "mfa", mfa));
     }
 
     private TokenPair startSession(User user, boolean mfaVerified) {

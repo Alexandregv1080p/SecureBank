@@ -293,7 +293,7 @@ class AuthorizationTest {
     }
 
     private ResultActions deposit(String token, String account, String amount) throws Exception {
-        return mvc.perform(bearer(token, post("/api/v1/accounts/" + account + "/deposits"))
+        return mvc.perform(bearer(token, post("/api/v1/accounts/" + account + "/deposits")).header("Idempotency-Key", "idem-" + java.util.UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"" + amount + "\"}"));
     }
 

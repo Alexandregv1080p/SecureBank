@@ -85,8 +85,9 @@ TOKEN=$(curl -s -X POST localhost:8100/api/v1/auth/login -H "$H"   -d '{"email":
 curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer $TOKEN" -d '{"type":"CHECKING"}'
 ```
 
-## Idempotência (estado atual)
+## Idempotência
 
-`Idempotency-Key` é gravada junto da transferência/pagamento com índice único por conta. Nesta fase uma chave já usada
-responde `409 IDEMPOTENCY_KEY_IN_USE` (nunca executa duas vezes). A Fase 5 passa a devolver o resultado da primeira
-execução (replay) e a cobrir depósito e saque.
+`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`
+e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
+→ `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
+[`consistency.md`](../architecture/consistency.md).

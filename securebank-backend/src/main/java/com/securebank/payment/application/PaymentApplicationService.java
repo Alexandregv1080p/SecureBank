@@ -11,9 +11,11 @@ import com.securebank.limit.application.LimitUsage;
 import com.securebank.limit.domain.LimitType;
 import com.securebank.payment.domain.Payment;
 import com.securebank.payment.domain.PaymentService;
+import com.securebank.outbox.application.OutboxService;
 import com.securebank.shared.application.ApplicationException;
 import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
+import com.securebank.shared.application.TransactionalRetry;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.DomainException;
@@ -25,11 +27,10 @@ import com.securebank.transaction.domain.Transaction;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -45,12 +46,13 @@ public class PaymentApplicationService {
     private final TransactionRepository transactions;
     private final BankTime time;
     private final AuditService audit;
-    private final TransactionTemplate tx;
+    private final OutboxService outbox;
+    private final TransactionalRetry retry;
 
     public PaymentApplicationService(PaymentRepository payments, AccountApplicationService accountService,
             AccountRepository accounts, CustomerApplicationService customers, LimitUsage limitUsage,
             TransactionRepository transactions, BankTime time, AuditService audit,
-            PlatformTransactionManager transactionManager) {
+            OutboxService outbox, TransactionalRetry retry) {
         this.payments = payments;
         this.accountService = accountService;
         this.accounts = accounts;
@@ -59,7 +61,8 @@ public class PaymentApplicationService {
         this.transactions = transactions;
         this.time = time;
         this.audit = audit;
-        this.tx = new TransactionTemplate(transactionManager);
+        this.outbox = outbox;
+        this.retry = retry;
     }
 
     /** Mesmo desenho da transferência: sucesso auditado na transação; falha auditada em transação à parte. */
@@ -67,7 +70,7 @@ public class PaymentApplicationService {
     public Payment pay(CustomerId requester, AccountId accountId, BigDecimal amount, String barcode,
             String description, String idempotencyKey) {
         try {
-            return tx.execute(status -> doPay(requester, accountId, amount, barcode, description, idempotencyKey));
+            return retry.execute(() -> doPay(requester, accountId, amount, barcode, description, idempotencyKey));
         } catch (DomainException e) {
             audit.recordIndependently(AuditEntry.of(AuditEvent.PAYMENT_FAILED).account(accountId).detail(e.code()));
             throw e;
@@ -100,6 +103,9 @@ public class PaymentApplicationService {
         payments.save(payment);
         audit.record(AuditEntry.of(AuditEvent.PAYMENT_CREATED).account(account.id()).transaction(transaction.id())
                 .detail(payment.id().toString()));
+        outbox.record("PaymentCompleted", "Payment", payment.id().toString(), Map.of(
+                "paymentId", payment.id().toString(), "accountId", account.id().toString(),
+                "amount", money.amount().toPlainString(), "currency", money.currency().getCurrencyCode()));
         return payment;
     }
 

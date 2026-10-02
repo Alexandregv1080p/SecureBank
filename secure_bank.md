@@ -1949,11 +1949,20 @@ ADR-010 — Observability
 
 ## Fase 5 — Consistência
 
-* [ ] Idempotency
-* [ ] Optimistic Locking
-* [ ] Transaction Isolation
-* [ ] Concurrent Transactions
-* [ ] Transactional Outbox
+* [x] Idempotency
+* [x] Optimistic Locking
+* [x] Transaction Isolation
+* [x] Concurrent Transactions
+* [x] Transactional Outbox
+
+**Decisões da Fase 5** (detalhes em [`docs/architecture/consistency.md`](docs/architecture/consistency.md), ADR-005/006/007):
+
+* `Idempotency-Key` agora é **obrigatória** também em depósito e saque. Filtro HTTP após a autorização, chave por usuário, guardada no PostgreSQL com **replay** da resposta (`Idempotency-Replayed: true`); pedido diferente = 422, em andamento = 409.
+* Isolamento READ COMMITTED + `@Version` + `TransactionalRetry` (transação nova por tentativa, até 6, backoff com jitter): sem duplo gasto e sem estourar limite diário em paralelo; sem 409 em condições normais.
+* **Achado nos testes:** transferências A→B e B→A causavam *deadlock* no PostgreSQL (UPDATE otimista trava linhas em ordem oposta). Corrigido com `hibernate.order_updates=true` e retry também em falha de lock.
+* Transactional Outbox: `outbox_events` na mesma transação (`TransferCompleted`, `PaymentCompleted`, `AccountBlocked/Unblocked`, `UserLoggedIn`; `TransferFailed` em transação independente); relay agendado com `FOR UPDATE SKIP LOCKED`, em ordem, at-least-once. `EventPublisher` só loga até a Fase 6 (Kafka).
+* Testes: 178 no total; `ConsistencyTest` cobre replay, mismatch, escopo por usuário, requisições simultâneas com a mesma chave, depósitos/transferências paralelos, limite diário sob corrida, transferências opostas e o outbox (atomicidade, ordem, falha do broker). Desligar o retry faz os testes de concorrência falharem.
+* Pendências: limpeza periódica de `idempotency_keys`/`outbox_events` publicados.
 
 ---
 

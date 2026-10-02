@@ -54,9 +54,11 @@ class MfaTest {
                 String.class, login.userId());
         assertThat(stored).doesNotContain(secret);
 
+        mvc.perform(bearer(login.accessToken(), get("/api/v1/security/mfa"))).andExpect(jsonPath("$.enabled").value(false));
         confirm(login.accessToken(), "000000").andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("INVALID_MFA_CODE"));
         confirm(login.accessToken(), code(secret, 0)).andExpect(status().isNoContent());
+        mvc.perform(bearer(login.accessToken(), get("/api/v1/security/mfa"))).andExpect(jsonPath("$.enabled").value(true));
 
         // já ligado: não dá para cadastrar de novo
         mvc.perform(bearer(login.accessToken(), post("/api/v1/security/mfa"))).andExpect(status().isConflict())

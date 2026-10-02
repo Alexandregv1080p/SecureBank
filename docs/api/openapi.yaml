@@ -106,6 +106,17 @@ paths:
         "204":
           description: No Content
   /api/v1/security/mfa:
+    get:
+      tags:
+      - security-controller
+      operationId: mfaStatus
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MfaStatusResponse"
     post:
       tags:
       - security-controller
@@ -236,7 +247,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/RefreshRequest"
-        required: true
       responses:
         "200":
           description: OK
@@ -973,8 +983,6 @@ components:
           type: string
           maxLength: 200
           minLength: 0
-      required:
-      - refreshToken
     TokenResponse:
       type: object
       properties:
@@ -1189,6 +1197,11 @@ components:
         mfaVerified:
           type: boolean
         current:
+          type: boolean
+    MfaStatusResponse:
+      type: object
+      properties:
+        enabled:
           type: boolean
     PaymentPage:
       type: object

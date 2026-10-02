@@ -107,6 +107,11 @@ public class SecurityApplicationService {
 
     // ---------- MFA ----------
 
+    @Transactional(readOnly = true)
+    public boolean mfaEnabled(UserId userId) {
+        return mfaDevices.findByUser(userId).filter(MfaDevice::isActive).isPresent();
+    }
+
     public MfaSetup setupMfa(UserId userId) {
         User user = users.findById(userId).orElseThrow(ApplicationException::unauthenticated);
         if (mfaDevices.findByUser(userId).filter(MfaDevice::isActive).isPresent()) {

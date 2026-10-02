@@ -64,4 +64,4 @@ responde igual (`INVALID_CREDENTIALS`) — o motivo real só vai para a auditori
 
 * Códigos de recuperação de MFA e fluxo de redefinição de senha por e-mail.
 * Chaves JWT: sem `JWT_PRIVATE_KEY/PUBLIC_KEY` o servidor gera um par efêmero (dev). Produção usa Secrets Manager (Fase 12) e rotação de `kid`.
-* Transporte do refresh token no front (corpo JSON vs. cookie `HttpOnly`): decidir na Fase 7.
+* Refresh token no navegador: resolvido na Fase 7 (cookie `HttpOnly; SameSite=Strict`, ver [frontend.md](../architecture/frontend.md)).

@@ -1989,14 +1989,25 @@ ADR-010 — Observability
 
 ## Fase 7 — Frontend
 
-* [ ] Login
-* [ ] MFA
-* [ ] Dashboard
-* [ ] Accounts
-* [ ] Statement
-* [ ] Transfers
-* [ ] Payments
-* [ ] Security Center
+* [x] Login
+* [x] MFA
+* [x] Dashboard
+* [x] Accounts
+* [x] Statement
+* [x] Transfers
+* [x] Payments
+* [x] Security Center
+
+**Decisões da Fase 7** (detalhes em [`docs/architecture/frontend.md`](docs/architecture/frontend.md)):
+
+* **Refresh token em cookie `HttpOnly; SameSite=Strict`** para clientes web (header `X-Client: web`; o corpo da resposta não o traz). Access token só em memória. O refresh só é aceito do cookie com esse header (defesa extra contra CSRF). Clientes de API seguem usando o corpo JSON. Teste novo no backend.
+* Endpoint novo `GET /security/mfa` (status do MFA) para o Security Center.
+* Stack: Vite + React + TS + Tailwind 4 + React Router + TanStack Query + Zustand + React Hook Form + Zod + Phosphor + Geist auto-hospedada. Zustand guarda só a sessão; formulários validados com Zod.
+* Idempotency-Key por intenção, reaproveitada só quando o resultado anterior foi incerto; valores em string, entrada aceita `1.234,56`.
+* Tela de transferência com etapa de revisão; extrato paginado com filtro de datas; MFA com QR code (lib `qrcode`, segredo não fica em cache).
+* nginx com CSP restritiva; temas claro/escuro automáticos, contraste AA, estados de carregamento/vazio/erro.
+* Validado no navegador contra o stack real (cadastro, login, conta, depósito, limite, MFA/QR, recarga recuperando a sessão pelo cookie). Vitest cobre as regras puras do front; E2E e testes de componente ficam para a Fase 8.
+* Pendências: área administrativa para a equipe, recuperação de senha/MFA.
 
 ---
 

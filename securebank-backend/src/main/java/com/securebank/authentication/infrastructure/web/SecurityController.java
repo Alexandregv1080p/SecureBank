@@ -64,6 +64,13 @@ class SecurityController {
                 request.newPassword());
     }
 
+    record MfaStatusResponse(boolean enabled) {}
+
+    @GetMapping("/mfa")
+    MfaStatusResponse mfaStatus() {
+        return new MfaStatusResponse(security.mfaEnabled(current.userId()));
+    }
+
     /** Passo 1: devolve o segredo (uma única vez) para cadastrar no app autenticador. O MFA só liga no /confirm. */
     @PostMapping("/mfa")
     @ResponseStatus(HttpStatus.CREATED)

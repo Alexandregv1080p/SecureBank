@@ -156,7 +156,39 @@ class AuthenticationFlowTest {
         refresh("not-a-real-token").andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
         mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized()); // sem token no corpo nem cookie
+    }
+
+    @Test
+    void webClientsKeepTheRefreshTokenInAnHttpOnlyCookieOnly() throws Exception {
+        String email = TestUsers.newEmail();
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(TestUsers.registerBody(email, TestUsers.PASSWORD))).andExpect(status().isCreated());
+
+        MvcResult login = mvc.perform(post("/api/v1/auth/login").header("X-Client", "web")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, TestUsers.PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist()) // JavaScript nunca vê o refresh token
+                .andReturn();
+        String setCookie = login.getResponse().getHeader("Set-Cookie");
+        assertThat(setCookie).startsWith("refresh_token=").contains("HttpOnly", "SameSite=Strict", "Path=/api/v1/auth");
+        String value = setCookie.substring("refresh_token=".length(), setCookie.indexOf(';'));
+
+        // com o header de cliente web, o cookie renova a sessão (e rotaciona o cookie)
+        MvcResult refreshed = mvc.perform(post("/api/v1/auth/refresh").header("X-Client", "web")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", value)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.refreshToken").doesNotExist()).andReturn();
+        assertThat(refreshed.getResponse().getHeader("Set-Cookie")).startsWith("refresh_token=").isNotEqualTo(setCookie);
+
+        // sem o header X-Client o cookie é ignorado (defesa extra contra CSRF)
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new jakarta.servlet.http.Cookie("refresh_token", value)))
+                .andExpect(status().isUnauthorized());
+        // token já usado: 401 e o cookie é limpo
+        MvcResult reused = mvc.perform(post("/api/v1/auth/refresh").header("X-Client", "web")
+                .cookie(new jakarta.servlet.http.Cookie("refresh_token", value))).andExpect(status().isUnauthorized()).andReturn();
+        assertThat(reused.getResponse().getHeader("Set-Cookie")).contains("Max-Age=0");
     }
 
     @Test

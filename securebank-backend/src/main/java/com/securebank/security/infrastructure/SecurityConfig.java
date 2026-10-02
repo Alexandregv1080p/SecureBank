@@ -75,6 +75,8 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/transfers", "/api/v1/transfers/*").hasAuthority(Permission.VIEW_TRANSFER.name())
                         .requestMatchers(POST, "/api/v1/payments").hasAuthority(Permission.CREATE_PAYMENT.name())
                         .requestMatchers(GET, "/api/v1/payments", "/api/v1/payments/*").hasAuthority(Permission.VIEW_PAYMENT.name())
+                        .requestMatchers(GET, "/api/v1/notifications").hasAuthority(Permission.VIEW_NOTIFICATIONS.name())
+                        .requestMatchers(POST, "/api/v1/notifications/*/read").hasAuthority(Permission.VIEW_NOTIFICATIONS.name())
                         // equipe
                         .requestMatchers(GET, "/api/v1/admin/customers/*").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(PUT, "/api/v1/admin/accounts/*/limits/*").hasAuthority(Permission.MANAGE_LIMITS.name())

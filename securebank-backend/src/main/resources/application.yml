@@ -15,6 +15,20 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
       password: ${REDIS_PASSWORD:}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all                       # só confirma quando todas as réplicas em sincronia gravaram
+      properties:
+        enable.idempotence: true      # retry do produtor não duplica mensagem
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 15000   # >= request.timeout + linger
+    consumer:
+      group-id: securebank-notifications
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record                # offset só avança depois de processar (e gravar) cada mensagem
   jpa:
     hibernate:
       ddl-auto: validate   # Flyway é o dono do schema; JPA só valida
@@ -47,6 +61,8 @@ securebank:
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   ratelimit:
     enabled: true
+  kafka:
+    enabled: true                    # false = eventos só no log (sem broker)
 
 server:
   # Atrás do nginx: o IP real vem do X-Forwarded-For (Tomcat só confia em proxies de rede privada).

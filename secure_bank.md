@@ -1968,12 +1968,22 @@ ADR-010 — Observability
 
 ## Fase 6 — Mensageria
 
-* [ ] Kafka
-* [ ] Domain Events
-* [ ] Event Consumers
-* [ ] Retry
-* [ ] Dead Letter Topic
-* [ ] Consumer Idempotency
+* [x] Kafka
+* [x] Domain Events
+* [x] Event Consumers
+* [x] Retry
+* [x] Dead Letter Topic
+* [x] Consumer Idempotency
+
+**Decisões da Fase 6** (detalhes em [`docs/architecture/messaging.md`](docs/architecture/messaging.md), ADR-004):
+
+* Os eventos do outbox (Fase 5) saem para o Kafka (`apache/kafka:4.1.1`, KRaft de 1 nó no compose, `localhost:9092`): um tópico por família (`securebank.transfers|payments|accounts|users`), chave = agregado, `EventEnvelope` JSON, `acks=all` + produtor idempotente. O relay só marca publicado após a confirmação do broker.
+* `NotificationConsumer` → `NotificationService` gera avisos ao cliente (`GET /api/v1/notifications`, permissão nova `VIEW_NOTIFICATIONS`). Idempotente: `processed_events` na mesma transação do efeito.
+* Retry exponencial (3x) e DLT `<tópico>.DLT`; JSON/payload inválido vai direto ao DLT e a partição segue.
+* `securebank.kafka.enabled=false` desliga tudo (eventos só no log); os testes antigos rodam assim e `KafkaMessagingTest` sobe um Kafka real via Testcontainers.
+* **Ambiente Windows:** o `Selector` do JDK falhava ("Unable to establish loopback connection") por causa do TEMP em formato curto (`ALEXAN~1`); `-Djdk.net.unixdomain.tmpdir=C:\Temp` resolve. Era também a causa das falhas antigas com Tomcat e Lettuce (não era o sandbox).
+* Testes: 182 no total; os de Kafka cobrem fluxo ponta a ponta, reentrega duplicada, mensagem venenosa → DLT sem travar o consumidor e payload malformado → DLT sem marcar processado. Desligar a deduplicação derruba o teste.
+* Pendências: ferramenta de reprocessamento do DLT, consumidor de auditoria e métricas de lag (Fase 10), TLS/SASL (Fases 11–12).
 
 ---
 

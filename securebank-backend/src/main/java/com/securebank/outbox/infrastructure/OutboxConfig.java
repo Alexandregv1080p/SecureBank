@@ -4,7 +4,6 @@ import com.securebank.outbox.application.EventPublisher;
 import com.securebank.outbox.application.OutboxRelay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +16,9 @@ class OutboxConfig {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxConfig.class);
 
-    /** Até a Fase 6 (Kafka) os eventos só vão para o log; a troca é registrar outro EventPublisher. */
+    /** Com o Kafka desligado (securebank.kafka.enabled=false) os eventos só vão para o log. */
     @Bean
-    @ConditionalOnMissingBean(EventPublisher.class)
+    @ConditionalOnProperty(name = "securebank.kafka.enabled", havingValue = "false")
     EventPublisher loggingEventPublisher() {
         return event -> log.info("event {} {}#{} id={}", event.eventType(), event.aggregateType(),
                 event.aggregateId(), event.id());

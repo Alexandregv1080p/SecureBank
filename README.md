@@ -42,4 +42,7 @@ API: contrato em [`docs/api/openapi.yaml`](docs/api/openapi.yaml) e guia em [`do
 com o compose no ar, Swagger UI em http://localhost:8100/swagger-ui/index.html. Autenticação JWT: veja [`docs/security/`](docs/security/authentication.md).
 O primeiro ADMIN vem de `BOOTSTRAP_ADMIN_EMAIL/PASSWORD` no `.env`.
 
+Mensageria (Kafka em `localhost:9092`): [`docs/architecture/messaging.md`](docs/architecture/messaging.md). No Windows, se o JDK
+reclamar de "loopback connection", exporte `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Temp`.
+
 Segredos nunca entram no Git: `.env` é ignorado, `.env.example` só tem placeholders.

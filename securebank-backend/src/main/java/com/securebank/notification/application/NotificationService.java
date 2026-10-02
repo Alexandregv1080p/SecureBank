@@ -1,0 +1,96 @@
+package com.securebank.notification.application;
+
+import com.securebank.account.application.AccountRepository;
+import com.securebank.authentication.application.UserRepository;
+import com.securebank.notification.domain.Notification;
+import com.securebank.outbox.domain.EventEnvelope;
+import com.securebank.shared.application.ApplicationException;
+import com.securebank.shared.application.BankTime;
+import com.securebank.shared.application.PageResult;
+import com.securebank.shared.domain.AccountId;
+import com.securebank.shared.domain.CustomerId;
+import com.securebank.shared.domain.UserId;
+import java.util.Optional;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Consumidor dos eventos de domínio: transforma evento em aviso ao cliente. Idempotente por evento. */
+@Service
+public class NotificationService {
+
+    static final String CONSUMER = "notifications";
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
+    private final NotificationRepository notifications;
+    private final ProcessedEvents processed;
+    private final AccountRepository accounts;
+    private final UserRepository users;
+    private final BankTime time;
+
+    public NotificationService(NotificationRepository notifications, ProcessedEvents processed,
+            AccountRepository accounts, UserRepository users, BankTime time) {
+        this.notifications = notifications;
+        this.processed = processed;
+        this.accounts = accounts;
+        this.users = users;
+        this.time = time;
+    }
+
+    /**
+     * O registro "processado" e os avisos são gravados na MESMA transação: ou os dois existem ou nenhum. Assim uma
+     * reentrega do Kafka (at-least-once) não duplica avisos, e uma falha no meio não marca o evento como tratado.
+     * Payload malformado lança exceção (retry e depois DLT, configurados no listener).
+     */
+    @Transactional
+    public void handle(EventEnvelope event) {
+        if (!processed.markProcessed(CONSUMER, event.eventId(), time.now())) {
+            log.debug("Event {} already processed, skipping", event.eventId());
+            return;
+        }
+        switch (event.eventType()) {
+            case "TransferCompleted" -> {
+                String amount = event.text("amount") + " " + event.text("currency");
+                notifyOwner(event, event.text("sourceAccountId"), "TRANSFER_SENT", "Transferência enviada",
+                        "Você enviou " + amount + " por transferência.");
+                notifyOwner(event, event.text("destinationAccountId"), "TRANSFER_RECEIVED", "Transferência recebida",
+                        "Você recebeu " + amount + " por transferência.");
+            }
+            case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
+                    "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
+            case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",
+                    "Sua conta foi bloqueada. Fale com o suporte.");
+            case "AccountUnblocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_UNBLOCKED",
+                    "Conta desbloqueada", "Sua conta foi desbloqueada.");
+            case "UserLoggedIn" -> users.findById(UserId.of(event.text("userId")))
+                    .map(u -> u.customerId())
+                    .ifPresent(customerId -> save(customerId, event, "NEW_LOGIN", "Novo acesso à sua conta",
+                            "Houve um login na sua conta. Se não foi você, troque a senha."));
+            default -> log.debug("No notification for event type {}", event.eventType());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<Notification> list(CustomerId customerId, int page, int size) {
+        PageResult.validate(page, size);
+        return notifications.findByCustomer(customerId, page, size);
+    }
+
+    @Transactional
+    public void markRead(CustomerId customerId, UUID id) {
+        if (!notifications.markRead(id, customerId, time.now())) {
+            throw ApplicationException.notFound("Notification");
+        }
+    }
+
+    private void notifyOwner(EventEnvelope event, String accountId, String type, String title, String body) {
+        Optional<CustomerId> owner = accounts.findById(AccountId.of(accountId)).map(a -> a.customerId());
+        owner.ifPresent(customerId -> save(customerId, event, type, title, body));
+    }
+
+    private void save(CustomerId customerId, EventEnvelope event, String type, String title, String body) {
+        notifications.save(Notification.create(customerId, type, title, body, event.eventId(), time.now()));
+    }
+}

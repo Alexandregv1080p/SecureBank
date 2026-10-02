@@ -9,17 +9,29 @@ Para regenerar o contrato depois de mudar a API:
 curl -s localhost:8100/v3/api-docs.yaml -o docs/api/openapi.yaml
 ```
 
-## Identidade provisória
+## Autenticação
 
-Até a Fase 4 (JWT), o cliente é identificado pelo header `X-Customer-Id` (UUID devolvido por `POST /customers`).
-Esse header **é forjável**: só funciona com `securebank.devidentity.enabled=true` (compose de dev). Sem isso toda rota
-protegida responde `401`. A Fase 4 troca por Bearer token sem mudar nenhum caso de uso.
+Todas as rotas (exceto health, JWKS e `/auth/register|login|refresh|mfa/verify`) exigem `Authorization: Bearer <access token>`.
+Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authentication.md); permissões por papel em
+[`authorization.md`](../security/authorization.md). Rotas não declaradas respondem 401/403 (negar por padrão).
+
+| Método e rota | O que faz |
+| --- | --- |
+| `POST /auth/register` | Cria cliente + usuário (senha 12+ caracteres) |
+| `POST /auth/login` | Tokens, ou `{mfaRequired, mfaToken}` se o MFA estiver ligado |
+| `POST /auth/mfa/verify` | Troca `mfaToken` + código TOTP pelos tokens |
+| `POST /auth/refresh` | Novo access + refresh (rotação; reuso revoga a sessão) |
+| `POST /auth/logout` | Revoga a sessão atual |
+| `GET /security/sessions`, `DELETE /security/sessions/{id}` | Sessões ativas |
+| `POST /security/password` | Troca de senha (revoga as outras sessões) |
+| `POST /security/mfa`, `/mfa/confirm`, `DELETE /security/mfa` | MFA em duas etapas; desligar exige código |
+| `GET /audit` | Auditoria (SUPPORT/ADMIN) |
+| `/admin/**` | Limites, bloqueio de conta, usuários da equipe (ADMIN); consulta de cliente (SUPPORT/ADMIN) |
 
 ## Endpoints
 
 | Método e rota                           | O que faz                                                        |
 | --------------------------------------- | ---------------------------------------------------------------- |
-| `POST /customers`                       | Cadastra cliente (provisório; vira parte do registro na Fase 4)   |
 | `GET /customers/me`, `PATCH /customers/me` | Perfil (CPF mascarado) e atualização parcial de e-mail/telefone |
 | `POST /accounts`                        | Abre conta (`CHECKING`/`SAVINGS`) e cria os limites padrão         |
 | `GET /accounts`, `GET /accounts/{id}`   | Contas do cliente                                                 |
@@ -54,10 +66,12 @@ Sempre o mesmo formato, com `traceId` (também no header `X-Trace-Id`):
 | Status | `code`                                                                                          |
 | ------ | ----------------------------------------------------------------------------------------------- |
 | 400    | `VALIDATION_ERROR` (com `errors[]` por campo), `INVALID_VALUE`, `BAD_REQUEST`                    |
-| 401    | `UNAUTHENTICATED`                                                                               |
+| 401    | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_MFA_CODE`, `INVALID_MFA_CHALLENGE` |
+| 403    | `FORBIDDEN`                                                                                     |
 | 404    | `NOT_FOUND` — inclui recurso de **outro dono** (indistinguível de inexistente, anti-IDOR)         |
 | 409    | `IDEMPOTENCY_KEY_IN_USE`, `CUSTOMER_ALREADY_EXISTS`, `CONCURRENT_UPDATE` (refaça a requisição), `CONFLICT` |
-| 422    | `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH` |
+| 422    | `INVALID_MFA_CODE`, `INVALID_CURRENT_PASSWORD`, `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH` |
+| 429    | `RATE_LIMITED`, `TOO_MANY_ATTEMPTS` (com `Retry-After`)                                          |
 | 500    | `INTERNAL_ERROR` — mensagem genérica; o detalhe fica só no log, com o mesmo `traceId`             |
 
 Stack trace, SQL, token e credenciais nunca saem no corpo.
@@ -66,10 +80,9 @@ Stack trace, SQL, token e credenciais nunca saem no corpo.
 
 ```bash
 H='Content-Type: application/json'
-CUSTOMER=$(curl -s -X POST localhost:8100/api/v1/customers -H "$H" \
-  -d '{"name":"Ana Souza","document":"529.982.247-25","email":"ana@example.com","phone":"+5511999990001"}' | jq -r .id)
-ACCOUNT=$(curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "X-Customer-Id: $CUSTOMER" -d '{"type":"CHECKING"}' | jq -r .id)
-curl -s -X POST localhost:8100/api/v1/accounts/$ACCOUNT/deposits -H "$H" -H "X-Customer-Id: $CUSTOMER" -d '{"amount":"1000.00"}'
+curl -s -X POST localhost:8100/api/v1/auth/register -H "$H"   -d '{"name":"Ana Souza","document":"529.982.247-25","email":"ana@example.com","phone":"+5511999990001","password":"Correct-Horse-Battery-9"}'
+TOKEN=$(curl -s -X POST localhost:8100/api/v1/auth/login -H "$H"   -d '{"email":"ana@example.com","password":"Correct-Horse-Battery-9"}' | jq -r .accessToken)
+curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer $TOKEN" -d '{"type":"CHECKING"}'
 ```
 
 ## Idempotência (estado atual)

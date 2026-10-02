@@ -4,7 +4,7 @@ import com.securebank.payment.application.PaymentApplicationService;
 import com.securebank.payment.domain.Payment;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.PaymentId;
-import com.securebank.shared.infrastructure.web.CurrentCustomer;
+import com.securebank.shared.infrastructure.web.CurrentUser;
 import com.securebank.shared.infrastructure.web.MoneyResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -50,9 +50,9 @@ class PaymentController {
     record PaymentPage(List<PaymentResponse> items, int page, int size, long totalElements) {}
 
     private final PaymentApplicationService payments;
-    private final CurrentCustomer current;
+    private final CurrentUser current;
 
-    PaymentController(PaymentApplicationService payments, CurrentCustomer current) {
+    PaymentController(PaymentApplicationService payments, CurrentUser current) {
         this.payments = payments;
         this.current = current;
     }
@@ -61,19 +61,19 @@ class PaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     PaymentResponse create(@RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentRequest request) {
-        return PaymentResponse.of(payments.pay(current.id(), new AccountId(request.accountId()), request.amount(),
+        return PaymentResponse.of(payments.pay(current.customerId(), new AccountId(request.accountId()), request.amount(),
                 request.barcode(), request.description(), idempotencyKey));
     }
 
     @GetMapping
     PaymentPage list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        var result = payments.list(current.id(), page, size);
+        var result = payments.list(current.customerId(), page, size);
         return new PaymentPage(result.items().stream().map(PaymentResponse::of).toList(), result.page(),
                 result.size(), result.totalElements());
     }
 
     @GetMapping("/{id}")
     PaymentResponse get(@PathVariable String id) {
-        return PaymentResponse.of(payments.get(current.id(), PaymentId.of(id)));
+        return PaymentResponse.of(payments.get(current.customerId(), PaymentId.of(id)));
     }
 }

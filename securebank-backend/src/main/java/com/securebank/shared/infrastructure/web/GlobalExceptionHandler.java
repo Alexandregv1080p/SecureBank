@@ -44,9 +44,20 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         HttpStatus status = switch (e.kind()) {
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case CONFLICT -> HttpStatus.CONFLICT;
+            case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case TOO_MANY_REQUESTS -> HttpStatus.TOO_MANY_REQUESTS;
         };
-        return body(status, e.code(), e.getMessage(), request.getRequestURI(), null);
+        ResponseEntity<Object> response = body(status, e.code(), e.getMessage(), request.getRequestURI(), null);
+        if (e.kind() == ApplicationException.Kind.TOO_MANY_REQUESTS) {
+            return ResponseEntity.status(status).header(HttpHeaders.RETRY_AFTER, String.valueOf(e.retryAfterSeconds()))
+                    .body(response.getBody());
+        }
+        if (e.kind() == ApplicationException.Kind.UNAUTHENTICATED) {
+            return ResponseEntity.status(status).header(HttpHeaders.WWW_AUTHENTICATE, "Bearer").body(response.getBody());
+        }
+        return response;
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)

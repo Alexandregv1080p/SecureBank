@@ -1,6 +1,7 @@
 package com.securebank.customer.domain;
 
 import com.securebank.shared.domain.CustomerId;
+import com.securebank.shared.domain.Email;
 import com.securebank.shared.domain.InvalidStateTransitionException;
 import com.securebank.shared.domain.InvalidValueException;
 import java.time.Instant;

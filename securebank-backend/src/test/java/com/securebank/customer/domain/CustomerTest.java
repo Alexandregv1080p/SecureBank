@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.securebank.DomainFixtures;
+import com.securebank.shared.domain.Email;
 import com.securebank.shared.domain.InvalidStateTransitionException;
 import com.securebank.shared.domain.InvalidValueException;
 import java.time.Instant;

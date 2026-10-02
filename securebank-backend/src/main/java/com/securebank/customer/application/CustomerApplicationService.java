@@ -2,7 +2,7 @@ package com.securebank.customer.application;
 
 import com.securebank.customer.domain.Cpf;
 import com.securebank.customer.domain.Customer;
-import com.securebank.customer.domain.Email;
+import com.securebank.shared.domain.Email;
 import com.securebank.customer.domain.Phone;
 import com.securebank.shared.application.ApplicationException;
 import com.securebank.shared.application.BankTime;

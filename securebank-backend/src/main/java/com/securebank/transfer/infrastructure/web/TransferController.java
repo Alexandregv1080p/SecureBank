@@ -2,7 +2,7 @@ package com.securebank.transfer.infrastructure.web;
 
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.TransferId;
-import com.securebank.shared.infrastructure.web.CurrentCustomer;
+import com.securebank.shared.infrastructure.web.CurrentUser;
 import com.securebank.shared.infrastructure.web.MoneyResponse;
 import com.securebank.transfer.application.TransferApplicationService;
 import com.securebank.transfer.domain.Transfer;
@@ -52,9 +52,9 @@ class TransferController {
     record TransferPage(List<TransferResponse> items, int page, int size, long totalElements) {}
 
     private final TransferApplicationService transfers;
-    private final CurrentCustomer current;
+    private final CurrentUser current;
 
-    TransferController(TransferApplicationService transfers, CurrentCustomer current) {
+    TransferController(TransferApplicationService transfers, CurrentUser current) {
         this.transfers = transfers;
         this.current = current;
     }
@@ -63,20 +63,20 @@ class TransferController {
     @ResponseStatus(HttpStatus.CREATED)
     TransferResponse create(@RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TransferRequest request) {
-        return TransferResponse.of(transfers.transfer(current.id(), new AccountId(request.sourceAccountId()),
+        return TransferResponse.of(transfers.transfer(current.customerId(), new AccountId(request.sourceAccountId()),
                 request.destinationBranch(), request.destinationAccountNumber(), request.amount(),
                 request.description(), idempotencyKey));
     }
 
     @GetMapping
     TransferPage list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        var result = transfers.list(current.id(), page, size);
+        var result = transfers.list(current.customerId(), page, size);
         return new TransferPage(result.items().stream().map(TransferResponse::of).toList(), result.page(),
                 result.size(), result.totalElements());
     }
 
     @GetMapping("/{id}")
     TransferResponse get(@PathVariable String id) {
-        return TransferResponse.of(transfers.get(current.id(), TransferId.of(id)));
+        return TransferResponse.of(transfers.get(current.customerId(), TransferId.of(id)));
     }
 }

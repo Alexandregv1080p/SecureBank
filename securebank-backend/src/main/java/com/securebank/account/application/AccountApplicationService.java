@@ -1,6 +1,9 @@
 package com.securebank.account.application;
 
 import com.securebank.account.domain.Account;
+import com.securebank.audit.application.AuditEntry;
+import com.securebank.audit.application.AuditService;
+import com.securebank.audit.domain.AuditEvent;
 import com.securebank.account.domain.AccountType;
 import com.securebank.account.domain.Branch;
 import com.securebank.customer.application.CustomerApplicationService;
@@ -42,10 +45,11 @@ public class AccountApplicationService {
     private final LimitUsage limitUsage;
     private final TransactionRepository transactions;
     private final BankTime time;
+    private final AuditService audit;
 
     public AccountApplicationService(AccountRepository accounts, AccountNumberGenerator numbers,
             CustomerApplicationService customers, LimitRepository limits, LimitUsage limitUsage,
-            TransactionRepository transactions, BankTime time) {
+            TransactionRepository transactions, BankTime time, AuditService audit) {
         this.accounts = accounts;
         this.numbers = numbers;
         this.customers = customers;
@@ -53,6 +57,7 @@ public class AccountApplicationService {
         this.limitUsage = limitUsage;
         this.transactions = transactions;
         this.time = time;
+        this.audit = audit;
     }
 
     public Account open(CustomerId requester, AccountType type) {
@@ -111,6 +116,27 @@ public class AccountApplicationService {
         }
         PageResult.validate(page, size);
         return transactions.findStatement(account.id(), start, end, page, size);
+    }
+
+    /** Bloqueio administrativo (permissão MANAGE_ACCOUNTS): qualquer conta, não só as do chamador. */
+    public Account block(AccountId id) {
+        Account account = findAny(id);
+        account.block(time.now());
+        accounts.save(account);
+        audit.record(AuditEntry.of(AuditEvent.ACCOUNT_BLOCKED).account(id));
+        return account;
+    }
+
+    public Account unblock(AccountId id) {
+        Account account = findAny(id);
+        account.unblock(time.now());
+        accounts.save(account);
+        audit.record(AuditEntry.of(AuditEvent.ACCOUNT_UNBLOCKED).account(id));
+        return account;
+    }
+
+    private Account findAny(AccountId id) {
+        return accounts.findById(id).orElseThrow(() -> ApplicationException.notFound("Account"));
     }
 
     @Transactional(readOnly = true)

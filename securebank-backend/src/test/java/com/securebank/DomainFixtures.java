@@ -6,7 +6,7 @@ import com.securebank.account.domain.AccountType;
 import com.securebank.account.domain.Branch;
 import com.securebank.customer.domain.Cpf;
 import com.securebank.customer.domain.Customer;
-import com.securebank.customer.domain.Email;
+import com.securebank.shared.domain.Email;
 import com.securebank.customer.domain.Phone;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.IdempotencyKey;

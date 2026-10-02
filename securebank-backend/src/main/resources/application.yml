@@ -9,6 +9,12 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5439/securebank}
     username: ${DB_USER:securebank}
     password: ${DB_PASSWORD}
+  data:
+    redis:
+      client-type: jedis
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: validate   # Flyway é o dono do schema; JPA só valida
@@ -23,7 +29,25 @@ springdoc:
   swagger-ui:
     enabled: ${API_DOCS_ENABLED:false}
 
+# Autenticação e segurança. Segredos só por ambiente; os padrões seguem a seção 17 (access 15 min, refresh rotativo).
+securebank:
+  auth:
+    issuer: securebank
+    audience: securebank-api
+  security:
+    mfa-encryption-key: ${MFA_ENCRYPTION_KEY:}   # obrigatória: AES-256 em Base64 (openssl rand -base64 32)
+    jwt:
+      private-key: ${JWT_PRIVATE_KEY:}           # PEM PKCS#8; vazio = par efêmero (só dev)
+      public-key: ${JWT_PUBLIC_KEY:}
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}       # cria o 1º ADMIN se informado
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  ratelimit:
+    enabled: true
+
 server:
+  # Atrás do nginx: o IP real vem do X-Forwarded-For (Tomcat só confia em proxies de rede privada).
+  forward-headers-strategy: native
   # Erros nunca vazam stack trace nem mensagem interna para o cliente.
   error:
     include-stacktrace: never

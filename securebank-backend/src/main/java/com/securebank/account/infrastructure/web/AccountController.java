@@ -5,7 +5,7 @@ import com.securebank.account.domain.Account;
 import com.securebank.account.domain.AccountType;
 import com.securebank.limit.application.LimitUsage;
 import com.securebank.shared.domain.AccountId;
-import com.securebank.shared.infrastructure.web.CurrentCustomer;
+import com.securebank.shared.infrastructure.web.CurrentUser;
 import com.securebank.shared.infrastructure.web.MoneyResponse;
 import com.securebank.transaction.domain.Transaction;
 import jakarta.validation.Valid;
@@ -71,9 +71,9 @@ class AccountController {
     }
 
     private final AccountApplicationService accounts;
-    private final CurrentCustomer current;
+    private final CurrentUser current;
 
-    AccountController(AccountApplicationService accounts, CurrentCustomer current) {
+    AccountController(AccountApplicationService accounts, CurrentUser current) {
         this.accounts = accounts;
         this.current = current;
     }
@@ -81,22 +81,22 @@ class AccountController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     AccountResponse open(@Valid @RequestBody OpenAccountRequest request) {
-        return AccountResponse.of(accounts.open(current.id(), request.type()));
+        return AccountResponse.of(accounts.open(current.customerId(), request.type()));
     }
 
     @GetMapping
     List<AccountResponse> list() {
-        return accounts.list(current.id()).stream().map(AccountResponse::of).toList();
+        return accounts.list(current.customerId()).stream().map(AccountResponse::of).toList();
     }
 
     @GetMapping("/{id}")
     AccountResponse get(@PathVariable String id) {
-        return AccountResponse.of(accounts.findOwned(current.id(), AccountId.of(id)));
+        return AccountResponse.of(accounts.findOwned(current.customerId(), AccountId.of(id)));
     }
 
     @GetMapping("/{id}/balance")
     BalanceResponse balance(@PathVariable String id) {
-        Account account = accounts.findOwned(current.id(), AccountId.of(id));
+        Account account = accounts.findOwned(current.customerId(), AccountId.of(id));
         return new BalanceResponse(account.id().value(), MoneyResponse.of(account.balance()), Instant.now());
     }
 
@@ -106,25 +106,25 @@ class AccountController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        var result = accounts.statement(current.id(), AccountId.of(id), from, to, page, size);
+        var result = accounts.statement(current.customerId(), AccountId.of(id), from, to, page, size);
         return new StatementResponse(result.items().stream().map(TransactionResponse::of).toList(), result.page(),
                 result.size(), result.totalElements());
     }
 
     @GetMapping("/{id}/limits")
     List<LimitResponse> limits(@PathVariable String id) {
-        return accounts.limits(current.id(), AccountId.of(id)).stream().map(LimitResponse::of).toList();
+        return accounts.limits(current.customerId(), AccountId.of(id)).stream().map(LimitResponse::of).toList();
     }
 
     @PostMapping("/{id}/deposits")
     @ResponseStatus(HttpStatus.CREATED)
     TransactionResponse deposit(@PathVariable String id, @Valid @RequestBody AmountRequest request) {
-        return TransactionResponse.of(accounts.deposit(current.id(), AccountId.of(id), request.amount()));
+        return TransactionResponse.of(accounts.deposit(current.customerId(), AccountId.of(id), request.amount()));
     }
 
     @PostMapping("/{id}/withdrawals")
     @ResponseStatus(HttpStatus.CREATED)
     TransactionResponse withdraw(@PathVariable String id, @Valid @RequestBody AmountRequest request) {
-        return TransactionResponse.of(accounts.withdraw(current.id(), AccountId.of(id), request.amount()));
+        return TransactionResponse.of(accounts.withdraw(current.customerId(), AccountId.of(id), request.amount()));
     }
 }

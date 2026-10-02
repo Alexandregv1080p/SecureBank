@@ -3,6 +3,9 @@ package com.securebank.payment.application;
 import com.securebank.account.application.AccountApplicationService;
 import com.securebank.account.application.AccountRepository;
 import com.securebank.account.domain.Account;
+import com.securebank.audit.application.AuditEntry;
+import com.securebank.audit.application.AuditService;
+import com.securebank.audit.domain.AuditEvent;
 import com.securebank.customer.application.CustomerApplicationService;
 import com.securebank.limit.application.LimitUsage;
 import com.securebank.limit.domain.LimitType;
@@ -13,6 +16,7 @@ import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CustomerId;
+import com.securebank.shared.domain.DomainException;
 import com.securebank.shared.domain.IdempotencyKey;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PaymentId;
@@ -22,7 +26,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -37,10 +44,13 @@ public class PaymentApplicationService {
     private final LimitUsage limitUsage;
     private final TransactionRepository transactions;
     private final BankTime time;
+    private final AuditService audit;
+    private final TransactionTemplate tx;
 
     public PaymentApplicationService(PaymentRepository payments, AccountApplicationService accountService,
             AccountRepository accounts, CustomerApplicationService customers, LimitUsage limitUsage,
-            TransactionRepository transactions, BankTime time) {
+            TransactionRepository transactions, BankTime time, AuditService audit,
+            PlatformTransactionManager transactionManager) {
         this.payments = payments;
         this.accountService = accountService;
         this.accounts = accounts;
@@ -48,9 +58,26 @@ public class PaymentApplicationService {
         this.limitUsage = limitUsage;
         this.transactions = transactions;
         this.time = time;
+        this.audit = audit;
+        this.tx = new TransactionTemplate(transactionManager);
     }
 
+    /** Mesmo desenho da transferência: sucesso auditado na transação; falha auditada em transação à parte. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment pay(CustomerId requester, AccountId accountId, BigDecimal amount, String barcode,
+            String description, String idempotencyKey) {
+        try {
+            return tx.execute(status -> doPay(requester, accountId, amount, barcode, description, idempotencyKey));
+        } catch (DomainException e) {
+            audit.recordIndependently(AuditEntry.of(AuditEvent.PAYMENT_FAILED).account(accountId).detail(e.code()));
+            throw e;
+        } catch (ApplicationException e) {
+            audit.recordIndependently(AuditEntry.of(AuditEvent.PAYMENT_FAILED).account(accountId).detail(e.code()));
+            throw e;
+        }
+    }
+
+    private Payment doPay(CustomerId requester, AccountId accountId, BigDecimal amount, String barcode,
             String description, String idempotencyKey) {
         customers.requireActive(requester);
         Account account = accountService.findOwned(requester, accountId);
@@ -71,6 +98,8 @@ public class PaymentApplicationService {
         accounts.save(account);
         transactions.save(transaction);
         payments.save(payment);
+        audit.record(AuditEntry.of(AuditEvent.PAYMENT_CREATED).account(account.id()).transaction(transaction.id())
+                .detail(payment.id().toString()));
         return payment;
     }
 

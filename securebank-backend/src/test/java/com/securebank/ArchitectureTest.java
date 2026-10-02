@@ -26,7 +26,7 @@ class ArchitectureTest {
             .that().resideInAPackage("..application..")
             .should().dependOnClassesThat().resideInAnyPackage(
                     "..infrastructure..", "jakarta.persistence..", "org.hibernate..", "org.springframework.data..",
-                    "org.springframework.web..", "jakarta.servlet..");
+                    "org.springframework.web..", "jakarta.servlet..", "org.springframework.security..");
 
     /** O modelo de persistência é detalhe: só os adapters do próprio pacote o enxergam. */
     @ArchTest

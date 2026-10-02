@@ -20,7 +20,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,12 +34,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Jornada completa do Core Banking pela API, com Postgres real (Flyway + JPA + triggers). */
-@SpringBootTest(properties = "securebank.devidentity.enabled=true")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
 class CoreBankingApiTest {
 
-    private static final AtomicLong SEQ = new AtomicLong(System.nanoTime());
     private static final String BARCODE = "34191790010104351004791020150008291070026000";
 
     @Autowired MockMvc mvc;
@@ -49,55 +47,53 @@ class CoreBankingApiTest {
     // ---------- cliente ----------
 
     @Test
-    void customerRegistersAndReadsOwnProfileWithMaskedDocument() throws Exception {
-        String cpf = cpf();
-        String email = "ana-" + UUID.randomUUID() + "@example.com";
-        String body = json("""
-                {"name":"Ana Souza","document":"%s","email":"%s","phone":"+5511999990001"}""", cpf, email);
+    void customerReadsAndUpdatesOwnProfileWithMaskedDocument() throws Exception {
+        TestUsers.Login login = TestUsers.registerAndLogin(mvc);
 
-        MvcResult created = mvc.perform(post("/api/v1/customers").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.document").value(matchesPattern("\\*\\*\\*\\.\\d{3}\\.\\*\\*\\*-\\*\\*")))
-                .andReturn();
-        String id = read(created, "$.id");
-
-        mvc.perform(as(id, get("/api/v1/customers/me")))
+        mvc.perform(as(login.accessToken(), get("/api/v1/customers/me")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.email").value(email));
+                .andExpect(jsonPath("$.id").value(login.customerId()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.email").value(login.email()))
+                .andExpect(jsonPath("$.document").value(matchesPattern("\\*\\*\\*\\.\\d{3}\\.\\*\\*\\*-\\*\\*")));
 
-        mvc.perform(as(id, patch("/api/v1/customers/me")).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(as(login.accessToken(), patch("/api/v1/customers/me")).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"phone\":\"+5521988887777\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.phone").value("+5521988887777"))
-                .andExpect(jsonPath("$.email").value(email)); // não enviado = não muda
+                .andExpect(jsonPath("$.email").value(login.email())); // não enviado = não muda
+    }
 
-        // CPF/e-mail repetidos: 409 genérico, sem dizer qual dado já existe
-        mvc.perform(post("/api/v1/customers").contentType(MediaType.APPLICATION_JSON).content(body))
+    @Test
+    void registrationRejectsDuplicatesWithoutSayingWhichFieldExists() throws Exception {
+        TestUsers.Login existing = TestUsers.registerAndLogin(mvc);
+
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(TestUsers.registerBody(existing.email(), TestUsers.PASSWORD)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CUSTOMER_ALREADY_EXISTS"));
     }
 
     @Test
-    void invalidCustomerDataIsRejectedWithFieldErrors() throws Exception {
-        mvc.perform(post("/api/v1/customers").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\",\"document\":\"\",\"email\":\"x\",\"phone\":\"\"}"))
+    void invalidRegistrationDataIsRejectedWithFieldErrors() throws Exception {
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"\",\"document\":\"\",\"email\":\"x\",\"phone\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors").isNotEmpty());
 
-        mvc.perform(post("/api/v1/customers").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(json("""
-                                {"name":"Ana","document":"111.111.111-11","email":"a@b.co","phone":"+5511999990001"}""")))
+                                {"name":"Ana","document":"111.111.111-11","email":"a@b.co","phone":"+5511999990001","password":"%s"}""",
+                                TestUsers.PASSWORD)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_VALUE")); // CPF inválido (regra de domínio)
     }
 
-    // ---------- autenticação provisória / erro padrão ----------
+    // ---------- autenticação / erro padrão ----------
 
     @Test
-    void requestWithoutIdentityIs401InTheStandardErrorFormat() throws Exception {
+    void requestWithoutTokenIs401InTheStandardErrorFormat() throws Exception {
         mvc.perform(get("/api/v1/accounts"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
@@ -107,8 +103,9 @@ class CoreBankingApiTest {
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(header().exists("X-Trace-Id"));
 
-        mvc.perform(get("/api/v1/accounts").header("X-Customer-Id", "not-a-uuid"))
-                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/accounts").header("Authorization", "Bearer not-a-jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     @Test
@@ -400,7 +397,8 @@ class CoreBankingApiTest {
         String account = openAccount(c);
         deposit(c, account, "100.00").andExpect(status().isCreated());
 
-        jdbc.update("update customers set status = 'BLOCKED' where id = ?", UUID.fromString(c));
+        String customerId = read(mvc.perform(as(c, get("/api/v1/customers/me"))).andReturn(), "$.id");
+        jdbc.update("update customers set status = 'BLOCKED' where id = ?", UUID.fromString(customerId));
 
         deposit(c, account, "1.00").andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_ACTIVE"));
@@ -469,16 +467,14 @@ class CoreBankingApiTest {
 
     // ---------- helpers ----------
 
-    private static MockHttpServletRequestBuilder as(String customerId, MockHttpServletRequestBuilder request) {
-        return request.header("X-Customer-Id", customerId);
+    /** Autentica a requisição com o access token (JWT) do cliente. */
+    private static MockHttpServletRequestBuilder as(String accessToken, MockHttpServletRequestBuilder request) {
+        return TestUsers.bearer(accessToken, request);
     }
 
+    /** Registra um cliente novo e devolve o access token dele. */
     private String customer() throws Exception {
-        String body = json("""
-                {"name":"Cliente Teste","document":"%s","email":"c-%s@example.com","phone":"+5511999990001"}""",
-                cpf(), UUID.randomUUID());
-        return read(mvc.perform(post("/api/v1/customers").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isCreated()).andReturn(), "$.id");
+        return TestUsers.registerAndLogin(mvc).accessToken();
     }
 
     private MvcResult openAccountResult(String customerId) throws Exception {
@@ -532,21 +528,5 @@ class CoreBankingApiTest {
 
     private static String read(MvcResult result, String path) throws Exception {
         return JsonPath.read(result.getResponse().getContentAsString(), path);
-    }
-
-    private static String cpf() {
-        String base = String.format("%09d", 100_000_000L + SEQ.incrementAndGet() % 800_000_000L);
-        int first = digit(base, 10);
-        int second = digit(base + first, 11);
-        return base + first + second;
-    }
-
-    private static int digit(String digits, int firstWeight) {
-        int sum = 0;
-        for (int i = 0; i < digits.length(); i++) {
-            sum += (digits.charAt(i) - '0') * (firstWeight - i);
-        }
-        int remainder = (sum * 10) % 11;
-        return remainder == 10 ? 0 : remainder;
     }
 }

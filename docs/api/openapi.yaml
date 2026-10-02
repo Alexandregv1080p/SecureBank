@@ -1,16 +1,46 @@
 openapi: 3.1.0
 info:
   title: SecureBank Core Banking API
-  description: "Clientes, contas, depósitos, saques, transferências, pagamentos, extrato\
-    \ e limites. Valores monetários trafegam como string (\"100.00\"). Transferências\
-    \ e pagamentos exigem o header Idempotency-Key."
+  description: "Autenticação (JWT, refresh com rotação, MFA TOTP), clientes, contas,\
+    \ depósitos, saques, transferências, pagamentos, extrato, limites, auditoria e\
+    \ administração. Valores monetários trafegam como string (\"100.00\"). Transferê\
+    ncias e pagamentos exigem o header Idempotency-Key."
   version: v1
 servers:
 - url: http://localhost:8100
   description: Generated server url
 security:
-- devIdentity: []
+- bearerAuth: []
 paths:
+  /api/v1/admin/accounts/{accountId}/limits/{type}:
+    put:
+      tags:
+      - admin-controller
+      operationId: changeLimit
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: type
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LimitRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LimitView"
   /api/v1/transfers:
     get:
       tags:
@@ -61,6 +91,59 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TransferResponse"
+  /api/v1/security/password:
+    post:
+      tags:
+      - security-controller
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+        required: true
+      responses:
+        "204":
+          description: No Content
+  /api/v1/security/mfa:
+    post:
+      tags:
+      - security-controller
+      operationId: setupMfa
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MfaSetupResponse"
+    delete:
+      tags:
+      - security-controller
+      operationId: disableMfa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeRequest"
+        required: true
+      responses:
+        "204":
+          description: No Content
+  /api/v1/security/mfa/confirm:
+    post:
+      tags:
+      - security-controller
+      operationId: confirmMfa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeRequest"
+        required: true
+      responses:
+        "204":
+          description: No Content
   /api/v1/payments:
     get:
       tags:
@@ -111,10 +194,10 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PaymentResponse"
-  /api/v1/customers:
+  /api/v1/auth/register:
     post:
       tags:
-      - customer-controller
+      - auth-controller
       operationId: register
       requestBody:
         content:
@@ -128,7 +211,151 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/CustomerResponse"
+                $ref: "#/components/schemas/RegisterResponse"
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth-controller
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+  /api/v1/auth/mfa/verify:
+    post:
+      tags:
+      - auth-controller
+      operationId: verifyMfa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaVerifyRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      responses:
+        "204":
+          description: No Content
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth-controller
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+  /api/v1/admin/users:
+    post:
+      tags:
+      - admin-controller
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserView"
+  /api/v1/admin/users/{id}/enable:
+    post:
+      tags:
+      - admin-controller
+      operationId: enableUser
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+  /api/v1/admin/users/{id}/disable:
+    post:
+      tags:
+      - admin-controller
+      operationId: disableUser
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+  /api/v1/admin/accounts/{id}/unblock:
+    post:
+      tags:
+      - admin-controller
+      operationId: unblock
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountStatusView"
+  /api/v1/admin/accounts/{id}/block:
+    post:
+      tags:
+      - admin-controller
+      operationId: block
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountStatusView"
   /api/v1/accounts:
     get:
       tags:
@@ -255,6 +482,20 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TransferResponse"
+  /api/v1/security/sessions:
+    get:
+      tags:
+      - security-controller
+      operationId: sessions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionResponse"
   /api/v1/payments/{id}:
     get:
       tags:
@@ -273,6 +514,83 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PaymentResponse"
+  /api/v1/audit:
+    get:
+      tags:
+      - audit-controller
+      operationId: search
+      parameters:
+      - name: event
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - USER_REGISTERED
+          - LOGIN_SUCCESS
+          - LOGIN_FAILED
+          - LOGOUT
+          - SESSION_REVOKED
+          - REFRESH_TOKEN_REUSE_DETECTED
+          - PASSWORD_CHANGED
+          - MFA_ENABLED
+          - MFA_DISABLED
+          - MFA_FAILED
+          - TRANSFER_CREATED
+          - TRANSFER_FAILED
+          - PAYMENT_CREATED
+          - PAYMENT_FAILED
+          - ACCOUNT_BLOCKED
+          - ACCOUNT_UNBLOCKED
+          - LIMIT_CHANGED
+          - USER_CREATED
+          - USER_DISABLED
+          - USER_ENABLED
+          - ACCESS_DENIED
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuditPage"
+  /api/v1/admin/customers/{id}:
+    get:
+      tags:
+      - admin-controller
+      operationId: customer
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerView"
   /api/v1/accounts/{id}:
     get:
       tags:
@@ -373,8 +691,63 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/BalanceResponse"
+  /.well-known/jwks.json:
+    get:
+      tags:
+      - jwks-controller
+      operationId: jwks
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+  /api/v1/security/sessions/{id}:
+    delete:
+      tags:
+      - security-controller
+      operationId: revokeSession
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
 components:
   schemas:
+    LimitRequest:
+      type: object
+      properties:
+        perOperation:
+          type: number
+          minimum: 0.01
+        daily:
+          type: number
+          minimum: 0.01
+      required:
+      - daily
+      - perOperation
+    LimitView:
+      type: object
+      properties:
+        type:
+          type: string
+        perOperation:
+          $ref: "#/components/schemas/MoneyResponse"
+        daily:
+          $ref: "#/components/schemas/MoneyResponse"
+    MoneyResponse:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
     TransferRequest:
       type: object
       properties:
@@ -401,13 +774,6 @@ components:
       - destinationAccountNumber
       - destinationBranch
       - sourceAccountId
-    MoneyResponse:
-      type: object
-      properties:
-        amount:
-          type: string
-        currency:
-          type: string
     TransferResponse:
       type: object
       properties:
@@ -435,6 +801,36 @@ components:
         createdAt:
           type: string
           format: date-time
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 128
+          minLength: 0
+        newPassword:
+          type: string
+          maxLength: 128
+          minLength: 0
+      required:
+      - currentPassword
+      - newPassword
+    MfaSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+        otpauthUri:
+          type: string
+    CodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+      required:
+      - code
     PaymentRequest:
       type: object
       properties:
@@ -498,30 +894,121 @@ components:
           type: string
           maxLength: 16
           minLength: 0
+        password:
+          type: string
+          maxLength: 128
+          minLength: 0
       required:
       - document
       - email
       - name
+      - password
       - phone
-    CustomerResponse:
+    RegisterResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        email:
+          type: string
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - refreshToken
+    TokenResponse:
+      type: object
+      properties:
+        mfaRequired:
+          type: boolean
+        mfaToken:
+          type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+    MfaVerifyRequest:
+      type: object
+      properties:
+        mfaToken:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+      required:
+      - code
+      - mfaToken
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          minLength: 0
+        password:
+          type: string
+          maxLength: 128
+          minLength: 0
+      required:
+      - email
+      - password
+    CreateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          minLength: 0
+        password:
+          type: string
+          maxLength: 128
+          minLength: 0
+        role:
+          type: string
+          enum:
+          - CUSTOMER
+          - SUPPORT
+          - ADMIN
+      required:
+      - email
+      - password
+      - role
+    UserView:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        name:
-          type: string
-        document:
-          type: string
         email:
           type: string
-        phone:
+        role:
           type: string
         status:
           type: string
-        createdAt:
+    AccountStatusView:
+      type: object
+      properties:
+        id:
           type: string
-          format: date-time
+          format: uuid
+        status:
+          type: string
     OpenAccountRequest:
       type: object
       properties:
@@ -594,6 +1081,25 @@ components:
           type: string
           maxLength: 16
           minLength: 0
+    CustomerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        document:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     TransferPage:
       type: object
       properties:
@@ -610,6 +1116,29 @@ components:
         totalElements:
           type: integer
           format: int64
+    SessionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        ip:
+          type: string
+        userAgent:
+          type: string
+        mfaVerified:
+          type: boolean
+        current:
+          type: boolean
     PaymentPage:
       type: object
       properties:
@@ -626,6 +1155,67 @@ components:
         totalElements:
           type: integer
           format: int64
+    AuditLogResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        event:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        ip:
+          type: string
+        traceId:
+          type: string
+        detail:
+          type: string
+    AuditPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    CustomerView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        document:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     StatementResponse:
       type: object
       properties:
@@ -667,9 +1257,8 @@ components:
           type: string
           format: date-time
   securitySchemes:
-    devIdentity:
-      type: apiKey
-      description: Id do cliente (UUID). Apenas desenvolvimento; substituído por JWT
-        na Fase 4.
-      name: X-Customer-Id
-      in: header
+    bearerAuth:
+      type: http
+      description: "Access token (RS256, 15 min) obtido em POST /api/v1/auth/login"
+      scheme: bearer
+      bearerFormat: JWT

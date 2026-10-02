@@ -27,8 +27,8 @@ Portas configuráveis em `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`).
 ## Desenvolvimento
 
 ```bash
-docker compose up -d postgres                 # só o banco
-cd securebank-backend && SECUREBANK_DEVIDENTITY_ENABLED=true ./mvnw spring-boot:run   # API em :8080 (lê ../.env)
+docker compose up -d postgres redis           # banco e Redis
+cd securebank-backend && ./mvnw spring-boot:run   # API em :8080 (lê ../.env)
 cd securebank-web && npm install && npm run dev   # Vite em :5173, proxy /api → :8080
 ```
 
@@ -39,7 +39,7 @@ cd securebank-backend && ./mvnw verify
 ```
 
 API: contrato em [`docs/api/openapi.yaml`](docs/api/openapi.yaml) e guia em [`docs/api/README.md`](docs/api/README.md);
-com o compose no ar, Swagger UI em http://localhost:8100/swagger-ui/index.html. Até a Fase 4 a identidade é o header
-`X-Customer-Id` (provisório e forjável — só para desenvolvimento).
+com o compose no ar, Swagger UI em http://localhost:8100/swagger-ui/index.html. Autenticação JWT: veja [`docs/security/`](docs/security/authentication.md).
+O primeiro ADMIN vem de `BOOTSTRAP_ADMIN_EMAIL/PASSWORD` no `.env`.
 
 Segredos nunca entram no Git: `.env` é ignorado, `.env.example` só tem placeholders.

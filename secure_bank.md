@@ -1920,16 +1920,30 @@ ADR-010 — Observability
 
 ## Fase 4 — Segurança
 
-* [ ] Spring Security
-* [ ] OAuth2/OIDC
-* [ ] JWT
-* [ ] Refresh Token
-* [ ] MFA
-* [ ] RBAC
-* [ ] Resource Authorization
-* [ ] Rate Limiting
-* [ ] Audit Log
-* [ ] Session Management
+* [x] Spring Security
+* [x] OAuth2/OIDC
+* [x] JWT
+* [x] Refresh Token
+* [x] MFA
+* [x] RBAC
+* [x] Resource Authorization
+* [x] Rate Limiting
+* [x] Audit Log
+* [x] Session Management
+
+**Decisões da Fase 4** (detalhes em [`docs/security/`](docs/security/authentication.md), [ADR-002](docs/architecture/decisions/ADR-002-jwt-oidc.md), [ADR-003](docs/architecture/decisions/ADR-003-redis.md)):
+
+* A identidade provisória (`X-Customer-Id`) e `POST /customers` **foram removidos**. Cadastro vira `POST /auth/register` (Customer + User); a API é *resource server* JWT.
+* "OAuth2/OIDC" = emissor próprio (módulo `authentication`) com JWT **RS256**, JWKS em `/.well-known/jwks.json`, `iss`/`aud` validados; não é um IdP OIDC completo (ADR-002).
+* Access 15 min; refresh opaco **rotativo** guardado só como SHA-256; reuso revoga a sessão inteira; revogação vale na hora via denylist em Redis (falha fechada).
+* MFA TOTP (RFC 6238) implementado à mão e validado com os vetores do RFC; segredo cifrado com AES-256-GCM; anti-replay por passo.
+* Senhas em Argon2id (BouncyCastle); política NIST-like; login com resposta e tempo uniformes; bloqueio por e-mail (5/15 min) + rate limit por IP/usuário.
+* RBAC por permissão resolvida no servidor, negar por padrão (`anyRequest().denyAll()`); `SUPPORT`/`ADMIN` não operam contas de clientes.
+* Endpoints extras além da spec: `POST /security/password`, `POST /security/mfa/confirm`, rotas `/admin/**` (limites, bloqueio de conta, usuários da equipe), `GET /audit`; permissão `MANAGE_ACCOUNTS`.
+* Auditoria append-only (trigger), sucesso na mesma transação, falhas em transação independente; IP mascarado.
+* Cliente Redis = **Jedis** (I/O bloqueante). O Lettuce não consegue abrir o selector NIO dentro do sandbox desta sessão, e para contadores síncronos o Jedis atende igual.
+* Pendências: códigos de recuperação de MFA, redefinição de senha por e-mail, rotação de chaves JWT (Fase 12), transporte do refresh no front (Fase 7).
+* Testes: 166 no total — `AuthenticationFlowTest`, `MfaTest`, `JwtAttackTest` (alg=none, adulteração, outra chave, RS256→HS256, aud/iss), `AuthorizationTest` (RBAC, admin, auditoria), `RateLimitTest`. Desativar cada controle (reuso de refresh, denylist, deny-by-default, audiência) faz um teste falhar.
 
 ---
 

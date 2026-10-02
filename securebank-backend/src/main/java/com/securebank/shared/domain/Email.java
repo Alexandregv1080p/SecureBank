@@ -1,6 +1,5 @@
-package com.securebank.customer.domain;
+package com.securebank.shared.domain;
 
-import com.securebank.shared.domain.InvalidValueException;
 import java.util.Locale;
 import java.util.regex.Pattern;
 

@@ -16,7 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class FoundationTest {
+class FoundationIT {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;

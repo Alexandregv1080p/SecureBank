@@ -18,6 +18,11 @@
 		<archunit.version>1.5.1</archunit.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<bouncycastle.version>1.86</bouncycastle.version>
+		<rest-assured.version>6.0.1</rest-assured.version>
+		<jacoco.version>0.8.15</jacoco.version>
+		<pitest.version>1.30.0</pitest.version>
+		<!-- pasta curta para o socket AF_UNIX do JDK (o TEMP do Windows em formato 8.3 quebra o Selector) -->
+		<unixdomain.tmpdir>${java.io.tmpdir}</unixdomain.tmpdir>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -109,6 +114,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>${rest-assured.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-kafka</artifactId>
 			<scope>test</scope>
@@ -126,12 +137,116 @@
 		</dependency>
 	</dependencies>
 
+	<profiles>
+		<!-- Teste de mutação do domínio (lento, fora do build padrão): ./mvnw -Ppitest test-compile pitest:mutationCoverage -->
+		<profile>
+			<id>pitest</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+						<version>${pitest.version}</version>
+						<dependencies>
+							<dependency>
+								<groupId>org.pitest</groupId>
+								<artifactId>pitest-junit5-plugin</artifactId>
+								<version>1.2.3</version>
+							</dependency>
+						</dependencies>
+						<configuration>
+							<targetClasses>
+								<param>com.securebank.*.domain.*</param>
+							</targetClasses>
+							<targetTests>
+								<param>com.securebank.*.domain.*Test</param>
+								<param>com.securebank.shared.domain.*Test</param>
+							</targetTests>
+							<mutationThreshold>85</mutationThreshold>
+							<outputFormats><param>HTML</param><param>XML</param></outputFormats>
+							<argLine>-Djdk.net.unixdomain.tmpdir=${unixdomain.tmpdir}</argLine>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>windows-short-tmp</id>
+			<activation><os><family>windows</family></os></activation>
+			<properties><unixdomain.tmpdir>C:\Temp</unixdomain.tmpdir></properties>
+		</profile>
+	</profiles>
+
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+					<execution>
+						<goals><goal>prepare-agent</goal></goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals><goal>report</goal></goals>
+					</execution>
+					<execution>
+						<id>check</id>
+						<phase>verify</phase>
+						<goals><goal>check</goal></goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.90</minimum>
+										</limit>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.70</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- unitários (*Test, sem Docker) no surefire; integração (*IT, Testcontainers) no failsafe -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} -Djdk.net.unixdomain.tmpdir=${unixdomain.tmpdir}</argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} -Djdk.net.unixdomain.tmpdir=${unixdomain.tmpdir}</argLine>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
+
+	<!-- Teste de mutação do domínio: mvn -Ppitest verify (lento; não roda no build padrão) -->
 </project>

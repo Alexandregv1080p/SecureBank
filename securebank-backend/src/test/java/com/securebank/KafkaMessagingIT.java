@@ -42,8 +42,8 @@ import tools.jackson.databind.json.JsonMapper;
 /** Kafka de verdade: publicação pelo outbox, consumidor idempotente, retry e Dead Letter Topic. */
 @SpringBootTest(properties = {"securebank.kafka.enabled=true", "spring.autoconfigure.exclude="})
 @AutoConfigureMockMvc
-@Import({TestcontainersConfig.class, KafkaMessagingTest.Broker.class})
-class KafkaMessagingTest {
+@Import({TestcontainersConfig.class, KafkaMessagingIT.Broker.class})
+class KafkaMessagingIT {
 
     @TestConfiguration(proxyBeanMethods = false)
     static class Broker {

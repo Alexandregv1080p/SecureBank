@@ -38,7 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class JwtAttackTest {
+class JwtAttackIT {
 
     @Autowired MockMvc mvc;
     @Autowired JwtEncoder encoder; // assina com a chave REAL do servidor (só os testes têm acesso)

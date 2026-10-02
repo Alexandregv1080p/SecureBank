@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class AuthorizationTest {
+class AuthorizationIT {
 
     private static final String BARCODE = "34191790010104351004791020150008291070026000";
 

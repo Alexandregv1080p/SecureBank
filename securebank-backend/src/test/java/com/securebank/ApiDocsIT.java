@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(properties = "springdoc.api-docs.enabled=true")
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class ApiDocsTest {
+class ApiDocsIT {
 
     @Autowired MockMvc mvc;
 

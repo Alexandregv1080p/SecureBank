@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class CoreBankingApiTest {
+class CoreBankingApiIT {
 
     private static final String BARCODE = "34191790010104351004791020150008291070026000";
 

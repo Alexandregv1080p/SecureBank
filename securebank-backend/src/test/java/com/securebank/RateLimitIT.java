@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
         "securebank.ratelimit.money-per-minute-user=2"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class RateLimitTest {
+class RateLimitIT {
 
     @Autowired MockMvc mvc;
     @Autowired StringRedisTemplate redis;

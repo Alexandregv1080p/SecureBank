@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig.class)
-class AuthenticationFlowTest {
+class AuthenticationFlowIT {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;

@@ -2013,12 +2013,22 @@ ADR-010 — Observability
 
 ## Fase 8 — Testes
 
-* [ ] Unit Tests
-* [ ] Integration Tests
-* [ ] API Tests
-* [ ] Testcontainers
-* [ ] Security Tests
-* [ ] Concurrency Tests
+* [x] Unit Tests
+* [x] Integration Tests
+* [x] API Tests
+* [x] Testcontainers
+* [x] Security Tests
+* [x] Concurrency Tests
+
+**Decisões da Fase 8** (estratégia completa em [`docs/testing.md`](docs/testing.md)):
+
+* Unitários (`*Test`, surefire, sem Docker, segundos) separados da integração (`*IT`, failsafe, Testcontainers). `./mvnw test` é o ciclo rápido; `./mvnw verify` roda tudo.
+* **JaCoCo** com gate de build: 90% de linhas e 70% de ramos (hoje ~95% / ~77%).
+* **Teste de mutação (PIT)** no domínio, perfil `pitest` (job `mutation` no CI): subiu de 76% para **88%** com testes dirigidos (Base32 pelos vetores da RFC 4648, fronteiras da política de senha, `restore` sem perda de campos, tópicos, limites); gate de 85%.
+* API por **HTTP real** (REST Assured + Tomcat em porta aleatória): cabeçalhos de segurança, ausência de CORS, cookie `HttpOnly`, formato de erro, fluxo com replay. Só foi possível depois de achar a causa do problema de `Selector` no Windows (Fase 6).
+* Falhas que a medição expôs e agora têm teste: **Redis fora do ar** (tokens negados e 503 no limite de taxa, falha fechada), retomada de chave de idempotência abandonada/expirada, agendador do outbox.
+* Front: Vitest do cliente HTTP (renovação única em 401, erros incertos) e do mapa de mensagens (13 testes).
+* Totais: backend 120 unitários + 90 de integração; front 13. Testes de componente/E2E do front ficam como pendência.
 
 ---
 

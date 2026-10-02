@@ -74,4 +74,26 @@ class TotpTest {
         assertThat(uri).startsWith("otpauth://totp/SecureBank:ana%40example.com?secret=JBSWY3DPEHPK3PXP")
                 .contains("issuer=SecureBank").contains("digits=6").contains("period=30");
     }
+
+    @Test
+    void base32MatchesTheRfc4648Vectors() {
+        String[][] vectors = {{"f", "MY"}, {"fo", "MZXQ"}, {"foo", "MZXW6"}, {"foob", "MZXW6YQ"}, {"fooba", "MZXW6YTB"},
+                {"foobar", "MZXW6YTBOI"}};
+        for (String[] v : vectors) {
+            byte[] raw = v[0].getBytes(StandardCharsets.US_ASCII);
+            assertThat(Base32.encode(raw)).isEqualTo(v[1]);
+            assertThat(Base32.decode(v[1])).isEqualTo(raw);
+        }
+        assertThat(Base32.encode(new byte[0])).isEmpty();
+        assertThat(Base32.decode("mzxw6ytboi")).isEqualTo("foobar".getBytes(StandardCharsets.US_ASCII)); // minúsculas
+        assertThat(Base32.decode("MZXW6YQ=")).isEqualTo("foob".getBytes(StandardCharsets.US_ASCII)); // com padding
+        assertThat(Base32.decode("MZXW 6YTB")).isEqualTo("fooba".getBytes(StandardCharsets.US_ASCII)); // com espaço
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> Base32.decode("MZXW1")) // '1' não existe em Base32
+                .isInstanceOf(com.securebank.shared.domain.InvalidValueException.class);
+    }
+
+    @Test
+    void generatedSecretsAreUnique() {
+        assertThat(Totp.generateSecret()).isNotEqualTo(Totp.generateSecret());
+    }
 }

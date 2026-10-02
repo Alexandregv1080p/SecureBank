@@ -32,10 +32,12 @@ cd securebank-backend && ./mvnw spring-boot:run   # API em :8080 (lê ../.env)
 cd securebank-web && npm install && npm run dev   # Vite em :5173, proxy /api → :8080
 ```
 
-Testes do backend (Testcontainers sobe um Postgres real, Docker precisa estar ativo):
+Testes (estratégia em [`docs/testing.md`](docs/testing.md)):
 
 ```bash
-cd securebank-backend && ./mvnw verify
+cd securebank-backend && ./mvnw test      # unitários, sem Docker
+cd securebank-backend && ./mvnw verify    # + integração (Docker) e cobertura
+cd securebank-web && npm test
 ```
 
 API: contrato em [`docs/api/openapi.yaml`](docs/api/openapi.yaml) e guia em [`docs/api/README.md`](docs/api/README.md);

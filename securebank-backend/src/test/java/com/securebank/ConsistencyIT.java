@@ -40,8 +40,8 @@ import org.springframework.test.web.servlet.ResultActions;
 /** Fase 5: idempotência com replay, concorrência (versão otimista + retry) e Transactional Outbox. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({TestcontainersConfig.class, ConsistencyTest.Capture.class})
-class ConsistencyTest {
+@Import({TestcontainersConfig.class, ConsistencyIT.Capture.class})
+class ConsistencyIT {
 
     static class CapturingPublisher implements EventPublisher {
         final List<OutboxEvent> published = new CopyOnWriteArrayList<>();

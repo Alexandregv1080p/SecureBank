@@ -1,0 +1,12 @@
+title = "SecureBank gitleaks"
+
+[extend]
+useDefault = true
+
+# .env.example só traz placeholders ("change-me"); o .env real é ignorado pelo Git. Segredos de teste são descartáveis.
+[[allowlists]]
+description = "placeholders e segredos descartáveis de teste"
+paths = [
+  '''\.env\.example$''',
+  '''securebank-backend/src/test/resources/application\.properties$''',
+]

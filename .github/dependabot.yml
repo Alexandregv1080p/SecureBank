@@ -1,0 +1,39 @@
+version: 2
+
+# Atualizações automáticas (e correções de segurança) como pull requests semanais, agrupadas para não inundar o repositório.
+updates:
+  - package-ecosystem: maven
+    directory: /securebank-backend
+    schedule:
+      interval: weekly
+    groups:
+      spring-boot:
+        patterns: ['org.springframework.boot*', 'org.springframework*']
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /securebank-web
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /securebank-backend
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /securebank-web
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

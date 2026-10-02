@@ -1,0 +1,47 @@
+name: CodeQL
+
+# SAST: análise estática de segurança do código (Java e TypeScript). Resultados aparecem em Security > Code scanning.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 4 * * 1' # semanalmente, para pegar regras novas
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+      - name: Compila (sem testes) para o CodeQL enxergar o código Java
+        if: matrix.language == 'java-kotlin'
+        working-directory: securebank-backend
+        run: ./mvnw -B -DskipTests -Djacoco.skip=true package
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

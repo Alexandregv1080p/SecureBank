@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Supressões do OWASP Dependency-Check. Cada entrada precisa de justificativa e de data de revisão.
+  Vazio de propósito: nenhuma vulnerabilidade foi aceita até agora.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>

@@ -1859,7 +1859,7 @@ ADR-010 — Observability
 * Web: Vite + React + TS + Tailwind 4 + React Router + TanStack Query. Zustand, React Hook Form e Zod entram quando houver uso (Fase 7).
 * Containers: multi-stage, imagens oficiais com versão fixa, usuário não-root (`app` / `nginx`), Postgres exposto só em `127.0.0.1`. nginx faz proxy de `/api` (mesma origem → sem CORS) e adiciona headers de segurança básicos.
 * Portas no host (evitam conflito com outros projetos locais): web 3500, API 8100, Postgres 5439. Redis (6380) e Kafka entram nas Fases 5/6.
-* CI (GitHub Actions): `./mvnw verify` (Testcontainers no Docker do runner) + `npm run lint` e `build`. Scans, imagem e deploy ficam para a Fase 9.
+* CI (GitHub Actions): `./mvnw verify` (Testcontainers no Docker do runner) + `npm run lint` e `build`. Scans e imagem: ver Fase 9.
 
 ---
 
@@ -2034,13 +2034,17 @@ ADR-010 — Observability
 
 ## Fase 9 — DevOps
 
-* [ ] Docker
-* [ ] Docker Compose
-* [ ] GitHub Actions
-* [ ] SAST
-* [ ] Dependency Scan
-* [ ] Container Scan
-* [ ] Registry
+* [x] Docker — multi-stage, não-root, versões fixas, labels OCI, HEALTHCHECK
+* [x] Docker Compose — hardening: `read_only`, `cap_drop: ALL`, `no-new-privileges`, limites de memória/PIDs
+* [x] GitHub Actions — `ci.yml` (backend, mutação, web, secrets, dependencies, docker)
+* [x] SAST — CodeQL (Java e TypeScript, `security-extended`)
+* [x] Dependency Scan — Trivy fs, `npm audit`, OWASP Dependency-Check semanal, Dependabot
+* [x] Container Scan — Trivy na imagem antes do push; gitleaks para segredos
+* [x] Registry — GHCR, tags por SHA/branch/semver, SBOM e proveniência
+
+Decisões e detalhes em [docs/devops/ci-cd.md](docs/devops/ci-cd.md).
+
+**Validação (honesta):** os workflows só rodam após o push, então ainda **não foram executados**. Verificados localmente: `docker compose config`, `npm audit` (0 vulnerabilidades). Pendente com o Docker Desktop aberto: build das imagens, subir a stack com o hardening, rodar Trivy/gitleaks e corrigir achados.
 
 ---
 

@@ -2044,7 +2044,7 @@ ADR-010 — Observability
 
 Decisões e detalhes em [docs/devops/ci-cd.md](docs/devops/ci-cd.md).
 
-**Validação (honesta):** os workflows só rodam após o push, então ainda **não foram executados**. Verificados localmente: `docker compose config`, `npm audit` (0 vulnerabilidades). Pendente com o Docker Desktop aberto: build das imagens, subir a stack com o hardening, rodar Trivy/gitleaks e corrigir achados.
+**Validação (honesta):** os workflows só rodam após o push, então ainda **não foram executados**. Localmente: stack com hardening saudável, Trivy (imagens e fs) e gitleaks limpos após corrigir CVEs de Jackson, Tomcat e Alpine (ver [ci-cd.md](docs/devops/ci-cd.md)).
 
 ---
 

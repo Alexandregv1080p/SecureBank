@@ -52,6 +52,20 @@ Produção: AWS Secrets Manager / Kubernetes Secrets (Fases 11 e 12).
 
 ## Pendências
 
-* Os workflows ainda **não rodaram** (dependem do push para o GitHub); foram escritos e as ferramentas validadas localmente quando possível.
+* Os workflows ainda **não rodaram** (dependem do push). Os mesmos scans foram executados localmente (Trivy fs/imagem e gitleaks): ver "Validação local" abaixo.
 * Deploy automático (Kubernetes/Terraform) entra nas Fases 11 e 12; a imagem já sai assinada por proveniência para isso.
 * Assinatura de imagem com cosign e política de admissão no cluster: Fase 11.
+
+## Validação local (2026-10-02)
+
+Stack subida com o hardening (`read_only`, `cap_drop: ALL`...): api e web saudáveis. Trivy e gitleaks rodaram e acharam problemas reais, já corrigidos:
+
+| Achado | Correção |
+| ------ | -------- |
+| Jackson 3.1.5 (jackson-core/databind, CVEs HIGH de DoS) | `jackson-bom.version=3.1.7` no `pom.xml` |
+| Jackson 2.21.5 transitivo (mesmos CVEs) | `jackson-2-bom.version=2.21.7` |
+| Tomcat 11.0.24, CVE crítico de bypass de restrição de acesso | `tomcat.version=11.0.25` |
+| Pacotes Alpine da web (libxml2, musl, zlib, nghttp2: HIGH/CRITICAL) | `apk upgrade` no estágio final da imagem web |
+
+Resultado: Trivy (imagens api/web e fs) com 0 HIGH/CRITICAL corrigíveis; gitleaks sem vazamentos; `./mvnw verify` verde.
+As propriedades de versão no `pom.xml` são remendos: remover quando o Spring Boot trouxer as versões corrigidas.

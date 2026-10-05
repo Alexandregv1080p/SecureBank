@@ -1,0 +1,12 @@
+# Namespace dedicado, com Pod Security Standards "restricted" imposto: pod que não seja non-root, sem capabilities
+# e sem seccomp é rejeitado na criação (não só avisado).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: securebank
+  labels:
+    app.kubernetes.io/part-of: securebank
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

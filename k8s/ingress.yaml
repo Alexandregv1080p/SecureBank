@@ -1,0 +1,31 @@
+# Entrada única: tudo vai para o web, e o nginx dele leva /api para a API (mesma origem do SPA, sem CORS).
+# Requer um ingress controller (ingress-nginx) e, para TLS, o Secret securebank-tls (cert-manager ou manual).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: securebank
+  namespace: securebank
+  labels: {app.kubernetes.io/part-of: securebank}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    # com cert-manager: descomente e ajuste o ClusterIssuer
+    # cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [securebank.local]
+      secretName: securebank-tls
+  rules:
+    - host: securebank.local        # em produção, o domínio real (Fase 12)
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: securebank-web
+                port: {name: http}

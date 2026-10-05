@@ -1,0 +1,111 @@
+# Zero trust na rede do namespace: tudo é negado e cada fluxo necessário é liberado explicitamente.
+#
+#   internet → ingress-nginx → web:8080 → api:8080 → postgres:5432 / redis:6379 / kafka:19092
+#                                          └─ ← prometheus (ns monitoring) :9090
+#
+# ATENÇÃO: NetworkPolicy só vale com um CNI que a implemente (Calico, Cilium, EKS com VPC CNI + policy engine).
+# kindnet e o Kubernetes do Docker Desktop aceitam o objeto mas NÃO aplicam.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: securebank
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: securebank
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web
+  namespace: securebank
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: securebank-web}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+      ports: [{protocol: TCP, port: 8080}]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-api}}
+      ports: [{protocol: TCP, port: 8080}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api
+  namespace: securebank
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: securebank-api}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-web}}
+      ports: [{protocol: TCP, port: 8080}]
+    - from:                          # métricas: só o Prometheus
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: monitoring}}
+      ports: [{protocol: TCP, port: 9090}]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgres}}}]
+      ports: [{protocol: TCP, port: 5432}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: redis}}}]
+      ports: [{protocol: TCP, port: 6379}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: kafka}}}]
+      ports: [{protocol: TCP, port: 19092}]
+    - to:                            # traces (OTLP/HTTP)
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: observability}}
+      ports: [{protocol: TCP, port: 4318}]
+---
+# Dependências de desenvolvimento (k8s/dependencies): só a API conversa com elas.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dependencies
+  namespace: securebank
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app.kubernetes.io/name, operator: In, values: [postgres, redis, kafka]}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app.kubernetes.io/name: securebank-api}}}]
+      ports:
+        - {protocol: TCP, port: 5432}
+        - {protocol: TCP, port: 6379}
+        - {protocol: TCP, port: 19092}
+    - from: [{podSelector: {matchLabels: {app.kubernetes.io/name: kafka}}}]   # broker ↔ controller (KRaft)
+      ports:
+        - {protocol: TCP, port: 9093}
+        - {protocol: TCP, port: 19092}
+---
+# O broker fala consigo mesmo (controller KRaft e listener interno) pelo Service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-self
+  namespace: securebank
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: kafka}}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: kafka}}}]
+      ports:
+        - {protocol: TCP, port: 9093}
+        - {protocol: TCP, port: 19092}

@@ -1,0 +1,18 @@
+# kubectl apply -k k8s/        (o secret.yaml é de propósito deixado de fora: crie o Secret real à parte)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - network-policy.yaml
+# A pipeline (Fase 12) fixa a tag imutável do commit: kustomize edit set image ...:sha-<commit>
+images:
+  - name: ghcr.io/alexandregv1080p/securebank-backend
+    newTag: latest
+  - name: ghcr.io/alexandregv1080p/securebank-web
+    newTag: latest

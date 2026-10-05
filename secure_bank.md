@@ -2066,14 +2066,18 @@ Compose: `compose.observability.yml`; detalhes e limites em [docs/observability/
 
 ## Fase 11 — Kubernetes
 
-* [ ] Deployments
-* [ ] Services
-* [ ] Ingress
-* [ ] ConfigMaps
-* [ ] Secrets
-* [ ] HPA
-* [ ] Network Policies
-* [ ] RBAC
+* [x] Deployments — api e web: 2 réplicas, rolling update sem indisponibilidade, probes (startup/readiness/liveness), securityContext restrito
+* [x] Services — api, api-management (9090, só métricas) e web
+* [x] Ingress — entrada única com TLS/HSTS; o web leva `/api` à API
+* [x] ConfigMaps — configuração não secreta da API
+* [x] Secrets — modelo com placeholders; o real é criado fora do Git (chaves JWT compartilhadas são obrigatórias com 2+ réplicas)
+* [x] HPA — CPU 70%, 2–6 pods na API, mais PodDisruptionBudget
+* [x] Network Policies — default-deny + fluxos explícitos
+* [x] RBAC — ServiceAccounts sem permissão/token; Role mínimo para o deploy
+
+Manifestos em `k8s/` (Kustomize) e dependências de dev em `k8s/dependencies/`; decisões e como rodar em [docs/devops/kubernetes.md](docs/devops/kubernetes.md).
+
+**Validação (honesta):** os manifestos renderizam com `kubectl kustomize`, mas **não foram aplicados a nenhum cluster** nem passaram por kubeconform ou Trivy config (Docker fechado). NetworkPolicy só é aplicada com CNI adequado (Calico/Cilium).
 
 ---
 

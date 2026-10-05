@@ -1,0 +1,26 @@
+# Configuração não secreta da API. Segredos ficam em secret.yaml.
+# Os endereços abaixo apontam para os serviços de k8s/dependencies (dev). Em produção (Fase 12) viram RDS,
+# ElastiCache e MSK: só estes valores mudam.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: securebank-api-config
+  namespace: securebank
+  labels:
+    app.kubernetes.io/name: securebank-api
+    app.kubernetes.io/part-of: securebank
+data:
+  DB_URL: jdbc:postgresql://postgres:5432/securebank
+  DB_USER: securebank
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP: kafka:19092
+  MANAGEMENT_PORT: "9090"
+  # Swagger só em ambiente de desenvolvimento
+  API_DOCS_ENABLED: "false"
+  # logs em JSON, uma linha por evento, com traceId
+  LOGGING_STRUCTURED_FORMAT_CONSOLE: logstash
+  # traces: ligar quando houver um coletor OTLP (Jaeger/Tempo/ADOT) no cluster
+  TRACING_EXPORT: "false"
+  OTEL_TRACES_ENDPOINT: http://jaeger-collector.observability.svc:4318/v1/traces
+  TRACING_SAMPLING: "0.1"

@@ -1,0 +1,57 @@
+# Identidades dos workloads: contas de serviço próprias, SEM nenhuma permissão e sem token montado.
+# Nem a API nem o nginx falam com a API do Kubernetes; se um pod for comprometido, não há credencial de cluster nele.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: securebank-api
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-api, app.kubernetes.io/part-of: securebank}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: securebank-web
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-web, app.kubernetes.io/part-of: securebank}
+automountServiceAccountToken: false
+---
+# Quem faz deploy (pipeline, Fase 12): só o necessário, só neste namespace. Não lê Secrets e não cria Role/RoleBinding,
+# então não consegue se dar mais poder.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: securebank-deployer
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-deployer, app.kubernetes.io/part-of: securebank}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: securebank-deployer
+  namespace: securebank
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: securebank-deployer
+  namespace: securebank
+subjects:
+  - kind: ServiceAccount
+    name: securebank-deployer
+    namespace: securebank
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: securebank-deployer

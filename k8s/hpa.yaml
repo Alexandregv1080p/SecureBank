@@ -1,0 +1,58 @@
+# Escala pela CPU (precisa do metrics-server). Sobe rápido, desce devagar: evita oscilar com tráfego em rajadas.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: securebank-api
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-api, app.kubernetes.io/part-of: securebank}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: securebank-api}
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies: [{type: Pods, value: 2, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies: [{type: Pods, value: 1, periodSeconds: 120}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: securebank-web
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-web, app.kubernetes.io/part-of: securebank}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: securebank-web}
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+---
+# Manutenção de nós (drain) nunca derruba todas as réplicas de uma vez.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: securebank-api
+  namespace: securebank
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app.kubernetes.io/name: securebank-api}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: securebank-web
+  namespace: securebank
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app.kubernetes.io/name: securebank-web}}

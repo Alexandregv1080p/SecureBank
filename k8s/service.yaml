@@ -1,0 +1,38 @@
+# O nginx do web faz proxy de /api para "securebank-api" (mesmo nome do compose): o Service mantém esse nome.
+apiVersion: v1
+kind: Service
+metadata:
+  name: securebank-api
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-api, app.kubernetes.io/part-of: securebank}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: securebank-api}
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Porta de management (health/métricas) num Service à parte, só para o Prometheus: assim ela nunca aparece no Service
+# que o resto do cluster usa para falar com a API.
+apiVersion: v1
+kind: Service
+metadata:
+  name: securebank-api-management
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-api, app.kubernetes.io/part-of: securebank}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: securebank-api}
+  ports:
+    - {name: management, port: 9090, targetPort: management}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: securebank-web
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-web, app.kubernetes.io/part-of: securebank}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: securebank-web}
+  ports:
+    - {name: http, port: 80, targetPort: http}

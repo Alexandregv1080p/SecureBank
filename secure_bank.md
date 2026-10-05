@@ -2083,14 +2083,18 @@ Manifestos em `k8s/` (Kustomize) e dependências de dev em `k8s/dependencies/`; 
 
 ## Fase 12 — Cloud
 
-* [ ] AWS VPC
-* [ ] RDS
-* [ ] ElastiCache
-* [ ] Kafka
-* [ ] Container Registry
-* [ ] Compute
-* [ ] Secrets Manager
-* [ ] Terraform
+* [x] AWS VPC — 3 camadas (public/private/data), NAT, flow logs; a camada de dados sem rota para a internet
+* [x] RDS — PostgreSQL 16 cifrado, TLS obrigatório, senha gerenciada pelo RDS, Multi-AZ e proteção contra exclusão em produção
+* [x] ElastiCache — Redis 7 com TLS e token, failover com 2+ nós
+* [x] Kafka — MSK com TLS, RF/min ISR por ambiente (a aplicação passou a aceitar `KAFKA_TOPIC_REPLICAS`)
+* [x] Container Registry — ECR (tags imutáveis, scan no push) e publicação pelo GitHub Actions via OIDC
+* [x] Compute — EKS com nós gerenciados, NetworkPolicy ligada no CNI, IMDSv2, secrets cifrados
+* [x] Secrets Manager — segredos cifrados; chaves JWT/MFA preenchidas por quem opera; leitura via External Secrets (IRSA)
+* [x] Terraform — módulos + 3 ambientes (dev/staging/production), state remoto, `fmt`/`validate` no CI
+
+Também desta fase: alarmes de infraestrutura (CloudWatch → SNS) e o **Disaster Recovery** da seção 52 com cenários simulados. Detalhes em [docs/devops/cloud.md](docs/devops/cloud.md) e [docs/devops/disaster-recovery.md](docs/devops/disaster-recovery.md).
+
+**Validação (honesta):** o Terraform passa em `fmt`, `validate` (3 ambientes) e Trivy (0 HIGH/CRITICAL), mas **nunca foi aplicado** (sem conta AWS; também custa dinheiro): nada foi testado na AWS, e a aplicação nunca rodou contra TLS/MSK/ElastiCache. Os simulados de DR **foram executados de verdade** no compose (Kafka, Redis, PostgreSQL, partição de rede, crash) e acharam quatro problemas, já corrigidos: sem restart policy, banco fora pendurando e devolvendo 500, readiness sem banco, e Redis fora respondendo 401 em vez de 503. Pendentes: Kafka sem autenticação de cliente (só TLS + security group), Alertmanager do cluster → SNS, acesso de CI ao cluster.
 
 ---
 

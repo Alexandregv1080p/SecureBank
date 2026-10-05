@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,13 +22,17 @@ class KafkaMessagingConfig {
 
     private static final int PARTITIONS = 3;
 
-    /** Tópicos criados na subida (idempotente). O DLT tem uma partição: é uma fila de triagem, não de volume. */
+    /**
+     * Tópicos criados na subida (idempotente). O DLT tem uma partição: é uma fila de triagem, não de volume.
+     * {@code replicas}: 1 com broker único (dev); em produção (MSK, 3 brokers) 3, com min.insync.replicas=2 no cluster.
+     */
     @Bean
-    org.springframework.kafka.core.KafkaAdmin.NewTopics eventTopics() {
+    org.springframework.kafka.core.KafkaAdmin.NewTopics eventTopics(
+            @Value("${securebank.kafka.topic-replicas:1}") short replicas) {
         List<NewTopic> topics = new ArrayList<>();
         for (String topic : EventTopics.ALL) {
-            topics.add(TopicBuilder.name(topic).partitions(PARTITIONS).replicas(1).build());
-            topics.add(TopicBuilder.name(topic + EventTopics.DLT_SUFFIX).partitions(1).replicas(1).build());
+            topics.add(TopicBuilder.name(topic).partitions(PARTITIONS).replicas(replicas).build());
+            topics.add(TopicBuilder.name(topic + EventTopics.DLT_SUFFIX).partitions(1).replicas(replicas).build());
         }
         return new org.springframework.kafka.core.KafkaAdmin.NewTopics(topics.toArray(NewTopic[]::new));
     }

@@ -34,6 +34,8 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
  */
 class IdempotencyFilter extends OncePerRequestFilter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(IdempotencyFilter.class);
+
     static final String HEADER = "Idempotency-Key";
     private static final int MAX_BODY = 64 * 1024;
     private static final List<String> PATHS = List.of("/api/v1/transfers", "/api/v1/payments",
@@ -76,7 +78,17 @@ class IdempotencyFilter extends OncePerRequestFilter {
         String scope = auth.getName();
         String fingerprint = Digests.sha256Url(request.getMethod() + " " + request.getRequestURI() + "\n"
                 + new String(body, StandardCharsets.UTF_8));
-        IdempotencyStore.Claim claim = store.claim(scope, key, fingerprint, time.now());
+        IdempotencyStore.Claim claim;
+        try {
+            claim = store.claim(scope, key, fingerprint, time.now());
+        } catch (RuntimeException e) {
+            // Sem o banco não dá para garantir a idempotência, e mover dinheiro sem essa garantia é pior que recusar.
+            log.error("Idempotency store unavailable; rejecting request (fail closed)", e);
+            response.setHeader("Retry-After", "5");
+            errors.write(request, response, HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
+                    "Service temporarily unavailable");
+            return;
+        }
 
         if (claim instanceof IdempotencyStore.Claim.Replay replay) {
             response.setStatus(replay.status());
@@ -111,7 +123,11 @@ class IdempotencyFilter extends OncePerRequestFilter {
             }
         } finally {
             if (!stored) {
-                store.release(scope, key);
+                try {
+                    store.release(scope, key);
+                } catch (RuntimeException e) {
+                    log.warn("Could not release idempotency key (it expires on its own)", e);
+                }
             }
             wrapped.copyBodyToResponse();
         }

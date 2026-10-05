@@ -9,6 +9,8 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5439/securebank}
     username: ${DB_USER:securebank}
     password: ${DB_PASSWORD}
+    hikari:
+      connection-timeout: 3000   # banco fora: falha em 3 s com 503, não pendura a requisição por 30 s
   data:
     redis:
       client-type: jedis
@@ -67,6 +69,7 @@ securebank:
     enabled: true
   kafka:
     enabled: true                    # false = eventos só no log (sem broker)
+    topic-replicas: ${KAFKA_TOPIC_REPLICAS:1}   # 1 = broker único; 3 no MSK
 
 server:
   # Atrás do nginx: o IP real vem do X-Forwarded-For (Tomcat só confia em proxies de rede privada).
@@ -91,6 +94,10 @@ management:
     health:
       probes:
         enabled: true
+      # sem banco a API não atende nada: sai do balanceamento (readiness) mas NÃO é reiniciada (liveness não inclui o banco)
+      group:
+        readiness:
+          include: readinessState,db
       show-details: never
   metrics:
     tags:

@@ -101,6 +101,8 @@ class JwtConfig {
                 : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Wrong audience", null));
     }
 
+    static final String SERVER_ERROR = "server_error";
+
     /** Sessão revogada (logout, reuso de refresh, troca de senha...) derruba o access token na hora. */
     private record SessionNotRevokedValidator(SessionDenylist denylist) implements OAuth2TokenValidator<Jwt> {
 
@@ -113,9 +115,10 @@ class JwtConfig {
                 }
                 return OAuth2TokenValidatorResult.success();
             } catch (RuntimeException e) {
-                // Falha fechada: se não dá para saber se a sessão foi revogada, o token não vale.
+                // Falha fechada: se não dá para saber se a sessão foi revogada, o token não vale. O código
+                // "server_error" deixa o SecurityHandlers responder 503 (dependência fora) em vez de 401 (sessão inválida).
                 log.error("Could not check session denylist", e);
-                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Session check failed", null));
+                return OAuth2TokenValidatorResult.failure(new OAuth2Error(SERVER_ERROR, "Session check failed", null));
             }
         }
     }

@@ -13,3 +13,13 @@ dist/
 .vscode/
 *.iml
 .DS_Store
+.terraform.lock.hcl
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+terraform/backend.hcl

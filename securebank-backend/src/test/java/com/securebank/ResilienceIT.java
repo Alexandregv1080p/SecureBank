@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,10 @@ class ResilienceIT {
         redis.stop();
 
         // sem poder consultar a denylist de sessões, o token deixa de valer (em vez de valer sem checagem)
-        mvc.perform(bearer(login.accessToken(), get("/api/v1/customers/me"))).andExpect(status().isUnauthorized());
+        // 503 (e não 401): o cliente não deve achar que a sessão acabou, só tentar de novo
+        mvc.perform(bearer(login.accessToken(), get("/api/v1/customers/me")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"));
         // o limite de taxa não pode ser contornado derrubando o Redis: 503, não "sem limite"
         mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + login.email() + "\",\"password\":\"" + TestUsers.PASSWORD + "\"}"))

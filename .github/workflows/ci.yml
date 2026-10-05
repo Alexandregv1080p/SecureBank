@@ -103,6 +103,21 @@ jobs:
           docker run --rm -v "$RUNNER_TEMP/k8s:/m:ro" ghcr.io/yannh/kubeconform:v0.7.0 \
             -strict -summary -kubernetes-version 1.31.0 /m/app.yaml /m/dependencies.yaml
 
+  terraform:
+    # Formato, sintaxe e coerência dos três ambientes. Sem credenciais AWS: nunca faz plan nem apply (isso é manual).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.8
+      - run: terraform fmt -recursive -check terraform
+      - name: Validar cada ambiente
+        run: |
+          for env in dev staging production; do
+            (cd terraform/environments/$env && terraform init -backend=false -input=false && terraform validate)
+          done
+
   dependencies:
     # Trivy no repositório: vulnerabilidades em pom.xml / package-lock.json, segredos e má configuração (Dockerfile, compose)
     runs-on: ubuntu-latest

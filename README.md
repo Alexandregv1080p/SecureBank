@@ -27,6 +27,8 @@ Saúde e métricas da API ficam numa porta interna (9090), fora do host: veja `d
 **Observabilidade** (Grafana, Prometheus, Jaeger, Loki): `docker compose -f compose.yml -f compose.observability.yml up -d`
 (defina `GRAFANA_PASSWORD` no `.env`); detalhes em [`docs/observability/observability.md`](docs/observability/observability.md).
 
+**Cloud, DR e Kubernetes:** [`docs/devops/cloud.md`](docs/devops/cloud.md) (Terraform/AWS, nunca aplicado), [`docs/devops/disaster-recovery.md`](docs/devops/disaster-recovery.md) (RTO/RPO e cenários simulados) e [`docs/devops/kubernetes.md`](docs/devops/kubernetes.md).
+
 ## Desenvolvimento
 
 ```bash

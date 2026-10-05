@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -36,8 +37,26 @@ class SecurityHandlers implements AuthenticationEntryPoint, AccessDeniedHandler 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e)
             throws IOException {
+        if (dependencyFailure(e)) {
+            // Não deu para validar a sessão (Redis fora): o token não é aceito, mas o cliente não deve achar que
+            // a sessão acabou. 503 + Retry-After pede nova tentativa em vez de novo login.
+            response.setHeader("Retry-After", "5");
+            errors.write(request, response, HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
+                    "Service temporarily unavailable");
+            return;
+        }
         response.setHeader("WWW-Authenticate", "Bearer");
         errors.write(request, response, HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required");
+    }
+
+    private static boolean dependencyFailure(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof JwtValidationException v
+                    && v.getErrors().stream().anyMatch(err -> JwtConfig.SERVER_ERROR.equals(err.getErrorCode()))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

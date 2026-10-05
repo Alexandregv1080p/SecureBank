@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.ConcurrencyFailureException;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -64,6 +67,17 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity<Object> concurrentUpdate(ConcurrencyFailureException e, HttpServletRequest request) {
         return body(HttpStatus.CONFLICT, "CONCURRENT_UPDATE", "The resource was modified by another request; retry",
                 request.getRequestURI(), null);
+    }
+
+    /** Banco inalcançável ou lento demais: 503 com Retry-After (o cliente tenta de novo), nunca um 500 genérico. */
+    @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class,
+            QueryTimeoutException.class})
+    ResponseEntity<Object> databaseUnavailable(Exception e, HttpServletRequest request) {
+        log.error("Database unavailable", e);
+        ResponseEntity<Object> response = body(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
+                "Service temporarily unavailable", request.getRequestURI(), null);
+        return ResponseEntity.status(response.getStatusCode()).header(HttpHeaders.RETRY_AFTER, "5")
+                .body(response.getBody());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

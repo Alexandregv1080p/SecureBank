@@ -1,0 +1,5 @@
+# Copie para terraform.tfvars (que o Git ignora) e ajuste.
+region                  = "us-east-1"
+github_repository       = "Alexandregv1080p/SecureBank"
+eks_public_access_cidrs = ["203.0.113.10/32"] # SEU IP (ou o da VPN); 203.0.113.0/24 é só um exemplo de documentação
+alert_emails            = ["voce@exemplo.com"]

@@ -67,12 +67,14 @@ kubectl -n securebank get pods -w
 kubectl -n securebank port-forward svc/securebank-web 8080:80   # http://localhost:8080
 ```
 
-## Validação
+## Validação (2026-10-05)
 
-| O quê | Estado |
-| ----- | ------ |
-| `kubectl kustomize k8s/` e `k8s/dependencies` renderizam (23 e 6 objetos) | feito |
-| Esquema (kubeconform), lint de segurança (Trivy config) e `--dry-run=server` | **pendente** (precisa do Docker/cluster) |
-| Subir no cluster: pods Ready, rollout, falha de um pod, HPA, NetworkPolicy | **pendente** |
+| O quê | Resultado |
+| ----- | --------- |
+| `kubectl kustomize` (app e dependências) | renderiza |
+| kubeconform `-strict` contra o esquema do Kubernetes 1.31 | 29 recursos válidos, 0 erros (também roda no CI, job `kubernetes`) |
+| Trivy config (HIGH/CRITICAL) | 0 achados; o único que apareceu (`KSV-0014`, filesystem gravável no Postgres e no Kafka) foi **corrigido**: ambos sobem com `--read-only` e volumes para `/tmp`, `/var/run/postgresql`, `/opt/kafka/logs` e `/opt/kafka/config` (testado com `docker run --read-only`) |
+| Trivy config (MEDIUM/LOW) | restam: porta em ConfigMap tratada como "sensível" (falso positivo), CPU sem limite (deliberado) e UID abaixo de 10000 nas imagens oficiais de Postgres, Redis e Kafka (imposto pelas imagens) |
+| Aplicar num cluster: pods Ready, rollout, falha de um pod, HPA, NetworkPolicy | **pendente** (sem cluster nesta máquina; precisa ligar o Kubernetes do Docker Desktop ou usar kind) |
 
-Nada disso foi executado num cluster real ainda: os manifestos foram escritos com cuidado, mas devem ser tratados como não testados até o item acima ser feito.
+Os manifestos passam nas verificações estáticas, mas **nunca foram aplicados a um cluster**: tratar o comportamento em runtime como não testado.

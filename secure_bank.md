@@ -2077,7 +2077,7 @@ Compose: `compose.observability.yml`; detalhes e limites em [docs/observability/
 
 Manifestos em `k8s/` (Kustomize) e dependências de dev em `k8s/dependencies/`; decisões e como rodar em [docs/devops/kubernetes.md](docs/devops/kubernetes.md).
 
-**Validação (honesta):** os manifestos renderizam com `kubectl kustomize`, mas **não foram aplicados a nenhum cluster** nem passaram por kubeconform ou Trivy config (Docker fechado). NetworkPolicy só é aplicada com CNI adequado (Calico/Cilium).
+**Validação (honesta):** kustomize renderiza, kubeconform (K8s 1.31) aprova os 29 recursos e o Trivy config não acha HIGH/CRITICAL (o `readOnlyRootFilesystem` das dependências foi corrigido e testado com `docker --read-only`). **Não foram aplicados a nenhum cluster**; NetworkPolicy só é aplicada com CNI adequado (Calico/Cilium).
 
 ---
 

@@ -90,6 +90,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  kubernetes:
+    # Os manifestos têm de renderizar e passar no esquema da API do Kubernetes (o Trivy, no job dependencies, cuida da segurança)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Renderizar (kustomize) e validar (kubeconform)
+        run: |
+          mkdir -p "$RUNNER_TEMP/k8s"
+          kubectl kustomize k8s > "$RUNNER_TEMP/k8s/app.yaml"
+          kubectl kustomize k8s/dependencies > "$RUNNER_TEMP/k8s/dependencies.yaml"
+          docker run --rm -v "$RUNNER_TEMP/k8s:/m:ro" ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -kubernetes-version 1.31.0 /m/app.yaml /m/dependencies.yaml
+
   dependencies:
     # Trivy no repositório: vulnerabilidades em pom.xml / package-lock.json, segredos e má configuração (Dockerfile, compose)
     runs-on: ubuntu-latest
@@ -116,7 +129,7 @@ jobs:
 
   docker:
     # Build das imagens → scan (falha com HIGH/CRITICAL corrigível) → publicação no GHCR só em main/tags
-    needs: [backend, web, secrets, dependencies]
+    needs: [backend, web, secrets, dependencies, kubernetes]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,7 +1,7 @@
 # SOMENTE DESENVOLVIMENTO/DEMONSTRAÇÃO: uma instância de cada, sem alta disponibilidade nem backup.
 # Em produção (Fase 12) isto some e a ConfigMap aponta para RDS (PostgreSQL), ElastiCache (Redis) e MSK (Kafka).
-# Os pods obedecem ao Pod Security "restricted" do namespace (non-root, sem capabilities, seccomp). O sistema de
-# arquivos fica gravável porque as imagens oficiais escrevem fora dos volumes.
+# Os pods obedecem ao Pod Security "restricted" do namespace (non-root, sem capabilities, seccomp) e rodam com o
+# sistema de arquivos somente leitura; o que as imagens precisam gravar vai em volumes (testado com docker --read-only).
 apiVersion: v1
 kind: Service
 metadata:
@@ -51,9 +51,12 @@ spec:
             limits: {memory: 512Mi}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities: {drop: [ALL]}
           volumeMounts:
             - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: tmp, mountPath: /tmp}
+            - {name: run, mountPath: /var/run/postgresql}
           readinessProbe:
             exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d securebank"]}
             periodSeconds: 5
@@ -61,6 +64,9 @@ spec:
             exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d securebank"]}
             periodSeconds: 20
             failureThreshold: 6
+      volumes:
+        - {name: tmp, emptyDir: {sizeLimit: 64Mi}}
+        - {name: run, emptyDir: {sizeLimit: 8Mi}}
   volumeClaimTemplates:
     - metadata: {name: data}
       spec:
@@ -183,9 +189,13 @@ spec:
             limits: {memory: 1Gi}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities: {drop: [ALL]}
           volumeMounts:
             - {name: data, mountPath: /var/lib/kafka/data}
+            - {name: tmp, mountPath: /tmp}
+            - {name: logs, mountPath: /opt/kafka/logs}
+            - {name: config, mountPath: /opt/kafka/config}   # o entrypoint gera a configuração aqui
           readinessProbe:
             tcpSocket: {port: internal}
             periodSeconds: 10
@@ -194,6 +204,10 @@ spec:
             tcpSocket: {port: internal}
             periodSeconds: 20
             failureThreshold: 6
+      volumes:
+        - {name: tmp, emptyDir: {sizeLimit: 64Mi}}
+        - {name: logs, emptyDir: {sizeLimit: 128Mi}}
+        - {name: config, emptyDir: {sizeLimit: 8Mi}}
   volumeClaimTemplates:
     - metadata: {name: data}
       spec:

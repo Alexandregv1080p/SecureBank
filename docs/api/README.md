@@ -52,7 +52,13 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /pix/keys`, `GET /pix/keys`, `DELETE /pix/keys/{id}` | Chaves Pix (CPF, e-mail, celular ou aleatória; até 5). O **valor** vem do cadastro do cliente, nunca do corpo |
 | `GET /pix/keys/lookup?key=`             | Consulta uma chave: devolve só o nome **mascarado**, o CPF mascarado e se é conta sua (limitada por taxa) |
 | `POST /pix/transfers`                   | Envia Pix por chave (`Idempotency-Key` obrigatório); usa o limite **Pix** da conta |
-| `GET /pix/transfers`                    | Histórico dos Pix enviados e recebidos, com `direction` e a contraparte mascarada |
+| `GET /pix/transfers`                    | Histórico dos Pix enviados e recebidos, com `direction` e a contraparte mascarada; em Pix recebido traz `refundedAmount`/`refundableAmount` |
+| `GET /pix/transfers/{id}`               | Um Pix (só quem enviou ou recebeu; outro usuário recebe 404) |
+| `POST /pix/transfers/{id}/refund`       | **Devolução** (`Idempotency-Key`): só quem recebeu, em até 90 dias, parcial ou total, soma limitada ao original; devolução não se devolve. Não consome o limite Pix. Erros: `PIX_REFUND_EXPIRED`, `PIX_REFUND_EXCEEDS`, `PIX_NOT_REFUNDABLE` |
+| `POST /pix/charges`, `GET /pix/charges`, `DELETE /pix/charges/{txid}` | **Cobrança** (QR dinâmico) de valor fixo, validade de 1 min a 7 dias, uso único; devolve `location` (vai no BR Code). Status `ACTIVE/PAID/CANCELED` e `EXPIRED` (derivado) |
+| `GET /pix/charges/{txid}`               | O pagador vê valor, validade e nome/CPF **mascarados** do recebedor |
+| `POST /pix/charges/{txid}/pay`          | Paga a cobrança (`Idempotency-Key`); com pagadores simultâneos só um vence. Erros: `PIX_CHARGE_EXPIRED`, `PIX_CHARGE_NOT_PAYABLE`, `PIX_CHARGE_NOT_CANCELABLE` |
+| `POST /pix/schedules`, `GET /pix/schedules`, `DELETE /pix/schedules/{id}` | **Pix agendado** (`Idempotency-Key` no POST): autorizado ao agendar, executado na data (de amanhã a 365 dias, fuso de São Paulo) por um agendador; falha na data vira `FAILED` com `failureReason` + aviso, sem nova tentativa. Máx. 20 pendentes (`PIX_SCHEDULE_LIMIT_REACHED`) |
 
 Convenções: valores monetários são **strings** (`"100.00"`, no máximo 2 casas) para nenhum cliente perder precisão;
 horários em UTC (ISO-8601); "dia" de limite e extrato é o de `America/Sao_Paulo`.
@@ -96,7 +102,7 @@ curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer
 
 ## Idempotência
 
-`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`
+`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`
 e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
 → `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
 [`consistency.md`](../architecture/consistency.md).

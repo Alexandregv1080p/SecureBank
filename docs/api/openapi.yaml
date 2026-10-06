@@ -205,6 +205,84 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PixResponse"
+  /api/v1/pix/transfers/{id}/refund:
+    post:
+      tags:
+      - pix-controller
+      operationId: refund
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PixResponse"
+  /api/v1/pix/schedules:
+    get:
+      tags:
+      - pix-schedule-controller
+      operationId: list_1
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SchedulePage"
+    post:
+      tags:
+      - pix-schedule-controller
+      operationId: create_1
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ScheduleResponse"
   /api/v1/pix/keys:
     get:
       tags:
@@ -236,11 +314,84 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/KeyResponse"
+  /api/v1/pix/charges:
+    get:
+      tags:
+      - pix-charge-controller
+      operationId: list_2
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChargePage"
+    post:
+      tags:
+      - pix-charge-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+  /api/v1/pix/charges/{txid}/pay:
+    post:
+      tags:
+      - pix-charge-controller
+      operationId: pay
+      parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PixResponse"
   /api/v1/piggies:
     get:
       tags:
       - piggy-controller
-      operationId: list_1
+      operationId: list_3
       responses:
         "200":
           description: OK
@@ -253,7 +404,7 @@ paths:
     post:
       tags:
       - piggy-controller
-      operationId: create_1
+      operationId: create_3
       requestBody:
         content:
           application/json:
@@ -319,7 +470,7 @@ paths:
     get:
       tags:
       - payment-controller
-      operationId: list_2
+      operationId: list_4
       parameters:
       - name: page
         in: query
@@ -345,7 +496,7 @@ paths:
     post:
       tags:
       - payment-controller
-      operationId: create_2
+      operationId: create_4
       parameters:
       - name: Idempotency-Key
         in: header
@@ -544,7 +695,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: list_3
+      operationId: list_5
       responses:
         "200":
           description: OK
@@ -744,6 +895,24 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SessionResponse"
+  /api/v1/pix/transfers/{id}:
+    get:
+      tags:
+      - pix-controller
+      operationId: get_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PixResponse"
   /api/v1/pix/keys/lookup:
     get:
       tags:
@@ -764,11 +933,42 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/LookupResponse"
+  /api/v1/pix/charges/{txid}:
+    get:
+      tags:
+      - pix-charge-controller
+      operationId: view
+      parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ViewResponse"
+    delete:
+      tags:
+      - pix-charge-controller
+      operationId: cancel
+      parameters:
+      - name: txid
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
   /api/v1/payments/{id}:
     get:
       tags:
       - payment-controller
-      operationId: get_2
+      operationId: get_3
       parameters:
       - name: id
         in: path
@@ -786,7 +986,7 @@ paths:
     get:
       tags:
       - notification-controller
-      operationId: list_4
+      operationId: list_6
       parameters:
       - name: page
         in: query
@@ -842,6 +1042,12 @@ paths:
           - PIX_KEY_DELETED
           - PIX_SENT
           - PIX_FAILED
+          - PIX_REFUNDED
+          - PIX_CHARGE_CREATED
+          - PIX_CHARGE_CANCELED
+          - PIX_SCHEDULED
+          - PIX_SCHEDULE_CANCELED
+          - PIX_SCHEDULE_FAILED
           - PIGGY_CREATED
           - PIGGY_DEPOSIT
           - PIGGY_WITHDRAW
@@ -898,7 +1104,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: get_3
+      operationId: get_4
       parameters:
       - name: id
         in: path
@@ -1012,6 +1218,20 @@ paths:
       tags:
       - security-controller
       operationId: revokeSession
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+  /api/v1/pix/schedules/{id}:
+    delete:
+      tags:
+      - pix-schedule-controller
+      operationId: cancel_1
       parameters:
       - name: id
         in: path
@@ -1190,6 +1410,74 @@ components:
           type: string
         direction:
           type: string
+        refundOfId:
+          type: string
+          format: uuid
+        refundedAmount:
+          $ref: "#/components/schemas/MoneyResponse"
+        refundableAmount:
+          $ref: "#/components/schemas/MoneyResponse"
+        createdAt:
+          type: string
+          format: date-time
+    RefundRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+    CreateRequest:
+      type: object
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        key:
+          type: string
+          maxLength: 100
+          minLength: 0
+        amount:
+          type: number
+          minimum: 0.01
+        message:
+          type: string
+          maxLength: 140
+          minLength: 0
+        scheduledFor:
+          type: string
+          format: date
+      required:
+      - amount
+      - key
+      - scheduledFor
+      - sourceAccountId
+    ScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceAccountId:
+          type: string
+          format: uuid
+        key:
+          type: string
+        destinationName:
+          type: string
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        message:
+          type: string
+        scheduledFor:
+          type: string
+          format: date
+        status:
+          type: string
+        failureReason:
+          type: string
+        executedPixId:
+          type: string
+          format: uuid
         createdAt:
           type: string
           format: date-time
@@ -1225,22 +1513,39 @@ components:
         createdAt:
           type: string
           format: date-time
-    CreateRequest:
+    ChargeResponse:
       type: object
       properties:
+        txid:
+          type: string
         accountId:
           type: string
           format: uuid
-        name:
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        description:
           type: string
-          maxLength: 40
-          minLength: 0
-        goal:
-          type: number
-          minimum: 0.01
+        status:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        paidAt:
+          type: string
+          format: date-time
+        location:
+          type: string
+    PayRequest:
+      type: object
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
       required:
-      - accountId
-      - name
+      - sourceAccountId
     PiggyResponse:
       type: object
       properties:
@@ -1594,6 +1899,22 @@ components:
         totalElements:
           type: integer
           format: int64
+    SchedulePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
     LookupResponse:
       type: object
       properties:
@@ -1609,6 +1930,44 @@ components:
           type: string
         ownAccount:
           type: boolean
+    ChargePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChargeResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    ViewResponse:
+      type: object
+      properties:
+        txid:
+          type: string
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        description:
+          type: string
+        status:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        receiverName:
+          type: string
+        receiverDocument:
+          type: string
+        own:
+          type: boolean
+        bank:
+          type: string
     PaymentPage:
       type: object
       properties:

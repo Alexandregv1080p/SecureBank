@@ -22,6 +22,11 @@ public class BankTime {
         return clock.instant();
     }
 
+    /** O dia de hoje no fuso do banco (America/Sao_Paulo). */
+    public LocalDate today() {
+        return LocalDate.now(clock.withZone(ZONE));
+    }
+
     public Instant startOfToday() {
         return startOfDay(LocalDate.now(clock.withZone(ZONE)));
     }

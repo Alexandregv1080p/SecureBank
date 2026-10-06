@@ -41,7 +41,8 @@ class IdempotencyFilter extends OncePerRequestFilter {
     private static final List<String> PATHS = List.of("/api/v1/transfers", "/api/v1/payments",
             "/api/v1/accounts/*/deposits", "/api/v1/accounts/*/withdrawals",
             "/api/v1/piggies/*/deposits", "/api/v1/piggies/*/withdrawals", "/api/v1/pix/transfers",
-            "/api/v1/pix/transfers/*/refund", "/api/v1/pix/charges/*/pay");
+            "/api/v1/pix/transfers/*/refund", "/api/v1/pix/charges/*/pay",
+            "/api/v1/pix/schedules");
 
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final IdempotencyStore store;

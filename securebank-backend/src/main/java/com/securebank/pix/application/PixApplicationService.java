@@ -162,7 +162,8 @@ public class PixApplicationService {
         audit.recordIndependently(sourceAccountId == null ? entry : entry.account(sourceAccountId));
     }
 
-    private PixTransfer doSend(CustomerId requester, AccountId sourceAccountId, String rawKey, BigDecimal amount,
+    /** Envio por chave dentro da transação do chamador (também usado pelo agendador do Pix agendado). */
+    PixTransfer doSend(CustomerId requester, AccountId sourceAccountId, String rawKey, BigDecimal amount,
             String message) {
         customerService.requireActive(requester);
         Account source = accountService.findOwned(requester, sourceAccountId);

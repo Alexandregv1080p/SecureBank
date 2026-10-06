@@ -72,6 +72,9 @@ public class NotificationService {
                 notifyOwner(event, event.text("sourceAccountId"), "PIX_REFUND_SENT", "Devolução enviada", "Você devolveu " + amount + " de um Pix.");
                 notifyOwner(event, event.text("destinationAccountId"), "PIX_REFUND_RECEIVED", "Devolução recebida", "Você recebeu " + amount + " de volta de um Pix.");
             }
+            case "PixScheduleFailed" -> notifyOwner(event, event.text("accountId"), "PIX_SCHEDULE_FAILED", "Pix agendado não realizado",
+                    "Seu Pix agendado de " + event.text("amount") + " " + event.text("currency") + " não foi realizado: "
+                            + scheduleReason(event.text("reason")) + ".");
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",
@@ -101,6 +104,18 @@ public class NotificationService {
         if (!notifications.markRead(id, customerId, time.now())) {
             throw ApplicationException.notFound("Notification");
         }
+    }
+
+    /** Motivo do agendamento que falhou, em linguagem de gente. */
+    private static String scheduleReason(String code) {
+        return switch (code) {
+            case "INSUFFICIENT_FUNDS" -> "saldo insuficiente";
+            case "LIMIT_EXCEEDED" -> "o limite do Pix foi excedido";
+            case "NOT_FOUND" -> "a chave do destinatário não existe mais";
+            case "ACCOUNT_NOT_ACTIVE" -> "uma das contas não está ativa";
+            case "CUSTOMER_NOT_ACTIVE" -> "seu cadastro não está ativo";
+            default -> "motivo " + code;
+        };
     }
 
     private void notifyOwner(EventEnvelope event, String accountId, String type, String title, String body) {

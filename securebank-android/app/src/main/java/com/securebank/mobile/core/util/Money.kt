@@ -21,6 +21,10 @@ object Money {
         return if (BigDecimal(normalized).signum() > 0) normalized else null
     }
 
+    /** Soma exata (BigDecimal, nunca double) de valores em string; devolve "1234.56". */
+    fun sum(values: List<String>): String =
+        values.fold(BigDecimal.ZERO) { acc, v -> acc + BigDecimal(v) }.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
+
     /** Só para exibição (R$ 1.234,50). */
     fun format(amount: String): String =
         NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(BigDecimal(amount))

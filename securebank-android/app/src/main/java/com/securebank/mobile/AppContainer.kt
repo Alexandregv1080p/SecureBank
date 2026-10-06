@@ -10,6 +10,7 @@ import com.securebank.mobile.core.session.KeystoreTokenStore
 import com.securebank.mobile.core.session.SecureTokenStore
 import com.securebank.mobile.core.session.SessionManager
 import com.securebank.mobile.data.AuthRepository
+import com.securebank.mobile.data.BankingRepository
 
 /** Injeção de dependência manual: poucos objetos, todos criados uma vez, sem framework. */
 class AppContainer(context: Context) {
@@ -23,6 +24,7 @@ class AppContainer(context: Context) {
         certPins = BuildConfig.CERT_PINS,
     )
     val auth = AuthRepository(network.auth, tokenStore, session, network.json)
+    val banking = BankingRepository(network.banking, network.json)
 
     val lockSettings = LockSettings(context)
     val biometric = BiometricGate(context)

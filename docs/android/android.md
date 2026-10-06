@@ -10,7 +10,7 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 | ---- | ------- | ------ |
 | **A1 Fundação** | projeto Gradle, tema (mesmos tokens do web), camada de rede, sessão segura, testes da lógica | feita |
 | **A2 Autenticação** | cadastro, login, etapa de MFA, restauração da sessão, sair, bloqueio por biometria | feita (ver Validação) |
-| A3 Contas | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | pendente |
+| **A3 Contas** | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | feita (ver Validação) |
 | A4 Movimentação | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | pendente |
 | A5 Segurança e avisos | avisos, MFA com QR, troca de senha, dispositivos conectados | pendente |
 | A6 Testes e entrega | testes de UI, R8/pinning de release, CI, assinatura | pendente |
@@ -49,6 +49,16 @@ Fluxo: **Restaurando** (refresh token do Keystore → renova) → **Login** (e-m
 
 **Limite honesto:** é um portão de interface. Quem comprometer o aparelho com root pode contornar a tela; o que protege o refresh token em si é o Keystore (chave não exportável). Amarrar a chave do Keystore à biometria (`setUserAuthenticationRequired`) seria mais forte, mas traz invalidação de chave ao cadastrar nova digital e foi deixado como melhoria.
 
+## Contas (A3)
+
+Barra inferior **Início / Contas**; o detalhe da conta abre por cima, com "voltar".
+
+* **Início:** "Olá, {nome}", saldo total, lista de contas, estado vazio com "Abrir conta" e puxar para atualizar. O saldo total soma com `BigDecimal` (nunca `double`: 0,10 + 0,20 dá exatamente 0,30).
+* **Contas:** lista e abertura de conta (corrente ou poupança); mostra o número da conta aberta.
+* **Detalhe:** saldo, selo de conta bloqueada/encerrada, **limites do dia** (restante hoje e teto por operação) e **extrato** com filtro de período (seletor de data do Material), "Ver mais" que acrescenta a próxima página de 20, e puxar para atualizar. Mudar o período cancela o pedido anterior que ainda estava a caminho (não mistura resultados).
+* Todas as telas têm esqueleto de carregamento, estado vazio e erro com "Tentar novamente". Falha nos limites não derruba o resto da tela.
+* Conta de outro dono é indistinguível de inexistente (a API devolve 404), então o app mostra o mesmo erro.
+
 ## Estrutura
 
 ```text
@@ -60,8 +70,8 @@ securebank-android/
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
 │   ├── core/security/  AppLock, BiometricGate, LockSettings
 │   ├── core/util/      Money, Phone, IdempotencyKeys, RegisterValidation
-│   ├── data/           AuthRepository
-│   └── ui/             theme/Theme.kt, AppRoot.kt, components/, auth/ (Login, Register, Lock + ViewModels)
+│   ├── data/           AuthRepository, BankingRepository
+│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 
@@ -77,7 +87,7 @@ Testes: `./gradlew testDebugUnitTest` (JVM, sem emulador). Lint: `./gradlew lint
 
 | O quê | Resultado |
 | ----- | --------- |
-| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **32 testes passam** (rede 9, claims 3, util 5, validação do cadastro 2, bloqueio 6, autenticação 7), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
+| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **42 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, bloqueio 6, autenticação 7, contas 5), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
 | Build Android completo (AGP, Compose, recursos, manifesto, lint) | **não executado**: precisa do Android SDK, que não existe nesta máquina e cuja licença só o usuário pode aceitar |
 | Telas, ViewModels, Compose, `BiometricGate`, `KeystoreTokenStore`, `MainActivity` | escritas, **nunca compiladas** (dependem do Android SDK); o CI compila no primeiro push |
 

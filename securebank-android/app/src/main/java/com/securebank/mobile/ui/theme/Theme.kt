@@ -7,6 +7,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -51,3 +52,8 @@ private val shapes = Shapes(extraSmall = radius, small = radius, medium = radius
 fun SecureBankTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = if (darkTheme) Dark else Light, shapes = shapes, content = content)
 }
+
+/** Verde de entrada de dinheiro (mesmo --ok do web), com contraste AA nos dois temas. */
+@Composable
+@ReadOnlyComposable
+fun creditColor(): Color = if (isSystemInDarkTheme()) Color(0xFF6EE7A0) else Color(0xFF17663A)

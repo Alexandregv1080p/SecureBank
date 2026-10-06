@@ -39,6 +39,8 @@ class FormatTest {
         assertEquals("Estorno", Format.describe(tx("REFUND", "CREDIT")))
         assertEquals("Pix enviado", Format.describe(tx("PIX_OUT", "DEBIT")))
         assertEquals("Pix recebido", Format.describe(tx("PIX_IN", "CREDIT")))
+        assertEquals("Devolução de Pix enviada", Format.describe(tx("PIX_RETURN_OUT", "DEBIT")))
+        assertEquals("Devolução de Pix recebida", Format.describe(tx("PIX_RETURN_IN", "CREDIT")))
         assertEquals("Guardado no porquinho", Format.describe(tx("PIGGY_IN", "DEBIT")))
         assertEquals("Resgate do porquinho", Format.describe(tx("PIGGY_OUT", "CREDIT")))
     }

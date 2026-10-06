@@ -14,6 +14,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.util.Format
 import com.securebank.mobile.core.util.Money
 import com.securebank.mobile.core.util.PixField
+import com.securebank.mobile.core.util.PixValidation
 import com.securebank.mobile.ui.Load
 import com.securebank.mobile.ui.components.AccountPicker
 import com.securebank.mobile.ui.components.AuthScaffold
@@ -107,6 +109,18 @@ fun PixSendScreen(container: AppContainer, viewModel: PixSendViewModel, onHistor
 
 @Composable
 private fun Recipient(s: PixSendState) {
+    s.charge?.let { c ->
+        Panel {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Cobrança para", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(c.receiverName, style = MaterialTheme.typography.titleMedium)
+                Text("CPF ${c.receiverDocument} · ${c.bank}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                c.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                Text("Vence em ${Format.dateTime(c.expiresAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        return
+    }
     val lookup = s.lookup ?: return
     Panel {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -130,7 +144,22 @@ private fun Details(s: PixSendState, accounts: List<Account>, vm: PixSendViewMod
             "Valor (R$)", s.amount, vm::onAmount, error = s.errors[PixField.Amount], keyboardType = KeyboardType.Decimal,
             hint = if (s.fixedAmount) "Valor definido pelo código" else null, enabled = !s.fixedAmount,
         )
-        SbTextField("Mensagem (opcional)", s.message, vm::onMessage, error = s.errors[PixField.Message], imeAction = ImeAction.Done, onDone = vm::review)
+        if (s.charge == null) {
+            SbTextField("Mensagem (opcional)", s.message, vm::onMessage, error = s.errors[PixField.Message], imeAction = ImeAction.Done, onDone = vm::review)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Agendar para outra data", style = MaterialTheme.typography.titleSmall)
+                    Text("O dinheiro só sai na data escolhida.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = s.scheduleOn, onCheckedChange = vm::onSchedule)
+            }
+            if (s.scheduleOn) {
+                SbTextField(
+                    "Data (dd/mm/aaaa)", s.dateInput, vm::onDate, error = s.dateError, keyboardType = KeyboardType.Number,
+                    hint = "De amanhã até ${PixValidation.MAX_SCHEDULE_DAYS} dias à frente", imeAction = ImeAction.Done, onDone = vm::review,
+                )
+            }
+        }
         PrimaryButton("Revisar", onClick = vm::review)
     }
 }
@@ -145,14 +174,15 @@ private fun Review(s: PixSendState, accounts: List<Account>, onConfirm: () -> Un
                     Text("Valor", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     MoneyText(Money.format(Money.parse(s.amount).orEmpty()), style = MaterialTheme.typography.titleLarge)
                 }
-                Line("Para", s.lookup?.name.orEmpty())
-                Line("Chave", s.resolvedKey)
+                Line("Para", s.charge?.receiverName ?: s.lookup?.name.orEmpty())
+                if (s.charge == null) Line("Chave", s.resolvedKey) else Line("Cobrança", "paga na hora, uso único")
+                if (s.scheduleOn && s.charge == null) Line("Data", s.dateInput.trim())
                 Line("De", source?.let { "${Format.accountTypeLabel(it.type)}, ${Format.accountLabel(it.branch, it.accountNumber)}" }.orEmpty())
                 if (s.message.isNotBlank()) Line("Mensagem", s.message.trim())
             }
         }
         s.error?.let { Banner(it) }
-        PrimaryButton("Confirmar Pix", onClick = onConfirm, loading = s.loading)
+        PrimaryButton(if (s.scheduleOn && s.charge == null) "Confirmar agendamento" else "Confirmar Pix", onClick = onConfirm, loading = s.loading)
         OutlinedButton(onClick = onEdit, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Editar") }
     }
 }
@@ -168,7 +198,7 @@ private fun Line(label: String, value: String) {
 @Composable
 private fun Receipt(s: PixSendState, onNew: () -> Unit, onHistory: () -> Unit) {
     val entry = s.receipt
-    AuthScaffold("Pix enviado", null) {
+    AuthScaffold(if (s.scheduled != null) "Pix agendado" else "Pix enviado", null) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = creditColor(), modifier = Modifier.padding(top = 16.dp).size(48.dp))
             if (entry != null) {
@@ -177,6 +207,15 @@ private fun Receipt(s: PixSendState, onNew: () -> Unit, onHistory: () -> Unit) {
                 entry.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text("Identificador", style = MaterialTheme.typography.labelLarge)
                 Text(entry.endToEndId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            s.scheduled?.let { sch ->
+                MoneyText(Money.format(sch.amount.amount), style = MaterialTheme.typography.displaySmall)
+                Text("para ${sch.destinationName}", style = MaterialTheme.typography.titleMedium)
+                Text("em ${PixValidation.displayDate(sch.scheduledFor)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Se na data o saldo ou o limite não cobrirem, o Pix não é feito e você é avisado. Você pode cancelar em Agendados até lá.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             PrimaryButton("Novo Pix", onClick = onNew)
             OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) { Text("Ver histórico") }

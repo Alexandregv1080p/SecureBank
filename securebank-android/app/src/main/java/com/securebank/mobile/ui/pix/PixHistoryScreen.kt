@@ -25,7 +25,7 @@ import com.securebank.mobile.ui.components.Skeleton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PixHistoryScreen(viewModel: PixHistoryViewModel, onBack: () -> Unit) {
+fun PixHistoryScreen(viewModel: PixHistoryViewModel, onRefund: (String) -> Unit, onBack: () -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
 
     PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.fillMaxSize()) {
@@ -46,7 +46,7 @@ fun PixHistoryScreen(viewModel: PixHistoryViewModel, onBack: () -> Unit) {
                             Column {
                                 s.items.forEachIndexed { i, e ->
                                     if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                                    PixEntryRow(e)
+                                    PixEntryRow(e, onRefund = { onRefund(it.id) })
                                 }
                             }
                         }

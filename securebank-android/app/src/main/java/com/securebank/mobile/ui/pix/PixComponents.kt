@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,9 +32,29 @@ import com.securebank.mobile.core.util.Money
 import com.securebank.mobile.ui.components.MoneyText
 import com.securebank.mobile.ui.theme.creditColor
 
+private fun entryTitle(e: PixEntry): String = when {
+    e.isRefund && e.sent -> "Devolução enviada para ${e.counterpartName}"
+    e.isRefund -> "Devolução recebida de ${e.counterpartName}"
+    e.sent -> "Pix enviado para ${e.counterpartName}"
+    else -> "Pix recebido de ${e.counterpartName}"
+}
+
+/** Linha do histórico; em Pix recebido ainda devolvível, mostra a ação "Devolver" (a tela confere de novo no servidor). */
+@Composable
+fun PixEntryRow(entry: PixEntry, onRefund: ((PixEntry) -> Unit)? = null) {
+    Column {
+        PixEntryLine(entry)
+        if (onRefund != null && entry.canRefund) {
+            TextButton(onClick = { onRefund(entry) }, modifier = Modifier.padding(start = 52.dp)) {
+                Text("Devolver (até ${Money.format(entry.refundableAmount!!.amount)})")
+            }
+        }
+    }
+}
+
 /** Um Pix do histórico: enviado em cinza com "−", recebido em verde com "+"; a contraparte vem mascarada do servidor. */
 @Composable
-fun PixEntryRow(entry: PixEntry) {
+private fun PixEntryLine(entry: PixEntry) {
     val received = !entry.sent
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -56,7 +77,7 @@ fun PixEntryRow(entry: PixEntry) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    if (received) "Pix recebido de ${entry.counterpartName}" else "Pix enviado para ${entry.counterpartName}",
+                    entryTitle(entry),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(

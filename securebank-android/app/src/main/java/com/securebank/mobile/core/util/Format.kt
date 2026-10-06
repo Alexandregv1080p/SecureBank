@@ -31,6 +31,8 @@ object Format {
         "PAYMENT" -> "Pagamento"
         "PIX_OUT" -> "Pix enviado"
         "PIX_IN" -> "Pix recebido"
+        "PIX_RETURN_OUT" -> "Devolução de Pix enviada"
+        "PIX_RETURN_IN" -> "Devolução de Pix recebida"
         "PIGGY_IN" -> "Guardado no porquinho"
         "PIGGY_OUT" -> "Resgate do porquinho"
         else -> "Estorno"

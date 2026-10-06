@@ -11,7 +11,8 @@ object BrCode {
 
     class InvalidBrCodeException(message: String) : Exception(message)
 
-    data class Data(val key: String, val amount: String?, val name: String, val city: String, val txid: String)
+    /** Estático: traz a [key]. Dinâmico (cobrança): traz a [location] (URL) e nenhuma chave. */
+    data class Data(val key: String?, val location: String?, val amount: String?, val name: String, val city: String, val txid: String)
 
     private const val GUI = "br.gov.bcb.pix"
 
@@ -26,6 +27,28 @@ object BrCode {
         return withCrcHeader + crc16(withCrcHeader)
     }
 
+    /**
+     * QR DINÂMICO de uma cobrança: em vez da chave leva o endereço ([location]) onde a cobrança mora; valor e dados do
+     * recebedor vêm de lá (o servidor garante valor fixo, validade e uso único).
+     */
+    fun encodeDynamic(location: String, name: String, city: String = "SAO PAULO"): String {
+        require(location.isNotBlank() && location.length <= 77) { "endereço da cobrança inválido" }
+        val merchant = tlv("00", GUI) + tlv("25", location)
+        val body = tlv("00", "01") + tlv("01", "12") + tlv("26", merchant) + tlv("52", "0000") + tlv("53", "986") +
+            tlv("58", "BR") + tlv("59", clean(name, 25).ifEmpty { "RECEBEDOR" }) +
+            tlv("60", clean(city, 15).ifEmpty { "BRASIL" }) + tlv("62", tlv("05", "***"))
+        val withCrcHeader = body + "6304"
+        return withCrcHeader + crc16(withCrcHeader)
+    }
+
+    private val chargePath = Regex("(?:^|/)charges/([A-Za-z0-9]{26,35})/?$")
+
+    /**
+     * Identificador da cobrança dentro do endereço do QR dinâmico. O app NUNCA acessa a URL do código (quem fez o QR
+     * poderia apontá-la para qualquer servidor): só extrai o txid e consulta a SUA própria API.
+     */
+    fun chargeTxid(location: String): String? = chargePath.find(location.trim())?.groupValues?.get(1)
+
     /** Lê um código colado. Confere o CRC (um caractere errado é pego aqui, antes de qualquer consulta). */
     fun decode(code: String): Data {
         val text = code.trim()
@@ -38,11 +61,11 @@ object BrCode {
         val merchant = parse(fields["26"] ?: throw InvalidBrCodeException("Não é um código Pix."))
         if (!merchant["00"].equals(GUI, ignoreCase = true)) throw InvalidBrCodeException("Não é um código Pix.")
         val key = merchant["01"]
-            ?: throw InvalidBrCodeException(
-                if (merchant.containsKey("25")) "Pix de cobrança (QR dinâmico) ainda não é suportado. Use a chave." else "O código não traz uma chave Pix.",
-            )
+        val location = merchant["25"]
+        if (key == null && location == null) throw InvalidBrCodeException("O código não traz uma chave Pix.")
         return Data(
             key = key,
+            location = if (key == null) location else null,
             amount = fields["54"],
             name = fields["59"].orEmpty(),
             city = fields["60"].orEmpty(),

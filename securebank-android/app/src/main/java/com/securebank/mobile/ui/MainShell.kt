@@ -42,7 +42,13 @@ import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
 import com.securebank.mobile.ui.more.MoreScreen
 import com.securebank.mobile.ui.piggy.NewPiggyScreen
+import com.securebank.mobile.ui.pix.PixChargesScreen
+import com.securebank.mobile.ui.pix.PixChargesViewModel
 import com.securebank.mobile.ui.pix.PixHistoryScreen
+import com.securebank.mobile.ui.pix.PixRefundScreen
+import com.securebank.mobile.ui.pix.PixRefundViewModel
+import com.securebank.mobile.ui.pix.PixSchedulesScreen
+import com.securebank.mobile.ui.pix.PixSchedulesViewModel
 import com.securebank.mobile.ui.pix.PixHistoryViewModel
 import com.securebank.mobile.ui.pix.PixHubScreen
 import com.securebank.mobile.ui.pix.PixKeysScreen
@@ -158,6 +164,8 @@ fun MainShell(container: AppContainer) {
                     onReceive = { nav.navigate("pix/receive") },
                     onKeys = { nav.navigate("pix/keys") },
                     onHistory = { nav.navigate("pix/history") },
+                    onCharges = { nav.navigate("pix/charges") },
+                    onSchedules = { nav.navigate("pix/schedules") },
                 )
             }
             composable("pix/send") {
@@ -178,7 +186,20 @@ fun MainShell(container: AppContainer) {
             }
             composable("pix/history") {
                 val vm: PixHistoryViewModel = viewModel(factory = viewModelFactory { initializer { PixHistoryViewModel(container.pix, container.banking) } })
-                PixHistoryScreen(vm, onBack = { nav.popBackStack() })
+                PixHistoryScreen(vm, onRefund = { nav.navigate("pix/refund/$it") }, onBack = { nav.popBackStack() })
+            }
+            composable("pix/refund/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val vm: PixRefundViewModel = viewModel(factory = viewModelFactory { initializer { PixRefundViewModel(container.pix, id) } })
+                PixRefundScreen(container, vm, onBack = { nav.popBackStack() })
+            }
+            composable("pix/charges") {
+                val vm: PixChargesViewModel = viewModel(factory = viewModelFactory { initializer { PixChargesViewModel(container.pix, container.banking) } })
+                PixChargesScreen(vm, onBack = { nav.popBackStack() })
+            }
+            composable("pix/schedules") {
+                val vm: PixSchedulesViewModel = viewModel(factory = viewModelFactory { initializer { PixSchedulesViewModel(container.pix, container.banking) } })
+                PixSchedulesScreen(vm, onBack = { nav.popBackStack() })
             }
             composable("piggies") {
                 val vm: PiggiesViewModel = viewModel(factory = viewModelFactory { initializer { PiggiesViewModel(container.piggies, container.banking) } })

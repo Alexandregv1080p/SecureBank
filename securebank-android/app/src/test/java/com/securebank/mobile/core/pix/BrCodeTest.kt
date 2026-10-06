@@ -81,14 +81,47 @@ class BrCodeTest {
     }
 
     @Test
-    fun dynamicQrCodesAreExplainedNotMisread() {
-        val merchant = "0014br.gov.bcb.pix" + "2542pix.exemplo.com/qr/v2/abcdefghijklmnopqrst"
+    fun aDynamicCodeCarriesALocationInsteadOfAKey() {
+        val txid = "AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+        val code = BrCode.encodeDynamic("pix.securebank.example/charges/$txid", "Ana Souza")
+
+        val data = BrCode.decode(code)
+
+        assertNull(data.key)
+        assertEquals("pix.securebank.example/charges/$txid", data.location)
+        assertEquals("ANA SOUZA", data.name)
+        assertEquals(BrCode.crc16(code.dropLast(4)), code.takeLast(4))
+        assertTrue(code.contains("010212")) // ponto de iniciação "12": uso único
+    }
+
+    @Test
+    fun theTxidIsExtractedFromTheLocationOnlyInTheExpectedShape() {
+        val txid = "AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+
+        assertEquals(txid, BrCode.chargeTxid("pix.securebank.example/charges/$txid"))
+        assertEquals(txid, BrCode.chargeTxid("https://pix.exemplo.com/v2/charges/$txid/"))
+        assertNull(BrCode.chargeTxid("pix.securebank.example/charges/curto"))
+        assertNull(BrCode.chargeTxid("pix.securebank.example/outra/$txid"))
+        assertNull(BrCode.chargeTxid("pix.securebank.example/charges/$txid/../../etc"))
+        assertNull(BrCode.chargeTxid("pix.securebank.example/charges/${txid}!"))
+        assertNull(BrCode.chargeTxid(""))
+    }
+
+    @Test
+    fun aStaticCodeHasNoLocationAndADynamicOneHasNoKey() {
+        assertNull(BrCode.decode(BrCode.encode("a@b.co", "A")).location)
+        assertEquals("a@b.co", BrCode.decode(BrCode.encode("a@b.co", "A")).key)
+    }
+
+    @Test
+    fun aMerchantWithNeitherKeyNorLocationIsRefused() {
+        val merchant = "0014br.gov.bcb.pix"
         val body = "000201" + "26" + merchant.length.toString().padStart(2, '0') + merchant + "5204000053039865802BR5903ANA6003SAO" + "6304"
         val code = body + BrCode.crc16(body)
 
         val e = assertThrows(BrCode.InvalidBrCodeException::class.java) { BrCode.decode(code) }
 
-        assertTrue(e.message!!.contains("dinâmico"))
+        assertTrue(e.message!!.contains("chave"))
     }
 
     @Test

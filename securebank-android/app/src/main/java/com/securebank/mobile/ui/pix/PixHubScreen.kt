@@ -28,6 +28,8 @@ fun PixHubScreen(
     onReceive: () -> Unit,
     onKeys: () -> Unit,
     onHistory: () -> Unit,
+    onCharges: () -> Unit,
+    onSchedules: () -> Unit,
 ) {
     val s = history.state.collectAsStateWithLifecycle().value
 
@@ -49,6 +51,10 @@ fun PixHubScreen(
                         NavRow("Enviar", "Por chave ou Pix Copia e Cola.", onSend)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                         NavRow("Receber", "Mostre seu QR code ou copie o código.", onReceive)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        NavRow("Cobrar", "Crie uma cobrança com QR code de valor fixo.", onCharges)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        NavRow("Agendados", "Pix marcados para uma data futura.", onSchedules)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                         NavRow("Minhas chaves", "CPF, e-mail, celular ou chave aleatória.", onKeys)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline)

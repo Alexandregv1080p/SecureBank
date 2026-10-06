@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.network.ApiError
 import com.securebank.mobile.core.network.PixEntry
+import com.securebank.mobile.core.network.PixChargeView
 import com.securebank.mobile.core.network.PixLookup
+import com.securebank.mobile.core.network.PixScheduleDto
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.pix.BrCode
 import com.securebank.mobile.core.util.IdempotentIntent
@@ -17,6 +19,8 @@ import com.securebank.mobile.data.PixRepository
 import com.securebank.mobile.ui.Load
 import com.securebank.mobile.ui.attempt
 import com.securebank.mobile.ui.toLoad
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,15 +51,25 @@ data class PixSendState(
     val loading: Boolean = false,
     val error: String? = null,
     val receipt: PixEntry? = null,
+    /** QR dinâmico lido: o pagador só vê nome/CPF mascarados e o valor, que é fixo. */
+    val charge: PixChargeView? = null,
+    val scheduleOn: Boolean = false,
+    val dateInput: String = "",
+    val dateError: String? = null,
+    val scheduled: PixScheduleDto? = null,
 )
 
 /** Enviar Pix: chave (ou copia-e-cola) → consulta mascarada → valor → revisão → (biometria na tela) → comprovante. */
-class PixSendViewModel(private val pix: PixRepository, private val banking: BankingRepository) : ViewModel() {
+class PixSendViewModel(
+    private val pix: PixRepository,
+    private val banking: BankingRepository,
+    private val today: () -> LocalDate = { LocalDate.now(ZoneId.of("America/Sao_Paulo")) },
+) : ViewModel() {
     private val _state = MutableStateFlow(PixSendState())
     val state: StateFlow<PixSendState> = _state.asStateFlow()
     private val intent = IdempotentIntent()
 
-    private data class Payload(val source: String, val key: String, val amount: String, val message: String?)
+    private data class Payload(val source: String, val key: String, val amount: String, val message: String?, val date: String?, val txid: String?)
 
     init {
         viewModelScope.launch {
@@ -85,6 +99,9 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
         continueWithKey()
     }
 
+    fun onSchedule(on: Boolean) = _state.update { it.copy(scheduleOn = on, dateError = null) }
+    fun onDate(v: String) = _state.update { it.copy(dateInput = v.filter { c -> c.isDigit() || c == '/' }.take(10), dateError = null) }
+
     fun useRecent(recent: PixRecent) {
         _state.update { it.copy(keyInput = recent.key, keyError = null) }
         continueWithKey()
@@ -103,16 +120,33 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
             try {
                 var key = s.keyInput.trim()
                 var amount: String? = null
+                var charge: PixChargeView? = null
                 if (BrCode.looksLikeCode(key)) {
                     val data = BrCode.decode(key)
-                    key = data.key
-                    amount = data.amount?.takeIf { Money.parse(it) != null }
+                    if (data.key != null) {
+                        key = data.key
+                        amount = data.amount?.takeIf { Money.parse(it) != null }
+                    } else {
+                        // QR dinâmico: nunca acessa a URL do código; só extrai o txid e consulta a PRÓPRIA API.
+                        val txid = BrCode.chargeTxid(data.location.orEmpty())
+                            ?: throw BrCode.InvalidBrCodeException("Este QR de cobrança não é de um banco que o app reconheça.")
+                        val view = pix.charge(txid)
+                        when {
+                            view.own -> throw BrCode.InvalidBrCodeException("Esta cobrança é sua; quem paga é o outro lado.")
+                            view.status != "ACTIVE" -> throw BrCode.InvalidBrCodeException("Esta cobrança está ${PixValidation.chargeStatusLabel(view.status).lowercase()}.")
+                        }
+                        charge = view
+                        key = txid
+                        amount = view.amount.amount
+                    }
                 }
-                val lookup = pix.lookup(key)
+                val lookup = if (charge == null) pix.lookup(key) else null
                 _state.update {
                     it.copy(
-                        step = PixSendStep.Details, lookup = lookup, resolvedKey = key,
+                        step = PixSendStep.Details, lookup = lookup, charge = charge, resolvedKey = key,
                         fixedAmount = amount != null, amount = amount ?: it.amount,
+                        message = if (charge != null) charge.description.orEmpty() else it.message,
+                        scheduleOn = false, dateError = null,
                     )
                 }
             } catch (e: CancellationException) {
@@ -121,7 +155,7 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
                 _state.update { it.copy(keyError = e.message) }
             } catch (e: ApiError) {
                 _state.update {
-                    if (e.status == 404) it.copy(keyError = "Chave Pix não encontrada. Confira e tente de novo.")
+                    if (e.status == 404) it.copy(keyError = "Chave ou cobrança não encontrada. Confira e tente de novo.")
                     else it.copy(error = messageFor(e))
                 }
             } finally {
@@ -133,12 +167,16 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
     fun review() {
         val s = _state.value
         val errors = PixValidation.send(s.sourceId, s.amount, s.message)
-        _state.update { if (errors.isEmpty()) it.copy(step = PixSendStep.Review, errors = emptyMap()) else it.copy(errors = errors) }
+        val dateError = if (s.scheduleOn && s.charge == null) PixValidation.scheduleDateError(PixValidation.parseDate(s.dateInput), today()) else null
+        _state.update {
+            if (errors.isEmpty() && dateError == null) it.copy(step = PixSendStep.Review, errors = emptyMap(), dateError = null)
+            else it.copy(errors = errors, dateError = dateError)
+        }
     }
 
     fun backToDetails() = _state.update { it.copy(step = PixSendStep.Details, error = null) }
 
-    fun backToKey() = _state.update { it.copy(step = PixSendStep.Key, lookup = null, fixedAmount = false, error = null) }
+    fun backToKey() = _state.update { it.copy(step = PixSendStep.Key, lookup = null, charge = null, fixedAmount = false, error = null) }
 
     /** Só chamar DEPOIS da confirmação de identidade. */
     fun confirm() {
@@ -146,12 +184,26 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
         if (s.loading || s.step != PixSendStep.Review) return
         val amount = Money.parse(s.amount) ?: return
         val message = s.message.trim().ifEmpty { null }
-        val payload = Payload(s.sourceId!!, s.resolvedKey, amount, message)
+        val txid = s.charge?.txid
+        val date = if (s.scheduleOn && txid == null) PixValidation.parseDate(s.dateInput)?.toString() else null
+        val payload = Payload(s.sourceId!!, s.resolvedKey, amount, if (txid == null) message else null, date, txid)
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                val entry = intent.run(payload) { key -> pix.send(payload.source, payload.key, payload.amount, payload.message, key) }
-                _state.update { it.copy(step = PixSendStep.Sent, receipt = entry, amount = "", message = "") }
+                when {
+                    txid != null -> {
+                        val entry = intent.run(payload) { key -> pix.payCharge(txid, payload.source, key) }
+                        _state.update { it.copy(step = PixSendStep.Sent, receipt = entry, amount = "", message = "") }
+                    }
+                    date != null -> {
+                        val sch = intent.run(payload) { key -> pix.schedule(payload.source, payload.key, payload.amount, payload.message, date, key) }
+                        _state.update { it.copy(step = PixSendStep.Sent, scheduled = sch, amount = "", message = "") }
+                    }
+                    else -> {
+                        val entry = intent.run(payload) { key -> pix.send(payload.source, payload.key, payload.amount, payload.message, key) }
+                        _state.update { it.copy(step = PixSendStep.Sent, receipt = entry, amount = "", message = "") }
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

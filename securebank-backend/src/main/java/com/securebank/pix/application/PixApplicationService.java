@@ -168,14 +168,25 @@ public class PixApplicationService {
         Account source = accountService.findOwned(requester, sourceAccountId);
         PixKey key = resolve(rawKey);
         Account destination = destinationOf(key);
+        Money money = new Money(amount, source.balance().currency());
+        return settle(requester, source, destination, money, message, key.value(), null, time.now());
+    }
+
+    /**
+     * Efetiva um Pix já validado em quem envia e em quem recebe: limite, saldo, lançamentos, auditoria e evento, tudo na
+     * transação do chamador. Compartilhado pelo envio por chave e pelo pagamento de cobrança ({@code chargeTxid}).
+     */
+    PixTransfer settle(CustomerId requester, Account source, Account destination, Money money, String message,
+            String keyLabel, String chargeTxid, Instant now) {
         Customer sender = customerService.get(requester);
         Customer receiver = customers.findById(destination.customerId())
                 .orElseThrow(() -> ApplicationException.notFound("Pix key"));
 
-        Money money = new Money(amount, source.balance().currency());
-        Instant now = time.now();
-        PixTransfer pix = PixTransfer.create(source.id(), destination.id(), money, message, key.value(),
+        PixTransfer pix = PixTransfer.create(source.id(), destination.id(), money, message, keyLabel,
                 PixMasks.name(sender.name()), PixMasks.name(receiver.name()), EndToEndId.generate(now, random), now);
+        if (chargeTxid != null) {
+            pix.linkToCharge(chargeTxid);
+        }
         LimitUsage.Status limit = limitUsage.of(source.id(), LimitType.PIX, money.currency());
 
         PixService.Result result = domain.execute(pix, source, destination, limit.limit(), limit.usedToday(), now);

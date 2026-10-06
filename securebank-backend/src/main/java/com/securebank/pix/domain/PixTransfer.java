@@ -31,6 +31,7 @@ public final class PixTransfer {
     private TransactionId debitTransactionId;
     private TransactionId creditTransactionId;
     private final PixTransferId refundOfId;
+    private String chargeTxid;
     private final Instant createdAt;
 
     private PixTransfer(PixTransferId id, AccountId source, AccountId destination, Money amount, String message,
@@ -87,11 +88,12 @@ public final class PixTransfer {
 
     public static PixTransfer restore(PixTransferId id, AccountId source, AccountId destination, Money amount,
             String message, String destinationKey, String sourceName, String destinationName, String endToEndId,
-            TransactionId debit, TransactionId credit, PixTransferId refundOfId, Instant createdAt) {
+            TransactionId debit, TransactionId credit, PixTransferId refundOfId, String chargeTxid, Instant createdAt) {
         PixTransfer pix = new PixTransfer(id, source, destination, amount, message, destinationKey, sourceName,
                 destinationName, endToEndId, refundOfId, createdAt);
         pix.debitTransactionId = debit;
         pix.creditTransactionId = credit;
+        pix.chargeTxid = chargeTxid;
         return pix;
     }
 
@@ -102,6 +104,14 @@ public final class PixTransfer {
         }
         this.debitTransactionId = debit;
         this.creditTransactionId = credit;
+    }
+
+    /** Marca este Pix como o pagamento de uma cobrança (feito uma vez, antes de gravar). */
+    public void linkToCharge(String txid) {
+        if (chargeTxid != null || txid == null) {
+            throw new InvalidValueException("Pix already linked to a charge");
+        }
+        this.chargeTxid = txid;
     }
 
     public boolean isRefund() {
@@ -136,5 +146,6 @@ public final class PixTransfer {
     public TransactionId debitTransactionId() { return debitTransactionId; }
     public TransactionId creditTransactionId() { return creditTransactionId; }
     public PixTransferId refundOfId() { return refundOfId; }
+    public String chargeTxid() { return chargeTxid; }
     public Instant createdAt() { return createdAt; }
 }

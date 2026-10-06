@@ -30,6 +30,7 @@ class PixTransferEntity {
     UUID debitTransactionId;
     UUID creditTransactionId;
     UUID refundOfId;
+    String chargeTxid;
     Instant createdAt;
 
     void apply(PixTransfer pix) {
@@ -46,6 +47,7 @@ class PixTransferEntity {
         debitTransactionId = pix.debitTransactionId() == null ? null : pix.debitTransactionId().value();
         creditTransactionId = pix.creditTransactionId() == null ? null : pix.creditTransactionId().value();
         refundOfId = pix.refundOfId() == null ? null : pix.refundOfId().value();
+        chargeTxid = pix.chargeTxid();
         createdAt = pix.createdAt();
     }
 
@@ -55,6 +57,6 @@ class PixTransferEntity {
                 destinationKey, sourceName, destinationName, endToEndId,
                 debitTransactionId == null ? null : new TransactionId(debitTransactionId),
                 creditTransactionId == null ? null : new TransactionId(creditTransactionId),
-                refundOfId == null ? null : new PixTransferId(refundOfId), createdAt);
+                refundOfId == null ? null : new PixTransferId(refundOfId), chargeTxid, createdAt);
     }
 }

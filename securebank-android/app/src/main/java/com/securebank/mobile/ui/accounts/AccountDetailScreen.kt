@@ -8,6 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.FilterChip
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -52,6 +61,17 @@ import java.time.ZoneOffset
 fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, onDeposit: () -> Unit, onWithdraw: () -> Unit) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val statement = state.statement
+    val context = LocalContext.current
+    val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) {
+            viewModel.export { csv ->
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+                        ?: error("não foi possível abrir o arquivo")
+                }
+            }
+        }
+    }
 
     PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -120,7 +140,25 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, o
                 }
             }
 
+            item { Text("Resumo do mês", style = MaterialTheme.typography.titleMedium) }
+            item { SummaryCard(state, onPrev = { viewModel.changeMonth(-1) }, onNext = { viewModel.changeMonth(1) }, onRetry = viewModel::refresh) }
+
             item { Text("Extrato", style = MaterialTheme.typography.titleMedium) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        FilterChip(selected = statement.category == null, onClick = { viewModel.setCategory(null) }, label = { Text("Tudo") })
+                        Format.categories.forEach { c ->
+                            FilterChip(selected = statement.category == c, onClick = { viewModel.setCategory(c) }, label = { Text(Format.categoryLabel(c)) })
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = statement.direction == null, onClick = { viewModel.setDirection(null) }, label = { Text("Entradas e saídas") })
+                        FilterChip(selected = statement.direction == "CREDIT", onClick = { viewModel.setDirection("CREDIT") }, label = { Text("Entradas") })
+                        FilterChip(selected = statement.direction == "DEBIT", onClick = { viewModel.setDirection("DEBIT") }, label = { Text("Saídas") })
+                    }
+                }
+            }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -130,6 +168,10 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, o
                     if (statement.from != null || statement.to != null) {
                         TextButton(onClick = { viewModel.setRange(null, null) }) { Text("Limpar período") }
                     }
+                    OutlinedButton(onClick = { saveCsv.launch("extrato.csv") }, enabled = !state.exporting) {
+                        Text(if (state.exporting) "Exportando…" else "Exportar CSV (período e filtros atuais)")
+                    }
+                    state.exportMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     statement.rangeError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                 }
             }
@@ -167,6 +209,53 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, o
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryCard(state: AccountDetailState, onPrev: () -> Unit, onNext: () -> Unit, onRetry: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onPrev) { Text("‹") }
+            Text(Format.month(state.month), style = MaterialTheme.typography.titleSmall)
+            TextButton(onClick = onNext, enabled = state.canGoNext) { Text("›") }
+        }
+        when (val summary = state.summary) {
+            Load.Loading -> Skeleton(112.dp)
+            is Load.Failed -> ErrorState(summary.message, onRetry = onRetry)
+            is Load.Ready -> Panel {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SummaryLine("Entradas", summary.value.income.amount, credit = true)
+                    SummaryLine("Saídas", summary.value.expenses.amount, credit = false)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    SummaryLine("Resultado do mês", summary.value.net.amount, credit = null)
+                    val active = summary.value.byCategory.filter { it.income.amount != "0.00" || it.expenses.amount != "0.00" }
+                    if (active.isNotEmpty()) {
+                        Text("Por categoria", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+                        active.forEach { c ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(Format.categoryLabel(c.category), style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "+ ${Money.format(c.income.amount)}  − ${Money.format(c.expenses.amount)}",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryLine(label: String, amount: String, credit: Boolean?) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        MoneyText(
+            Money.format(amount), style = MaterialTheme.typography.titleSmall,
+            color = if (credit == true) creditColor() else androidx.compose.ui.graphics.Color.Unspecified,
+        )
     }
 }
 

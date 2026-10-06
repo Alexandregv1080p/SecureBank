@@ -96,6 +96,10 @@ Reserva com nome e meta opcional, guardada **dentro de uma conta**: guardar tira
 
 Também nesta mudança: o **tema** deixou de usar o lilás padrão do Material (seletores e a barra inferior agora seguem o teal do app).
 
+## Histórico (extrato)
+
+Na tela da conta: **resumo do mês** (entradas, saídas, resultado e por categoria, com navegação entre meses até o atual), **filtros** por categoria (Depósitos e saques, Transferências, Pagamentos, Pix, Porquinhos) e por sentido (entradas/saídas), combináveis com o período, e **Exportar CSV**, que respeita período e filtros e grava no arquivo que o usuário escolher (seletor de documentos do sistema: o app não pede permissão de armazenamento). As categorias são derivadas do tipo do lançamento no servidor (nada novo é gravado).
+
 ## Pix
 
 Pix **simulado dentro do próprio banco** (não fala com o Banco Central). Backend em `pix/`; contrato em `docs/api/README.md`.

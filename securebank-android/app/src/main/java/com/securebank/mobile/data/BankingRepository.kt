@@ -48,7 +48,25 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
         size: Int = STATEMENT_PAGE_SIZE,
         from: LocalDate? = null,
         to: LocalDate? = null,
-    ): Page<Transaction> = apiCall(json) { api.statement(id, page, size, from?.toString(), to?.toString()) }
+        category: String? = null,
+        direction: String? = null,
+    ): Page<Transaction> = apiCall(json) { api.statement(id, page, size, from?.toString(), to?.toString(), category, direction) }
+
+    suspend fun statementSummary(id: String, month: java.time.YearMonth): com.securebank.mobile.core.network.StatementSummary =
+        apiCall(json) { api.statementSummary(id, month.toString()) }
+
+    /** CSV do extrato (até 5.000 lançamentos), com os mesmos filtros da tela. */
+    suspend fun exportStatement(
+        id: String,
+        from: LocalDate? = null,
+        to: LocalDate? = null,
+        category: String? = null,
+        direction: String? = null,
+    ): String = apiCall(json) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            api.exportStatement(id, from?.toString(), to?.toString(), category, direction).use { it.string() }
+        }
+    }
 
     suspend fun openAccount(type: String): Account =
         apiCall(json) { api.openAccount(OpenAccountRequest(type)) }.also { _changes.tryEmit(Unit) }

@@ -6,6 +6,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class Money(val amount: String, val currency: String = "BRL")
 
+/** Entradas e saídas de uma categoria (CASH, TRANSFERS, PAYMENTS, PIX, SAVINGS) no mês. */
+@Serializable
+data class CategoryTotal(val category: String, val income: Money, val expenses: Money)
+
+/** Resumo do mês de uma conta: só lançamentos concluídos. */
+@Serializable
+data class StatementSummary(val month: String, val income: Money, val expenses: Money, val net: Money, val byCategory: List<CategoryTotal>)
+
 @Serializable
 data class Account(
     val id: String,

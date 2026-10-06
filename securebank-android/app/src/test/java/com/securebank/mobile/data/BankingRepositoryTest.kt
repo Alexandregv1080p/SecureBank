@@ -97,4 +97,45 @@ class BankingRepositoryTest {
         assertEquals(404, e.status)
         assertEquals("NOT_FOUND", e.code)
     }
+
+    @Test
+    fun statementSendsCategoryAndDirectionFilters() = runBlocking {
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody("""{"items":[],"page":0,"size":20,"totalElements":0}"""))
+
+        repo.statement("acc1", 0, category = "PIX", direction = "CREDIT")
+
+        val path = server.takeRequest().path.orEmpty()
+        assertTrue(path, path.contains("category=PIX") && path.contains("direction=CREDIT"))
+    }
+
+    @Test
+    fun theMonthlySummaryIsReadByMonth() = runBlocking {
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody("""{"month":"2026-10","income":{"amount":"520.00","currency":"BRL"},"expenses":{"amount":"150.00","currency":"BRL"},"net":{"amount":"370.00","currency":"BRL"},"byCategory":[{"category":"CASH","income":{"amount":"500.00","currency":"BRL"},"expenses":{"amount":"50.00","currency":"BRL"}}]}"""))
+
+        val summary = repo.statementSummary("acc1", java.time.YearMonth.of(2026, 10))
+
+        assertEquals("370.00", summary.net.amount)
+        assertEquals("CASH", summary.byCategory.single().category)
+        assertEquals("/api/v1/accounts/acc1/statement/summary?month=2026-10", server.takeRequest().path)
+    }
+
+    @Test
+    fun exportReturnsTheCsvTextWithTheSameFilters() = runBlocking {
+        server.enqueue(MockResponse().setHeader("Content-Type", "text/csv").setBody("date,type\r\nx,DEPOSIT\r\n"))
+
+        val csv = repo.exportStatement("acc1", java.time.LocalDate.of(2026, 10, 1), null, "CASH", null)
+
+        assertEquals("date,type\r\nx,DEPOSIT\r\n", csv)
+        val path = server.takeRequest().path.orEmpty()
+        assertTrue(path, path.contains("/statement/export") && path.contains("from=2026-10-01") && path.contains("category=CASH") && !path.contains("direction"))
+    }
+
+    @Test
+    fun anExportFailureIsAnApiError() {
+        server.enqueue(MockResponse().setResponseCode(404).setHeader("Content-Type", "application/json").setBody("""{"status":404,"code":"NOT_FOUND","message":"x","traceId":"t"}"""))
+
+        val e = runCatching { runBlocking { repo.exportStatement("acc1") } }.exceptionOrNull() as ApiError
+
+        assertEquals(404, e.status)
+    }
 }

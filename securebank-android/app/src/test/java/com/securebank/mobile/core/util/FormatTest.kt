@@ -14,6 +14,13 @@ class FormatTest {
     )
 
     @Test
+    fun categoriesAndMonthsAreInPortuguese() {
+        assertEquals(listOf("Depósitos e saques", "Transferências", "Pagamentos", "Pix", "Porquinhos"), Format.categories.map(Format::categoryLabel))
+        assertEquals("outubro de 2026", Format.month(java.time.YearMonth.of(2026, 10)))
+        assertEquals("março de 2027", Format.month(java.time.YearMonth.of(2027, 3)))
+    }
+
+    @Test
     fun totalBalanceSumsExactlyWithoutFloatingPointDrift() {
         assertEquals("0.30", Money.sum(listOf("0.10", "0.20"))) // 0.1 + 0.2 em double daria 0.30000000000000004
         assertEquals("1234.56", Money.sum(listOf("1000.00", "234.56")))

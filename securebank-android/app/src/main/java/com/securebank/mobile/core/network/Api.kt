@@ -9,6 +9,8 @@ import retrofit2.http.POST
 import retrofit2.http.DELETE
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
+import okhttp3.ResponseBody
 
 /** Rotas de autenticação não levam o access token e nunca disparam renovação (cabeçalho No-Auth, removido pelo interceptor). */
 interface AuthApi {
@@ -43,7 +45,22 @@ interface BankingApi {
         @Query("size") size: Int = 10,
         @Query("from") from: String? = null,
         @Query("to") to: String? = null,
+        @Query("category") category: String? = null,
+        @Query("direction") direction: String? = null,
     ): Page<Transaction>
+
+    @GET("accounts/{id}/statement/summary")
+    suspend fun statementSummary(@Path("id") id: String, @Query("month") month: String): StatementSummary
+
+    @Streaming
+    @GET("accounts/{id}/statement/export")
+    suspend fun exportStatement(
+        @Path("id") id: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("category") category: String? = null,
+        @Query("direction") direction: String? = null,
+    ): ResponseBody
 
     @POST("accounts/{id}/deposits")
     suspend fun deposit(@Path("id") id: String, @Body body: AmountRequest, @Header("Idempotency-Key") key: String): Transaction

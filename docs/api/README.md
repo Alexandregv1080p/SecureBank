@@ -36,7 +36,9 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /accounts`                        | Abre conta (`CHECKING`/`SAVINGS`) e cria os limites padrão         |
 | `GET /accounts`, `GET /accounts/{id}`   | Contas do cliente                                                 |
 | `GET /accounts/{id}/balance`            | Saldo                                                             |
-| `GET /accounts/{id}/statement`          | Extrato paginado (`from`, `to`, `page`, `size ≤ 100`), mais recente primeiro |
+| `GET /accounts/{id}/statement`          | Extrato paginado (`from`, `to`, `category`, `direction`, `page`, `size ≤ 100`), mais recente primeiro. Categorias (derivadas do tipo): `CASH` (depósito/saque), `TRANSFERS`, `PAYMENTS` (pagamento/estorno), `PIX` (inclui devoluções), `SAVINGS` (porquinhos); `direction`: `CREDIT`/`DEBIT` |
+| `GET /accounts/{id}/statement/summary?month=YYYY-MM` | Resumo do mês (fuso de São Paulo): entradas, saídas, resultado e o mesmo por categoria; só lançamentos concluídos |
+| `GET /accounts/{id}/statement/export`   | CSV do extrato (mesmos filtros), até 5.000 linhas (`X-Truncated: true` se houver mais); campo `reference` neutraliza fórmulas de planilha |
 | `GET /accounts/{id}/limits`             | Limites com o consumo do dia                                      |
 | `POST /accounts/{id}/deposits`          | Depósito (simulado)                                               |
 | `POST /accounts/{id}/withdrawals`       | Saque (respeita limite de saque)                                  |

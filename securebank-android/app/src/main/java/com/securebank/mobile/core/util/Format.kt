@@ -2,6 +2,7 @@ package com.securebank.mobile.core.util
 
 import com.securebank.mobile.core.network.Transaction
 import java.time.Instant
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -11,6 +12,7 @@ object Format {
     private val locale: Locale = Locale.forLanguageTag("pt-BR")
     private val dateTime = DateTimeFormatter.ofPattern("dd MMM, HH:mm", locale)
     private val date = DateTimeFormatter.ofPattern("dd/MM/yyyy", locale)
+    private val month = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", locale)
 
     fun accountTypeLabel(type: String) = if (type == "CHECKING") "Conta corrente" else "Poupança"
 
@@ -23,6 +25,20 @@ object Format {
         "PIX" -> "Pix"
         else -> type
     }
+
+    /** Categorias do extrato (derivadas do tipo no servidor). */
+    val categories = listOf("CASH", "TRANSFERS", "PAYMENTS", "PIX", "SAVINGS")
+
+    fun categoryLabel(category: String) = when (category) {
+        "CASH" -> "Depósitos e saques"
+        "TRANSFERS" -> "Transferências"
+        "PAYMENTS" -> "Pagamentos"
+        "PIX" -> "Pix"
+        "SAVINGS" -> "Porquinhos"
+        else -> category
+    }
+
+    fun month(m: YearMonth): String = month.format(m)
 
     fun describe(t: Transaction): String = when (t.type) {
         "DEPOSIT" -> "Depósito"

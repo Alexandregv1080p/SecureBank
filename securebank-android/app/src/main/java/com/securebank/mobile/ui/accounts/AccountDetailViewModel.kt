@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.network.LimitUsage
+import com.securebank.mobile.core.network.StatementSummary
 import com.securebank.mobile.core.network.Transaction
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.data.BankingRepository
@@ -11,6 +12,9 @@ import com.securebank.mobile.ui.Load
 import com.securebank.mobile.ui.attempt
 import com.securebank.mobile.ui.toLoad
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +33,9 @@ data class StatementState(
     val from: LocalDate? = null,
     val to: LocalDate? = null,
     val rangeError: String? = null,
+    /** Filtros do servidor: categoria (CASH, TRANSFERS, PAYMENTS, PIX, SAVINGS) e sentido (CREDIT, DEBIT); nulo = todos. */
+    val category: String? = null,
+    val direction: String? = null,
 ) {
     val hasMore: Boolean get() = items.size < total
 }
@@ -38,7 +45,14 @@ data class AccountDetailState(
     val limits: Load<List<LimitUsage>> = Load.Loading,
     val statement: StatementState = StatementState(),
     val refreshing: Boolean = false,
-)
+    val month: YearMonth = YearMonth.now(ZoneId.of("America/Sao_Paulo")),
+    val summary: Load<StatementSummary> = Load.Loading,
+    val exporting: Boolean = false,
+    val exportMessage: String? = null,
+) {
+    /** Não dá para ver o futuro: o resumo para no mês atual. */
+    val canGoNext: Boolean get() = month.isBefore(YearMonth.now(ZoneId.of("America/Sao_Paulo")))
+}
 
 class AccountDetailViewModel(private val banking: BankingRepository, private val accountId: String) : ViewModel() {
     private val _state = MutableStateFlow(AccountDetailState())
@@ -72,6 +86,45 @@ class AccountDetailViewModel(private val banking: BankingRepository, private val
         loadStatement(reset = true)
     }
 
+    fun setCategory(category: String?) {
+        _state.update { it.copy(statement = it.statement.copy(category = category)) }
+        loadStatement(reset = true)
+    }
+
+    fun setDirection(direction: String?) {
+        _state.update { it.copy(statement = it.statement.copy(direction = direction)) }
+        loadStatement(reset = true)
+    }
+
+    fun changeMonth(delta: Long) {
+        val next = _state.value.month.plusMonths(delta)
+        if (delta > 0 && !_state.value.canGoNext) return
+        _state.update { it.copy(month = next) }
+        loadSummary()
+    }
+
+    fun clearExportMessage() = _state.update { it.copy(exportMessage = null) }
+
+    /** Baixa o CSV com os filtros atuais e entrega a [write] (que grava no arquivo escolhido pelo usuário). */
+    fun export(write: suspend (String) -> Unit) {
+        val s = _state.value
+        if (s.exporting) return
+        _state.update { it.copy(exporting = true, exportMessage = null) }
+        viewModelScope.launch {
+            try {
+                val st = s.statement
+                write(banking.exportStatement(accountId, st.from, st.to, st.category, st.direction))
+                _state.update { it.copy(exportMessage = "Extrato exportado.") }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(exportMessage = "Não foi possível exportar: ${messageFor(e)}") }
+            } finally {
+                _state.update { it.copy(exporting = false) }
+            }
+        }
+    }
+
     fun loadMore() {
         val s = _state.value.statement
         if (s.hasMore && !s.loading && !s.loadingMore) loadStatement(reset = false)
@@ -79,7 +132,17 @@ class AccountDetailViewModel(private val banking: BankingRepository, private val
 
     fun retryStatement() = loadStatement(reset = _state.value.statement.items.isEmpty())
 
+    private fun loadSummary() {
+        _state.update { it.copy(summary = Load.Loading) }
+        val month = _state.value.month
+        viewModelScope.launch {
+            val result = attempt { banking.statementSummary(accountId, month) }.toLoad()
+            _state.update { if (it.month == month) it.copy(summary = result) else it }
+        }
+    }
+
     private fun loadHeader() {
+        loadSummary()
         viewModelScope.launch {
             val account = attempt { banking.account(accountId) }
             _state.update { it.copy(account = account.toLoad(), refreshing = false) }
@@ -104,7 +167,7 @@ class AccountDetailViewModel(private val banking: BankingRepository, private val
             )
         }
         statementJob = viewModelScope.launch {
-            val result = attempt { banking.statement(accountId, page, from = before.from, to = before.to) }
+            val result = attempt { banking.statement(accountId, page, from = before.from, to = before.to, category = before.category, direction = before.direction) }
             _state.update { current ->
                 val s = current.statement
                 current.copy(

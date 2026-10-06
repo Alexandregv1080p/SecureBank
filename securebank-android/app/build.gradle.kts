@@ -61,7 +61,8 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    // bytecode Java 17 em qualquer JDK >= 17 (o CI usa 17; máquinas com JDK 21 não precisam de toolchain extra)
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
 
 dependencies {

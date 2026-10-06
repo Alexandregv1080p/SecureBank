@@ -2,7 +2,7 @@ package com.securebank.mobile.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
 import androidx.fragment.app.FragmentActivity
 import com.securebank.mobile.AppContainer
 
@@ -15,7 +15,7 @@ import com.securebank.mobile.AppContainer
  */
 @Composable
 fun rememberIdentityConfirmation(container: AppContainer, reason: String): (() -> Unit) -> Unit {
-    val activity = LocalContext.current as FragmentActivity
+    val activity = LocalActivity.current as FragmentActivity
     return remember(container, activity, reason) {
         { action ->
             if (container.appLock.isEnabled()) {

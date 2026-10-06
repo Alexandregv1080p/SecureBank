@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.securebank.mobile.AppContainer
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 /** Pede a biometria (ou o PIN do aparelho) ao abrir o app e ao voltar de segundo plano. Nada do app aparece antes. */
 @Composable
 fun LockScreen(container: AppContainer) {
-    val activity = LocalContext.current as FragmentActivity
+    val activity = LocalActivity.current as FragmentActivity
     val scope = rememberCoroutineScope()
 
     fun ask() = container.biometric.prompt(

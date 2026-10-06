@@ -105,12 +105,20 @@ securebank-android/
 
 Testes: `./gradlew testDebugUnitTest` (JVM, sem emulador). Lint: `./gradlew lintDebug`.
 
-## Validação (A1)
+## Validação (2026-10-06, Gradle e Android SDK reais)
 
 | O quê | Resultado |
 | ----- | --------- |
-| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **64 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, senha e dispositivo 2, bloqueio 7, autenticação 7, contas 5, operações 7, escritas 5, segurança e avisos 7), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
-| Build Android completo (AGP, Compose, recursos, manifesto, lint) | **não executado**: precisa do Android SDK, que não existe nesta máquina e cuja licença só o usuário pode aceitar |
-| Telas, ViewModels, Compose, `BiometricGate`, `KeystoreTokenStore`, `MainActivity` | escritas, **nunca compiladas** (dependem do Android SDK); o CI compila no primeiro push |
+| `assembleDebug` (AGP 8.7.3, Kotlin 2.1, Compose, API 35) | **compila** todas as telas das fases A1 a A5 (APK debug de 11,5 MB) |
+| `testDebugUnitTest` | **64 testes, 0 falhas** (rede, sessão, claims, util, formatação, validações, bloqueio, repositórios de autenticação, contas, operações e segurança) |
+| `lintDebug` | **limpo de erros**; só avisos de versões de dependências mais novas |
+| `assembleRelease` (R8 + redução de recursos + regras do `proguard-rules.pro`) | **compila** (APK de 2,2 MB, não assinado) |
+| Rodar o app (emulador ou aparelho): login, MFA, biometria, operações, R8 em execução | **nunca executado** |
 
-**Achado da validação:** o primeiro teste de 401 simultâneos **travou** (deadlock). O `Authenticator` bloqueia threads do dispatcher do OkHttp (máx. 5 por host) esperando o refresh, e a chamada de refresh precisava de uma thread desse mesmo dispatcher. Corrigido: o refresh usa um cliente com dispatcher próprio (`NetworkFactory`). Sem o teste, só apareceria em produção com 5 requisições em paralelo ao expirar o token.
+Achados da primeira compilação real:
+
+* O **lint reprovou** `LocalContext.current as FragmentActivity` (`ContextCastToActivity`) em dois lugares (confirmação de identidade e tela de bloqueio): trocado por `LocalActivity`.
+* O build exigia JDK 17 por *toolchain*; a máquina só tem JDK 21. Agora o Kotlin só mira bytecode 17 (`jvmTarget`), que funciona em qualquer JDK >= 17 (o CI continua em 17).
+* No Windows, o Gradle também sofre do erro de *loopback* por causa da pasta TEMP curta (o mesmo do Maven do backend). Contorno: `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Temp` e `TMP`/`TEMP=C:\Temp`. O JBR do Android Studio atual é Java 25, que o Kotlin 2.1 não reconhece: use o JDK 21.
+
+Limites honestos: o R8 só foi **compilado**; se as regras de `kotlinx.serialization` e Retrofit estão certas só se prova rodando o release num aparelho. O app inteiro nunca foi aberto numa tela. Testes de UI (Compose) e instrumentados ficam para a A6.

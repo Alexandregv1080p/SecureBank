@@ -1,18 +1,32 @@
 package com.securebank.mobile.data
 
 import com.securebank.mobile.core.network.Account
+import com.securebank.mobile.core.network.AmountRequest
 import com.securebank.mobile.core.network.BankingApi
 import com.securebank.mobile.core.network.Customer
 import com.securebank.mobile.core.network.LimitUsage
 import com.securebank.mobile.core.network.OpenAccountRequest
 import com.securebank.mobile.core.network.Page
+import com.securebank.mobile.core.network.Payment
+import com.securebank.mobile.core.network.PaymentRequest
 import com.securebank.mobile.core.network.Transaction
+import com.securebank.mobile.core.network.Transfer
+import com.securebank.mobile.core.network.TransferRequest
 import com.securebank.mobile.core.network.apiCall
 import java.time.LocalDate
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.json.Json
 
-/** Leituras e abertura de conta. Toda falha chega como ApiError (ver apiCall). */
+/**
+ * Leituras e operações de dinheiro. Toda falha chega como ApiError (ver apiCall). Depois de qualquer operação que mexe em
+ * saldo, [changes] avisa as telas abertas (início, contas, extrato, seletores) para recarregarem.
+ */
 class BankingRepository(private val api: BankingApi, private val json: Json) {
+    private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val changes: SharedFlow<Unit> = _changes.asSharedFlow()
+
     suspend fun me(): Customer = apiCall(json) { api.me() }
 
     suspend fun accounts(): List<Account> = apiCall(json) { api.accounts() }
@@ -30,7 +44,23 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
         to: LocalDate? = null,
     ): Page<Transaction> = apiCall(json) { api.statement(id, page, size, from?.toString(), to?.toString()) }
 
-    suspend fun openAccount(type: String): Account = apiCall(json) { api.openAccount(OpenAccountRequest(type)) }
+    suspend fun openAccount(type: String): Account =
+        apiCall(json) { api.openAccount(OpenAccountRequest(type)) }.also { _changes.tryEmit(Unit) }
+
+    /** [key]: Idempotency-Key da intenção (ver IdempotentIntent). */
+    suspend fun deposit(accountId: String, amount: String, key: String): Transaction =
+        apiCall(json) { api.deposit(accountId, AmountRequest(amount), key) }.also { _changes.tryEmit(Unit) }
+
+    suspend fun withdraw(accountId: String, amount: String, key: String): Transaction =
+        apiCall(json) { api.withdraw(accountId, AmountRequest(amount), key) }.also { _changes.tryEmit(Unit) }
+
+    suspend fun transfer(request: TransferRequest, key: String): Transfer =
+        apiCall(json) { api.transfer(request, key) }.also { _changes.tryEmit(Unit) }
+
+    suspend fun pay(request: PaymentRequest, key: String): Payment =
+        apiCall(json) { api.pay(request, key) }.also { _changes.tryEmit(Unit) }
+
+    suspend fun payments(page: Int = 0): Page<Payment> = apiCall(json) { api.payments(page) }
 
     companion object {
         const val STATEMENT_PAGE_SIZE = 20

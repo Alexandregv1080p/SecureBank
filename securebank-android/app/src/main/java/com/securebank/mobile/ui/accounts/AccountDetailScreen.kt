@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +49,7 @@ import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit) {
+fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, onDeposit: () -> Unit, onWithdraw: () -> Unit) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val statement = state.statement
 
@@ -73,6 +74,15 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit) {
                         Text(Format.accountLabel(a.branch, a.accountNumber), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Saldo disponível", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
                         MoneyText(Money.format(a.balance.amount), style = MaterialTheme.typography.displaySmall)
+                    }
+                }
+            }
+
+            (state.account as? Load.Ready)?.value?.let { a ->
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = onDeposit, enabled = a.status == "ACTIVE", modifier = Modifier.weight(1f)) { Text("Depositar") }
+                        OutlinedButton(onClick = onWithdraw, enabled = a.status == "ACTIVE", modifier = Modifier.weight(1f)) { Text("Sacar") }
                     }
                 }
             }

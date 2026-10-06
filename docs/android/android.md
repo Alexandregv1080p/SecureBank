@@ -11,7 +11,7 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 | **A1 Fundação** | projeto Gradle, tema (mesmos tokens do web), camada de rede, sessão segura, testes da lógica | feita |
 | **A2 Autenticação** | cadastro, login, etapa de MFA, restauração da sessão, sair, bloqueio por biometria | feita (ver Validação) |
 | **A3 Contas** | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | feita (ver Validação) |
-| A4 Movimentação | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | pendente |
+| **A4 Movimentação** | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | feita (ver Validação) |
 | A5 Segurança e avisos | avisos, MFA com QR, troca de senha, dispositivos conectados | pendente |
 | A6 Testes e entrega | testes de UI, R8/pinning de release, CI, assinatura | pendente |
 
@@ -59,6 +59,18 @@ Barra inferior **Início / Contas**; o detalhe da conta abre por cima, com "volt
 * Todas as telas têm esqueleto de carregamento, estado vazio e erro com "Tentar novamente". Falha nos limites não derruba o resto da tela.
 * Conta de outro dono é indistinguível de inexistente (a API devolve 404), então o app mostra o mesmo erro.
 
+## Movimentação (A4)
+
+Barra inferior: **Início / Contas / Transferir / Pagar**. Depositar e Sacar ficam no detalhe da conta (desabilitados se a conta não está ativa).
+
+* **Transferência:** formulário (conta de origem, agência, conta `123456-7`, valor, descrição) → **revisão** → confirmação → comprovante. Com uma conta só, ela já vem escolhida.
+* **Pagamento de boleto:** conta, código (44, 47 ou 48 dígitos; pontos e espaços da linha digitável são ignorados), valor, descrição, e a lista de pagamentos recentes.
+* **Depósito e saque:** valor e confirmação.
+* **Confirmação por biometria nos débitos:** saque, transferência e pagamento pedem biometria (ou o PIN do aparelho) **na hora de confirmar**, mesmo com o app já desbloqueado: quem pegar o celular destravado não move dinheiro. Depósito (entra dinheiro) não pede. Sem bloqueio ativo, a ação segue direto. Cancelar a biometria não envia nada.
+* **Idempotência por intenção** (`IdempotentIntent`, mesma regra do web): a `Idempotency-Key` só é reaproveitada se o pedido é idêntico **e** o resultado anterior foi incerto (rede, 5xx, 409, 429, **cancelamento**); sucesso ou erro de negócio (saldo insuficiente...) trocam a chave. Resultado: tocar de novo depois de uma queda de rede nunca duplica um pagamento, e corrigir o valor nunca recebe o replay de uma resposta velha.
+* **Saldos sempre atuais:** depois de qualquer operação o `BankingRepository` avisa (`changes`) e Início, Contas, detalhe/extrato e os seletores de conta recarregam sozinhos.
+* Valores seguem como `String` até a borda e vão no corpo como texto; descrição vazia não é enviada.
+
 ## Estrutura
 
 ```text
@@ -69,9 +81,9 @@ securebank-android/
 │   │                   AuthInterceptor, TokenAuthenticator, TokenRefresher, NetworkFactory
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
 │   ├── core/security/  AppLock, BiometricGate, LockSettings
-│   ├── core/util/      Money, Phone, IdempotencyKeys, RegisterValidation
+│   ├── core/util/      Money, Phone, Format, IdempotencyKeys, IdempotentIntent, RegisterValidation, OperationValidation
 │   ├── data/           AuthRepository, BankingRepository
-│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe)
+│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 
@@ -87,7 +99,7 @@ Testes: `./gradlew testDebugUnitTest` (JVM, sem emulador). Lint: `./gradlew lint
 
 | O quê | Resultado |
 | ----- | --------- |
-| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **42 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, bloqueio 6, autenticação 7, contas 5), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
+| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **55 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, bloqueio 7, autenticação 7, contas 5, operações 7, escritas 5), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
 | Build Android completo (AGP, Compose, recursos, manifesto, lint) | **não executado**: precisa do Android SDK, que não existe nesta máquina e cuja licença só o usuário pode aceitar |
 | Telas, ViewModels, Compose, `BiometricGate`, `KeystoreTokenStore`, `MainActivity` | escritas, **nunca compiladas** (dependem do Android SDK); o CI compila no primeiro push |
 

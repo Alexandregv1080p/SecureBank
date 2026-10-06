@@ -3,7 +3,9 @@ package com.securebank.mobile.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,6 +32,13 @@ import com.securebank.mobile.ui.accounts.AccountsScreen
 import com.securebank.mobile.ui.accounts.AccountsViewModel
 import com.securebank.mobile.ui.accounts.HomeScreen
 import com.securebank.mobile.ui.accounts.HomeViewModel
+import com.securebank.mobile.ui.money.MoneyKind
+import com.securebank.mobile.ui.money.MoneyScreen
+import com.securebank.mobile.ui.money.MoneyViewModel
+import com.securebank.mobile.ui.money.PaymentScreen
+import com.securebank.mobile.ui.money.PaymentViewModel
+import com.securebank.mobile.ui.money.TransferScreen
+import com.securebank.mobile.ui.money.TransferViewModel
 import kotlinx.coroutines.launch
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
@@ -37,6 +46,8 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 private val tabs = listOf(
     Tab("home", "Início", Icons.Filled.Home),
     Tab("accounts", "Contas", Icons.Filled.AccountBox),
+    Tab("transfer", "Transferir", Icons.Filled.Send),
+    Tab("pay", "Pagar", Icons.Filled.CheckCircle),
 )
 
 /** Área logada: barra inferior nas telas de topo; o detalhe da conta abre por cima, com "voltar". */
@@ -48,7 +59,7 @@ fun MainShell(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            if (route == "home" || route == "accounts") {
+            if (route in tabs.map { it.route }) {
                 NavigationBar {
                     tabs.forEach { tab ->
                         NavigationBarItem(
@@ -85,7 +96,29 @@ fun MainShell(container: AppContainer) {
             composable("accounts/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
                 val vm: AccountDetailViewModel = viewModel(factory = viewModelFactory { initializer { AccountDetailViewModel(container.banking, id) } })
-                AccountDetailScreen(vm, onBack = { nav.popBackStack() })
+                AccountDetailScreen(
+                    vm,
+                    onBack = { nav.popBackStack() },
+                    onDeposit = { nav.navigate("accounts/$id/money/deposit") },
+                    onWithdraw = { nav.navigate("accounts/$id/money/withdraw") },
+                )
+            }
+            composable(
+                "accounts/{id}/money/{kind}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType }, navArgument("kind") { type = NavType.StringType }),
+            ) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val kind = if (entry.arguments?.getString("kind") == "withdraw") MoneyKind.WITHDRAW else MoneyKind.DEPOSIT
+                val vm: MoneyViewModel = viewModel(factory = viewModelFactory { initializer { MoneyViewModel(container.banking, id, kind) } })
+                MoneyScreen(container, vm, onBack = { nav.popBackStack() })
+            }
+            composable("transfer") {
+                val vm: TransferViewModel = viewModel(factory = viewModelFactory { initializer { TransferViewModel(container.banking) } })
+                TransferScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") })
+            }
+            composable("pay") {
+                val vm: PaymentViewModel = viewModel(factory = viewModelFactory { initializer { PaymentViewModel(container.banking) } })
+                PaymentScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") })
             }
         }
     }

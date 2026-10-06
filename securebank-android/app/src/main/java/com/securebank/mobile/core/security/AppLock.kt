@@ -32,6 +32,9 @@ class AppLock(
         if (enabled() && now() - at >= timeoutMs) _locked.value = true
     }
 
+    /** O bloqueio está valendo (preferência ligada e aparelho com biometria/credencial)? */
+    fun isEnabled(): Boolean = enabled()
+
     /** Abertura do app com sessão restaurada: pede a identidade antes de mostrar qualquer saldo. */
     fun lockNow() {
         if (enabled()) _locked.value = true

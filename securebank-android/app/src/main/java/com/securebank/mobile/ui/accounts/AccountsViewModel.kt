@@ -28,6 +28,7 @@ class AccountsViewModel(private val banking: BankingRepository) : ViewModel() {
 
     init {
         load()
+        viewModelScope.launch { banking.changes.collect { load() } }
     }
 
     fun load() {

@@ -56,4 +56,11 @@ class AppLockTest {
         lock.reset()
         assertFalse(lock.locked.value)
     }
+
+    @Test
+    fun isEnabledReflectsThePreferenceAtCallTime() {
+        assertTrue(lock.isEnabled())
+        enabled = false
+        assertFalse(lock.isEnabled())
+    }
 }

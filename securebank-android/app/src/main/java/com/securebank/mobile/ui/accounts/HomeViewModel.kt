@@ -27,6 +27,7 @@ class HomeViewModel(private val banking: BankingRepository) : ViewModel() {
 
     init {
         load()
+        viewModelScope.launch { banking.changes.collect { load() } } // depois de operar, o saldo já aparece novo
     }
 
     fun refresh() = load()

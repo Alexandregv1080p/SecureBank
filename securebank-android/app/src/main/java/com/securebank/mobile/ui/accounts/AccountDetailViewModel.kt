@@ -49,6 +49,12 @@ class AccountDetailViewModel(private val banking: BankingRepository, private val
     init {
         loadHeader()
         loadStatement(reset = true)
+        viewModelScope.launch {
+            banking.changes.collect {
+                loadHeader()
+                loadStatement(reset = true)
+            }
+        }
     }
 
     fun refresh() {

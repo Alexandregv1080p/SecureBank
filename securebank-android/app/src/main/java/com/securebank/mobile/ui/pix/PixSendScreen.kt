@@ -1,5 +1,6 @@
 package com.securebank.mobile.ui.pix
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import com.securebank.mobile.AppContainer
 import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.util.Format
@@ -45,6 +48,7 @@ import com.securebank.mobile.ui.theme.creditColor
 fun PixSendScreen(container: AppContainer, viewModel: PixSendViewModel, onHistory: () -> Unit, onOpenAccounts: () -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val confirm = rememberIdentityConfirmation(container, "Confirme o Pix")
+    val scanner = rememberLauncherForActivityResult(ScanContract()) { result -> result.contents?.let(viewModel::onScanned) }
 
     when (s.step) {
         PixSendStep.Sent -> Receipt(s, onNew = viewModel::newPix, onHistory = onHistory)
@@ -56,6 +60,16 @@ fun PixSendScreen(container: AppContainer, viewModel: PixSendViewModel, onHistor
                     imeAction = ImeAction.Done, onDone = viewModel::continueWithKey, enabled = !s.loading,
                 )
                 PrimaryButton("Continuar", onClick = viewModel::continueWithKey, loading = s.loading)
+                OutlinedButton(
+                    onClick = {
+                        scanner.launch(
+                            ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Aponte para o QR code do Pix")
+                                .setBeepEnabled(false).setOrientationLocked(false),
+                        )
+                    },
+                    enabled = !s.loading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Ler QR code") }
                 if (s.recents.isNotEmpty()) {
                     Text("Recentes", style = MaterialTheme.typography.titleMedium)
                     Panel {

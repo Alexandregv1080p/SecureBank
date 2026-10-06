@@ -79,6 +79,12 @@ class PixSendViewModel(private val pix: PixRepository, private val banking: Bank
     fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, errors = it.errors - PixField.Amount, error = null) }
     fun onMessage(v: String) = _state.update { it.copy(message = v.take(PixValidation.MESSAGE_MAX + 5), errors = it.errors - PixField.Message) }
 
+    /** Texto lido do QR code pela câmera. Conteúdo NÃO confiável: segue o mesmo caminho de um código colado (CRC, formato, consulta). */
+    fun onScanned(text: String) {
+        _state.update { it.copy(keyInput = text.trim(), keyError = null) }
+        continueWithKey()
+    }
+
     fun useRecent(recent: PixRecent) {
         _state.update { it.copy(keyInput = recent.key, keyError = null) }
         continueWithKey()

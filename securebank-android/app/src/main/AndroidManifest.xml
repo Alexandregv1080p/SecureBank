@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Câmera só para ler QR code do Pix; o Android pede a permissão no momento em que se toca em "Ler QR code".
+         required=false: o app funciona em aparelhos sem câmera (cola o código). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- allowBackup=false e regras vazias: o refresh token (cifrado pelo Keystore) nunca vai para backup na nuvem
          nem para outro aparelho, onde de qualquer forma não conseguiria ser decifrado. -->
@@ -15,6 +20,12 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.SecureBank">
+
+        <!-- A tela do leitor (ZXing) vem travada em paisagem; aqui ela acompanha o aparelho. -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="android:screenOrientation" />
 
         <activity
             android:name=".MainActivity"

@@ -5,6 +5,7 @@ import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PixTransferId;
 import com.securebank.shared.domain.TransactionId;
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -15,6 +16,8 @@ import java.time.Instant;
 public final class PixTransfer {
 
     public static final int MESSAGE_MAX = 140;
+    /** Prazo do Banco Central para devolver um Pix recebido. */
+    public static final int REFUND_WINDOW_DAYS = 90;
 
     private final PixTransferId id;
     private final AccountId sourceAccountId;
@@ -27,10 +30,12 @@ public final class PixTransfer {
     private final String endToEndId;
     private TransactionId debitTransactionId;
     private TransactionId creditTransactionId;
+    private final PixTransferId refundOfId;
     private final Instant createdAt;
 
     private PixTransfer(PixTransferId id, AccountId source, AccountId destination, Money amount, String message,
-            String destinationKey, String sourceName, String destinationName, String endToEndId, Instant createdAt) {
+            String destinationKey, String sourceName, String destinationName, String endToEndId, PixTransferId refundOfId,
+            Instant createdAt) {
         this.id = id;
         this.sourceAccountId = source;
         this.destinationAccountId = destination;
@@ -40,6 +45,7 @@ public final class PixTransfer {
         this.sourceName = sourceName;
         this.destinationName = destinationName;
         this.endToEndId = endToEndId;
+        this.refundOfId = refundOfId;
         this.createdAt = createdAt;
     }
 
@@ -60,14 +66,30 @@ public final class PixTransfer {
             throw new InvalidValueException("Message must have at most " + MESSAGE_MAX + " characters");
         }
         return new PixTransfer(PixTransferId.newId(), source, destination, amount, text, destinationKey,
-                sourceName == null ? "" : sourceName, destinationName == null ? "" : destinationName, endToEndId, now);
+                sourceName == null ? "" : sourceName, destinationName == null ? "" : destinationName, endToEndId, null, now);
+    }
+
+    /**
+     * Devolução (total ou parcial) de um Pix RECEBIDO: vai no sentido contrário, da conta que recebeu para a que enviou.
+     * As regras (prazo, valor, quem pode) são validadas pelo {@link PixService#refund}.
+     */
+    public static PixTransfer refundOf(PixTransfer original, Money amount, String endToEndId, Instant now) {
+        if (original == null || amount == null || endToEndId == null || now == null) {
+            throw new InvalidValueException("Refund requires the original Pix, amount, end-to-end id and time");
+        }
+        if (!amount.isPositive()) {
+            throw new InvalidValueException("Amount must be greater than zero");
+        }
+        return new PixTransfer(PixTransferId.newId(), original.destinationAccountId, original.sourceAccountId, amount,
+                "Devolução", original.destinationKey, original.destinationName, original.sourceName, endToEndId,
+                original.id, now);
     }
 
     public static PixTransfer restore(PixTransferId id, AccountId source, AccountId destination, Money amount,
             String message, String destinationKey, String sourceName, String destinationName, String endToEndId,
-            TransactionId debit, TransactionId credit, Instant createdAt) {
+            TransactionId debit, TransactionId credit, PixTransferId refundOfId, Instant createdAt) {
         PixTransfer pix = new PixTransfer(id, source, destination, amount, message, destinationKey, sourceName,
-                destinationName, endToEndId, createdAt);
+                destinationName, endToEndId, refundOfId, createdAt);
         pix.debitTransactionId = debit;
         pix.creditTransactionId = credit;
         return pix;
@@ -82,6 +104,26 @@ public final class PixTransfer {
         this.creditTransactionId = credit;
     }
 
+    public boolean isRefund() {
+        return refundOfId != null;
+    }
+
+    /**
+     * Quanto ainda pode ser devolvido deste Pix: o valor menos o que já foi devolvido, ou zero se este Pix é uma
+     * devolução ou o prazo acabou.
+     */
+    public Money refundable(Money alreadyRefunded, Instant now) {
+        if (isRefund() || windowClosed(now)) {
+            return Money.zero(amount.currency());
+        }
+        Money remaining = amount.minus(alreadyRefunded);
+        return remaining.isPositive() ? remaining : Money.zero(amount.currency());
+    }
+
+    boolean windowClosed(Instant now) {
+        return now.isAfter(createdAt.plus(Duration.ofDays(REFUND_WINDOW_DAYS)));
+    }
+
     public PixTransferId id() { return id; }
     public AccountId sourceAccountId() { return sourceAccountId; }
     public AccountId destinationAccountId() { return destinationAccountId; }
@@ -93,5 +135,6 @@ public final class PixTransfer {
     public String endToEndId() { return endToEndId; }
     public TransactionId debitTransactionId() { return debitTransactionId; }
     public TransactionId creditTransactionId() { return creditTransactionId; }
+    public PixTransferId refundOfId() { return refundOfId; }
     public Instant createdAt() { return createdAt; }
 }

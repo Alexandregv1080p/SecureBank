@@ -6,6 +6,7 @@ import com.securebank.pix.domain.PixKeyType;
 import com.securebank.pix.domain.PixTransfer;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.PixKeyId;
+import com.securebank.shared.domain.PixTransferId;
 import com.securebank.shared.infrastructure.web.CurrentUser;
 import com.securebank.shared.infrastructure.web.MoneyResponse;
 import jakarta.validation.Valid;
@@ -56,20 +57,25 @@ class PixController {
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount,
             @Size(max = PixTransfer.MESSAGE_MAX) String message) {}
 
+    /** Opcional: sem valor, devolve tudo o que ainda resta. */
+    record RefundRequest(@DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount) {}
+
     record PixResponse(UUID id, String endToEndId, UUID sourceAccountId, MoneyResponse amount, String message,
-            String key, String counterpartName, String direction, Instant createdAt) {
+            String key, String counterpartName, String direction, UUID refundOfId, MoneyResponse refundedAmount,
+            MoneyResponse refundableAmount, Instant createdAt) {
 
         static PixResponse sent(PixTransfer p) {
             return new PixResponse(p.id().value(), p.endToEndId(), p.sourceAccountId().value(),
                     MoneyResponse.of(p.amount()), p.message(), p.destinationKey(), p.destinationName(), "SENT",
-                    p.createdAt());
+                    p.refundOfId() == null ? null : p.refundOfId().value(), null, null, p.createdAt());
         }
 
         static PixResponse of(PixApplicationService.Entry e) {
             PixTransfer p = e.pix();
             return new PixResponse(p.id().value(), p.endToEndId(), p.sourceAccountId().value(),
                     MoneyResponse.of(p.amount()), p.message(), p.destinationKey(), e.counterpartName(),
-                    e.sent() ? "SENT" : "RECEIVED", p.createdAt());
+                    e.sent() ? "SENT" : "RECEIVED", p.refundOfId() == null ? null : p.refundOfId().value(),
+                    MoneyResponse.of(e.refunded()), MoneyResponse.of(e.refundable()), p.createdAt());
         }
     }
 
@@ -110,6 +116,20 @@ class PixController {
     PixResponse send(@RequestHeader("Idempotency-Key") String idempotencyKey, @Valid @RequestBody SendRequest request) {
         return PixResponse.sent(pix.send(current.customerId(), new AccountId(request.sourceAccountId()), request.key(),
                 request.amount(), request.message()));
+    }
+
+    @GetMapping("/transfers/{id}")
+    PixResponse get(@PathVariable String id) {
+        return PixResponse.of(pix.get(current.customerId(), PixTransferId.of(id)));
+    }
+
+    /** Devolve (parte de) um Pix recebido, em até 90 dias. A resposta é a devolução (um Pix enviado). */
+    @PostMapping("/transfers/{id}/refund")
+    @ResponseStatus(HttpStatus.CREATED)
+    PixResponse refund(@PathVariable String id, @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody(required = false) RefundRequest request) {
+        return PixResponse.sent(pix.refund(current.customerId(), PixTransferId.of(id),
+                request == null ? null : request.amount()));
     }
 
     @GetMapping("/transfers")

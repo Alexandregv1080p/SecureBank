@@ -4,8 +4,13 @@ import com.securebank.pix.application.PixTransferRepository;
 import com.securebank.pix.domain.PixTransfer;
 import com.securebank.shared.application.PageResult;
 import com.securebank.shared.domain.AccountId;
+import com.securebank.shared.domain.PixTransferId;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
@@ -23,6 +28,27 @@ class PixTransferRepositoryAdapter implements PixTransferRepository {
         PixTransferEntity entity = new PixTransferEntity();
         entity.apply(pix);
         em.persist(entity); // Pix concluído é imutável
+    }
+
+    @Override
+    public Optional<PixTransfer> findById(PixTransferId id) {
+        return Optional.ofNullable(em.find(PixTransferEntity.class, id.value())).map(PixTransferEntity::toDomain);
+    }
+
+    @Override
+    public Map<PixTransferId, BigDecimal> refundedAmounts(List<PixTransferId> originals) {
+        Map<PixTransferId, BigDecimal> totals = new HashMap<>();
+        if (originals.isEmpty()) {
+            return totals;
+        }
+        List<UUID> ids = originals.stream().map(PixTransferId::value).toList();
+        List<Object[]> rows = em.createQuery("select p.refundOfId, sum(p.amount) from PixTransferEntity p"
+                        + " where p.refundOfId in :ids group by p.refundOfId", Object[].class)
+                .setParameter("ids", ids).getResultList();
+        for (Object[] row : rows) {
+            totals.put(new PixTransferId((UUID) row[0]), (BigDecimal) row[1]);
+        }
+        return totals;
     }
 
     @Override

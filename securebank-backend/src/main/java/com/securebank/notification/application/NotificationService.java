@@ -67,6 +67,11 @@ public class NotificationService {
                 notifyOwner(event, event.text("sourceAccountId"), "PIX_SENT", "Pix enviado", "Você enviou " + amount + " por Pix.");
                 notifyOwner(event, event.text("destinationAccountId"), "PIX_RECEIVED", "Pix recebido", "Você recebeu " + amount + " por Pix.");
             }
+            case "PixRefunded" -> {
+                String amount = event.text("amount") + " " + event.text("currency");
+                notifyOwner(event, event.text("sourceAccountId"), "PIX_REFUND_SENT", "Devolução enviada", "Você devolveu " + amount + " de um Pix.");
+                notifyOwner(event, event.text("destinationAccountId"), "PIX_REFUND_RECEIVED", "Devolução recebida", "Você recebeu " + amount + " de volta de um Pix.");
+            }
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",

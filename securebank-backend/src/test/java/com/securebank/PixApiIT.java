@@ -325,6 +325,139 @@ class PixApiIT {
                 .andExpect(jsonPath("$.items", hasSize(1))).andExpect(jsonPath("$.items[0].amount.amount").value("1.00"));
     }
 
+    // ---------- devolução ----------
+
+    @Test
+    void theReceiverCanRefundPartiallyThenTheRestAndBothSidesSeeIt() throws Exception {
+        Person sender = person();
+        Person receiver = person();
+        deposit(sender, "200.00");
+        registerKey(receiver, "EMAIL").andExpect(status().isCreated());
+        String pixId = JsonPath.read(send(sender, receiver.email(), "100.00", "compra", key()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        // o recebedor vê o Pix como devolvível; o pagador, não
+        mvc.perform(as(receiver, get("/api/v1/pix/transfers/" + pixId)))
+                .andExpect(jsonPath("$.direction").value("RECEIVED"))
+                .andExpect(jsonPath("$.refundableAmount.amount").value("100.00"))
+                .andExpect(jsonPath("$.refundedAmount.amount").value("0.00"));
+        mvc.perform(as(sender, get("/api/v1/pix/transfers/" + pixId)))
+                .andExpect(jsonPath("$.refundableAmount.amount").value("0.00"));
+
+        refund(receiver, pixId, "30.00", key()).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.direction").value("SENT"))
+                .andExpect(jsonPath("$.amount.amount").value("30.00"))
+                .andExpect(jsonPath("$.message").value("Devolução"))
+                .andExpect(jsonPath("$.refundOfId").value(pixId));
+        assertThat(balance(receiver)).isEqualTo("70.00");
+        assertThat(balance(sender)).isEqualTo("130.00"); // 200 - 100 + 30
+
+        mvc.perform(as(receiver, get("/api/v1/pix/transfers/" + pixId)))
+                .andExpect(jsonPath("$.refundedAmount.amount").value("30.00"))
+                .andExpect(jsonPath("$.refundableAmount.amount").value("70.00"));
+        refund(receiver, pixId, null, key()).andExpect(status().isCreated()) // sem valor: devolve o que resta
+                .andExpect(jsonPath("$.amount.amount").value("70.00"));
+
+        assertThat(balance(receiver)).isEqualTo("0.00");
+        assertThat(balance(sender)).isEqualTo("200.00"); // tudo voltou
+        mvc.perform(as(receiver, get("/api/v1/pix/transfers/" + pixId))).andExpect(jsonPath("$.refundableAmount.amount").value("0.00"));
+        mvc.perform(as(sender, get("/api/v1/accounts/" + sender.account() + "/statement")))
+                .andExpect(jsonPath("$.items[0].type").value("PIX_RETURN_IN")).andExpect(jsonPath("$.items[0].direction").value("CREDIT"));
+        mvc.perform(as(receiver, get("/api/v1/accounts/" + receiver.account() + "/statement")))
+                .andExpect(jsonPath("$.items[0].type").value("PIX_RETURN_OUT")).andExpect(jsonPath("$.items[0].direction").value("DEBIT"));
+        // a devolução aparece no histórico dos dois como Pix do tipo devolução
+        mvc.perform(as(sender, get("/api/v1/pix/transfers")))
+                .andExpect(jsonPath("$.items[0].direction").value("RECEIVED")).andExpect(jsonPath("$.items[0].refundOfId").value(pixId));
+    }
+
+    @Test
+    void youCannotRefundMoreThanWasReceivedNorTwiceTheRemainder() throws Exception {
+        Person sender = person();
+        Person receiver = person();
+        deposit(sender, "100.00");
+        registerKey(receiver, "EMAIL").andExpect(status().isCreated());
+        String pixId = JsonPath.read(send(sender, receiver.email(), "50.00", null, key()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        refund(receiver, pixId, "50.01", key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PIX_REFUND_EXCEEDS"));
+        refund(receiver, pixId, "20.00", key()).andExpect(status().isCreated());
+        refund(receiver, pixId, "30.01", key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PIX_REFUND_EXCEEDS"));
+        refund(receiver, pixId, "30.00", key()).andExpect(status().isCreated());
+        refund(receiver, pixId, "0.01", key()).andExpect(status().isUnprocessableEntity());
+
+        assertThat(balance(sender)).isEqualTo("100.00");
+    }
+
+    @Test
+    void onlyTheReceiverCanRefundAndARefundCannotBeRefunded() throws Exception {
+        Person sender = person();
+        Person receiver = person();
+        Person stranger = person();
+        deposit(sender, "100.00");
+        registerKey(receiver, "EMAIL").andExpect(status().isCreated());
+        String pixId = JsonPath.read(send(sender, receiver.email(), "40.00", null, key()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        refund(sender, pixId, "10.00", key()).andExpect(status().isNotFound());   // quem enviou não "devolve" o próprio Pix
+        refund(stranger, pixId, "10.00", key()).andExpect(status().isNotFound()); // nem um terceiro
+        mvc.perform(as(stranger, get("/api/v1/pix/transfers/" + pixId))).andExpect(status().isNotFound());
+        assertThat(balance(sender)).isEqualTo("60.00");
+        assertThat(balance(receiver)).isEqualTo("40.00");
+
+        String refundId = JsonPath.read(refund(receiver, pixId, "10.00", key()).andReturn().getResponse().getContentAsString(), "$.id");
+        refund(sender, refundId, "5.00", key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PIX_NOT_REFUNDABLE"));
+    }
+
+    @Test
+    void aRefundWithoutMoneyLeftIsRefusedAndNothingMoves() throws Exception {
+        Person sender = person();
+        Person receiver = person();
+        deposit(sender, "100.00");
+        registerKey(receiver, "EMAIL").andExpect(status().isCreated());
+        String pixId = JsonPath.read(send(sender, receiver.email(), "80.00", null, key()).andReturn().getResponse().getContentAsString(), "$.id");
+        mvc.perform(as(receiver, post("/api/v1/accounts/" + receiver.account() + "/withdrawals")).header("Idempotency-Key", key())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"75.00\"}")).andExpect(status().isCreated());
+
+        refund(receiver, pixId, "10.00", key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("INSUFFICIENT_FUNDS"));
+
+        assertThat(balance(receiver)).isEqualTo("5.00");
+        assertThat(balance(sender)).isEqualTo("20.00");
+    }
+
+    @Test
+    void theSameIdempotencyKeyNeverRefundsTwice() throws Exception {
+        Person sender = person();
+        Person receiver = person();
+        deposit(sender, "100.00");
+        registerKey(receiver, "EMAIL").andExpect(status().isCreated());
+        String pixId = JsonPath.read(send(sender, receiver.email(), "50.00", null, key()).andReturn().getResponse().getContentAsString(), "$.id");
+        String key = key();
+
+        refund(receiver, pixId, "20.00", key).andExpect(status().isCreated());
+        refund(receiver, pixId, "20.00", key).andExpect(status().isCreated()).andExpect(header().string("Idempotency-Replayed", "true"));
+
+        assertThat(balance(receiver)).isEqualTo("30.00"); // devolveu UMA vez
+    }
+
+    @Test
+    void refundNeedsAKeyAndAValidAmountAndAnExistingPix() throws Exception {
+        Person p = person();
+
+        mvc.perform(as(p, post("/api/v1/pix/transfers/" + UUID.randomUUID() + "/refund")).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_REQUIRED"));
+        refund(p, UUID.randomUUID().toString(), "5.00", key()).andExpect(status().isNotFound());
+        refund(p, "nao-e-uuid", "5.00", key()).andExpect(status().isBadRequest());
+        mvc.perform(as(p, post("/api/v1/pix/transfers/" + UUID.randomUUID() + "/refund")).header("Idempotency-Key", key())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"0\"}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void staffCannotRefund() throws Exception {
+        mvc.perform(as(TestUsers.adminToken(mvc), post("/api/v1/pix/transfers/" + UUID.randomUUID() + "/refund")).header("Idempotency-Key", key())
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+    }
+
     // ---------- segurança ----------
 
     @Test
@@ -371,6 +504,12 @@ class PixApiIT {
     private static String sendBody(Person from, String key, String amount, String message) {
         String msg = message == null ? "" : ",\"message\":\"" + message + "\"";
         return "{\"sourceAccountId\":\"" + from.account() + "\",\"key\":\"" + key + "\",\"amount\":\"" + amount + "\"" + msg + "}";
+    }
+
+    private ResultActions refund(Person by, String pixId, String amount, String idempotencyKey) throws Exception {
+        String body = amount == null ? "{}" : "{\"amount\":\"" + amount + "\"}";
+        return mvc.perform(as(by, post("/api/v1/pix/transfers/" + pixId + "/refund")).header("Idempotency-Key", idempotencyKey)
+                .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
     private void deposit(Person p, String amount) throws Exception {

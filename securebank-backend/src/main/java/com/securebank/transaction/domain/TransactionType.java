@@ -5,5 +5,7 @@ public enum TransactionType {
     /** Dinheiro guardado num porquinho (débito da conta) e resgatado dele (crédito). */
     PIGGY_IN, PIGGY_OUT,
     /** Pix enviado (débito) e recebido (crédito). */
-    PIX_OUT, PIX_IN
+    PIX_OUT, PIX_IN,
+    /** Devolução de Pix: paga por quem recebeu (débito) e recebida por quem enviou (crédito). */
+    PIX_RETURN_OUT, PIX_RETURN_IN
 }

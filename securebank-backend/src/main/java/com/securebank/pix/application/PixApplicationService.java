@@ -27,10 +27,12 @@ import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.DomainException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PixKeyId;
+import com.securebank.shared.domain.PixTransferId;
 import com.securebank.transaction.application.TransactionRepository;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,7 +57,7 @@ public class PixApplicationService {
     public record Lookup(PixKeyType type, String key, String maskedName, String maskedDocument, boolean ownAccount) {}
 
     /** Item do histórico, já do ponto de vista de quem consulta. */
-    public record Entry(PixTransfer pix, boolean sent, String counterpartName) {}
+    public record Entry(PixTransfer pix, boolean sent, String counterpartName, Money refunded, Money refundable) {}
 
     private final PixService domain = new PixService();
     private final Random random = new SecureRandom();
@@ -156,7 +158,8 @@ public class PixApplicationService {
     }
 
     private void failed(AccountId sourceAccountId, String code) {
-        audit.recordIndependently(AuditEntry.of(AuditEvent.PIX_FAILED).account(sourceAccountId).detail(code));
+        AuditEntry entry = AuditEntry.of(AuditEvent.PIX_FAILED).detail(code);
+        audit.recordIndependently(sourceAccountId == null ? entry : entry.account(sourceAccountId));
     }
 
     private PixTransfer doSend(CustomerId requester, AccountId sourceAccountId, String rawKey, BigDecimal amount,
@@ -200,11 +203,73 @@ public class PixApplicationService {
             return new PageResult<>(List.of(), page, size, 0);
         }
         PageResult<PixTransfer> result = transfers.findByAccounts(mine, page, size);
-        List<Entry> entries = result.items().stream().map(p -> {
-            boolean sent = mine.contains(p.sourceAccountId());
-            return new Entry(p, sent, sent ? p.destinationName() : p.sourceName());
-        }).toList();
+        Map<PixTransferId, BigDecimal> refunded = transfers.refundedAmounts(result.items().stream().map(PixTransfer::id).toList());
+        Instant now = time.now();
+        List<Entry> entries = result.items().stream().map(p -> entryOf(p, mine, refunded.get(p.id()), now)).toList();
         return new PageResult<>(entries, result.page(), result.size(), result.totalElements());
+    }
+
+    /** Um Pix (enviado ou recebido por mim), com o que já foi devolvido e o que ainda pode ser. */
+    @Transactional(readOnly = true)
+    public Entry get(CustomerId requester, PixTransferId id) {
+        List<AccountId> mine = accountService.list(requester).stream().map(Account::id).toList();
+        PixTransfer pix = transfers.findById(id)
+                .filter(p -> mine.contains(p.sourceAccountId()) || mine.contains(p.destinationAccountId()))
+                .orElseThrow(() -> ApplicationException.notFound("Pix"));
+        return entryOf(pix, mine, transfers.refundedAmounts(List.of(pix.id())).get(pix.id()), time.now());
+    }
+
+    private Entry entryOf(PixTransfer p, List<AccountId> mine, BigDecimal refundedAmount, Instant now) {
+        boolean sent = mine.contains(p.sourceAccountId());
+        Money refunded = refundedAmount == null ? Money.zero(p.amount().currency()) : new Money(refundedAmount, p.amount().currency());
+        // só quem RECEBEU pode devolver; para quem enviou (ou para uma devolução) o valor devolvível é zero
+        Money refundable = sent ? Money.zero(p.amount().currency()) : p.refundable(refunded, now);
+        return new Entry(p, sent, sent ? p.destinationName() : p.sourceName(), refunded, refundable);
+    }
+
+    // ------------------------------------------------------------------ devolução
+    /** Devolve (parte de) um Pix recebido. Sem {@code amount}, devolve o que ainda resta. Roda como o envio: com retry. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public PixTransfer refund(CustomerId requester, PixTransferId originalId, BigDecimal amount) {
+        PixTransfer original = transfers.findById(originalId).orElse(null);
+        try {
+            return retry.execute(() -> doRefund(requester, originalId, amount));
+        } catch (DomainException e) {
+            failed(original == null ? null : original.destinationAccountId(), e.code());
+            throw e;
+        } catch (ApplicationException e) {
+            failed(original == null ? null : original.destinationAccountId(), e.code());
+            throw e;
+        }
+    }
+
+    private PixTransfer doRefund(CustomerId requester, PixTransferId originalId, BigDecimal amount) {
+        customerService.requireActive(requester);
+        PixTransfer original = transfers.findById(originalId).orElseThrow(() -> ApplicationException.notFound("Pix"));
+        // só o dono da conta que RECEBEU enxerga o Pix como devolvível; qualquer outro recebe 404 (sem vazar que existe)
+        Account receiver = accountService.findOwned(requester, original.destinationAccountId());
+        Account payer = accounts.findById(original.sourceAccountId()).orElseThrow(() -> ApplicationException.notFound("Pix"));
+
+        BigDecimal alreadyRefunded = transfers.refundedAmounts(List.of(original.id())).get(original.id());
+        Money refunded = alreadyRefunded == null ? Money.zero(original.amount().currency()) : new Money(alreadyRefunded, original.amount().currency());
+        Instant now = time.now();
+        Money money = amount == null ? original.refundable(refunded, now) : new Money(amount, original.amount().currency());
+        PixTransfer refund = PixTransfer.refundOf(original, money, EndToEndId.generate(now, random), now);
+
+        PixService.Result result = domain.refund(original, refund, receiver, payer, refunded, now);
+
+        accounts.save(receiver);
+        accounts.save(payer);
+        transactions.save(result.debit());
+        transactions.save(result.credit());
+        transfers.save(refund);
+        audit.record(AuditEntry.of(AuditEvent.PIX_REFUNDED).account(receiver.id()).transaction(result.debit().id())
+                .detail(refund.endToEndId()));
+        outbox.record("PixRefunded", "Pix", refund.id().toString(), Map.of(
+                "pixId", refund.id().toString(), "refundOf", original.id().toString(),
+                "sourceAccountId", receiver.id().toString(), "destinationAccountId", payer.id().toString(),
+                "amount", money.amount().toPlainString(), "currency", money.currency().getCurrencyCode()));
+        return refund;
     }
 
     // ------------------------------------------------------------------ internos

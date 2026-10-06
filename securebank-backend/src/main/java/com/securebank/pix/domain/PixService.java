@@ -35,4 +35,37 @@ public final class PixService {
         pix.settle(debit.id(), credit.id());
         return new Result(debit, credit);
     }
+
+    /**
+     * Devolução: a conta que RECEBEU o Pix original devolve (parte de) o valor à que enviou. Regras: o original não pode
+     * ser, ele mesmo, uma devolução; vale até 90 dias; a soma devolvida não passa do valor recebido. Não consome o limite
+     * diário do Pix. Valida tudo antes de mutar qualquer conta.
+     *
+     * @param receiver conta que recebeu o original (e agora paga a devolução)
+     * @param payer conta que enviou o original (e agora recebe)
+     */
+    public Result refund(PixTransfer original, PixTransfer refund, Account receiver, Account payer,
+            Money alreadyRefunded, Instant now) {
+        if (!receiver.id().equals(original.destinationAccountId()) || !payer.id().equals(original.sourceAccountId())
+                || !refund.sourceAccountId().equals(receiver.id()) || !refund.destinationAccountId().equals(payer.id())
+                || !original.id().equals(refund.refundOfId())) {
+            throw new InvalidValueException("Accounts do not match the refund");
+        }
+        if (original.isRefund()) {
+            throw PixRefundException.notRefundable();
+        }
+        if (original.windowClosed(now)) {
+            throw PixRefundException.expired();
+        }
+        if (refund.amount().isGreaterThan(original.refundable(alreadyRefunded, now))) {
+            throw PixRefundException.exceeds();
+        }
+        receiver.ensureCanDebit(refund.amount());
+        payer.ensureCanCredit(refund.amount());
+
+        Transaction debit = receiver.pixReturnOut(refund.amount(), refund.endToEndId(), now);
+        Transaction credit = payer.pixReturnIn(refund.amount(), refund.endToEndId(), now);
+        refund.settle(debit.id(), credit.id());
+        return new Result(debit, credit);
+    }
 }

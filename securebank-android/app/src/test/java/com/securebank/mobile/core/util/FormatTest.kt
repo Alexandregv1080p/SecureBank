@@ -36,6 +36,8 @@ class FormatTest {
         assertEquals("Transferência enviada", Format.describe(tx("TRANSFER", "DEBIT")))
         assertEquals("Pagamento", Format.describe(tx("PAYMENT", "DEBIT")))
         assertEquals("Estorno", Format.describe(tx("REFUND", "CREDIT")))
+        assertEquals("Guardado no porquinho", Format.describe(tx("PIGGY_IN", "DEBIT")))
+        assertEquals("Resgate do porquinho", Format.describe(tx("PIGGY_OUT", "CREDIT")))
     }
 
     @Test

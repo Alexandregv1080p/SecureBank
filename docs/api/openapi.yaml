@@ -155,11 +155,90 @@ paths:
       responses:
         "204":
           description: No Content
+  /api/v1/piggies:
+    get:
+      tags:
+      - piggy-controller
+      operationId: list_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PiggyResponse"
+    post:
+      tags:
+      - piggy-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PiggyResponse"
+  /api/v1/piggies/{id}/withdrawals:
+    post:
+      tags:
+      - piggy-controller
+      operationId: withdraw
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmountRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PiggyResponse"
+  /api/v1/piggies/{id}/deposits:
+    post:
+      tags:
+      - piggy-controller
+      operationId: deposit
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmountRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PiggyResponse"
   /api/v1/payments:
     get:
       tags:
       - payment-controller
-      operationId: list_1
+      operationId: list_2
       parameters:
       - name: page
         in: query
@@ -185,7 +264,7 @@ paths:
     post:
       tags:
       - payment-controller
-      operationId: create_1
+      operationId: create_2
       parameters:
       - name: Idempotency-Key
         in: header
@@ -384,7 +463,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: list_2
+      operationId: list_3
       responses:
         "200":
           description: OK
@@ -415,7 +494,7 @@ paths:
     post:
       tags:
       - account-controller
-      operationId: withdraw
+      operationId: withdraw_1
       parameters:
       - name: id
         in: path
@@ -444,7 +523,7 @@ paths:
     post:
       tags:
       - account-controller
-      operationId: deposit
+      operationId: deposit_1
       parameters:
       - name: id
         in: path
@@ -469,6 +548,60 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TransactionResponse"
+  /api/v1/piggies/{id}:
+    get:
+      tags:
+      - piggy-controller
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PiggyResponse"
+    delete:
+      tags:
+      - piggy-controller
+      operationId: close
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+    patch:
+      tags:
+      - piggy-controller
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PiggyResponse"
   /api/v1/customers/me:
     get:
       tags:
@@ -502,7 +635,7 @@ paths:
     get:
       tags:
       - transfer-controller
-      operationId: get
+      operationId: get_1
       parameters:
       - name: id
         in: path
@@ -534,7 +667,7 @@ paths:
     get:
       tags:
       - payment-controller
-      operationId: get_1
+      operationId: get_2
       parameters:
       - name: id
         in: path
@@ -552,7 +685,7 @@ paths:
     get:
       tags:
       - notification-controller
-      operationId: list_3
+      operationId: list_4
       parameters:
       - name: page
         in: query
@@ -604,6 +737,10 @@ paths:
           - ACCOUNT_BLOCKED
           - ACCOUNT_UNBLOCKED
           - LIMIT_CHANGED
+          - PIGGY_CREATED
+          - PIGGY_DEPOSIT
+          - PIGGY_WITHDRAW
+          - PIGGY_CLOSED
           - USER_CREATED
           - USER_DISABLED
           - USER_ENABLED
@@ -656,7 +793,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: get_2
+      operationId: get_3
       parameters:
       - name: id
         in: path
@@ -892,6 +1029,55 @@ components:
           minLength: 6
       required:
       - code
+    CreateRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 40
+          minLength: 0
+        goal:
+          type: number
+          minimum: 0.01
+      required:
+      - accountId
+      - name
+    PiggyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          $ref: "#/components/schemas/MoneyResponse"
+        goal:
+          $ref: "#/components/schemas/MoneyResponse"
+        progressPercent:
+          type: integer
+          format: int32
+        goalReached:
+          type: boolean
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AmountRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+      required:
+      - amount
     PaymentRequest:
       type: object
       properties:
@@ -1097,14 +1283,6 @@ components:
         createdAt:
           type: string
           format: date-time
-    AmountRequest:
-      type: object
-      properties:
-        amount:
-          type: number
-          minimum: 0.01
-      required:
-      - amount
     TransactionResponse:
       type: object
       properties:
@@ -1132,14 +1310,15 @@ components:
     UpdateRequest:
       type: object
       properties:
-        email:
+        name:
           type: string
-          maxLength: 254
+          maxLength: 40
           minLength: 0
-        phone:
-          type: string
-          maxLength: 16
-          minLength: 0
+        goal:
+          type: number
+          minimum: 0.01
+        clearGoal:
+          type: boolean
     CustomerResponse:
       type: object
       properties:

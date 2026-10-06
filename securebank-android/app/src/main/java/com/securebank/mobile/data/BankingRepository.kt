@@ -28,6 +28,11 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
     private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val changes: SharedFlow<Unit> = _changes.asSharedFlow()
 
+    /** Para quem mexe em saldo por outro caminho (porquinhos): avisa as telas para recarregarem. */
+    fun notifyChanged() {
+        _changes.tryEmit(Unit)
+    }
+
     suspend fun me(): Customer = apiCall(json) { api.me() }
 
     suspend fun accounts(): List<Account> = apiCall(json) { api.accounts() }

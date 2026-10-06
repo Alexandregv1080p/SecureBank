@@ -22,6 +22,10 @@ function describe(t: Transaction): string {
       return t.direction === 'CREDIT' ? 'Transferência recebida' : 'Transferência enviada'
     case 'PAYMENT':
       return 'Pagamento'
+    case 'PIGGY_IN':
+      return 'Guardado no porquinho'
+    case 'PIGGY_OUT':
+      return 'Resgate do porquinho'
     default:
       return 'Estorno'
   }

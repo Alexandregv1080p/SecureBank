@@ -28,6 +28,8 @@ object Format {
         "WITHDRAW" -> "Saque"
         "TRANSFER" -> if (t.direction == "CREDIT") "Transferência recebida" else "Transferência enviada"
         "PAYMENT" -> "Pagamento"
+        "PIGGY_IN" -> "Guardado no porquinho"
+        "PIGGY_OUT" -> "Resgate do porquinho"
         else -> "Estorno"
     }
 

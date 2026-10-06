@@ -37,6 +37,8 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenAccount: (String) -> Unit,
     onOpenAccounts: () -> Unit,
+    onOpenPiggy: (String) -> Unit,
+    onOpenPiggies: () -> Unit,
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
 
@@ -68,6 +70,7 @@ fun HomeScreen(
                     } else {
                         item { TotalBalance(accounts.value) }
                         item { AccountList(accounts.value, onOpenAccount) }
+                        item { PiggySection(state.piggies, onOpenPiggy, onOpenPiggies) }
                     }
                 }
             }
@@ -116,5 +119,37 @@ fun AccountRow(a: Account, onClick: () -> Unit) {
             )
         }
         MoneyText(Money.format(a.balance.amount), style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** Resumo dos porquinhos: total guardado, os 3 primeiros e o atalho para todos (e para criar o primeiro). */
+@Composable
+private fun PiggySection(piggies: List<com.securebank.mobile.core.network.Piggy>, onOpen: (String) -> Unit, onAll: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Porquinhos", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onAll) { Text(if (piggies.isEmpty()) "Criar" else "Ver todos") }
+        }
+        if (piggies.isEmpty()) {
+            Text(
+                "Guarde dinheiro para um objetivo, separado do saldo da conta.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Panel {
+                Column {
+                    piggies.take(3).forEachIndexed { i, p ->
+                        if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        com.securebank.mobile.ui.piggy.PiggyRow(p, onClick = { onOpen(p.id) })
+                    }
+                }
+            }
+            MoneyText(
+                "Total guardado: " + Money.format(Money.sum(piggies.map { it.balance.amount })),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

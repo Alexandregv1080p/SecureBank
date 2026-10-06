@@ -13,6 +13,7 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 | **A3 Contas** | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | feita (ver Validação) |
 | **A4 Movimentação** | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | feita (ver Validação) |
 | **A5 Segurança e avisos** | avisos, MFA, troca de senha, dispositivos conectados, interruptor do bloqueio | feita (ver Validação) |
+| **Porquinhos** | reservas com nome e meta, guardar e resgatar, sem sair do banco | feita (ver abaixo) |
 | A6 Testes e entrega | testes de UI, R8/pinning de release, CI, assinatura | pendente |
 
 ## Modelo de segurança
@@ -81,6 +82,19 @@ Quinta aba, **Mais**: Avisos, Segurança e Sair da conta (o "Sair" saiu do Iníc
 * **Dispositivos conectados:** lista das sessões (aparelho em linguagem simples, IP mascarado pelo servidor, início, selos "Este dispositivo" e "2 etapas") e "Encerrar" nas outras.
 * **Bloqueio do app:** interruptor da biometria. **Ligar** é livre; **desligar exige a identidade** (biometria/PIN), para que quem pegar o celular destravado não desligue a proteção. Sem tela de bloqueio ou biometria no aparelho, o painel explica o que cadastrar.
 
+## Porquinhos
+
+Reserva com nome e meta opcional, guardada **dentro de uma conta**: guardar tira dinheiro do saldo da conta e põe no porquinho; resgatar faz o inverso. O total do cliente não muda, só onde ele está. Entram no extrato como "Guardado no porquinho" (débito) e "Resgate do porquinho" (crédito). Backend em `piggy/` (API em `docs/api/README.md`).
+
+* **Início:** seção Porquinhos com o total guardado e os 3 primeiros (barra de progresso); "Criar" quando não há nenhum. Lista completa em **Mais → Porquinhos**.
+* **Lista e novo porquinho:** nome (até 40 caracteres), meta opcional e, se houver mais de uma conta, de qual conta guardar. Até 20 porquinhos ativos por cliente.
+* **Detalhe:** saldo, progresso e meta ("Meta alcançada!" em verde), **Guardar** e **Resgatar** com `Idempotency-Key` por intenção, editar nome e meta (meta em branco remove), e **fechar** (o que houver volta para a conta, com confirmação).
+* **Sem biometria:** guardar e resgatar não pedem biometria, porque o dinheiro continua do próprio cliente, dentro do mesmo banco; só o que **sai** da conta (saque, transferência, pagamento) pede.
+* **Aviso de meta:** ao atingir a meta o servidor registra um evento (uma única vez) e o cliente recebe o aviso "Meta alcançada!" em Avisos (testado de ponta a ponta com o Kafka).
+* O saldo da conta e a lista de porquinhos recarregam juntos depois de qualquer operação (mesmo sinal do resto do app).
+
+Também nesta mudança: o **tema** deixou de usar o lilás padrão do Material (seletores e a barra inferior agora seguem o teal do app).
+
 ## Estrutura
 
 ```text
@@ -92,8 +106,8 @@ securebank-android/
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
 │   ├── core/security/  AppLock, BiometricGate, LockSettings
 │   ├── core/util/      Money, Phone, Format, IdempotencyKeys, IdempotentIntent, RegisterValidation, OperationValidation
-│   ├── data/           AuthRepository, BankingRepository, SecurityRepository
-│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento), more/ (avisos, segurança)
+│   ├── data/           AuthRepository, BankingRepository, SecurityRepository, PiggyRepository
+│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento), more/ (avisos, segurança), piggy/ (porquinhos)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 

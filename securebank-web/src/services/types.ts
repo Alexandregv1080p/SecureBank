@@ -15,7 +15,7 @@ export interface Account {
 
 export interface Transaction {
   id: string
-  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'REFUND'
+  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'REFUND' | 'PIGGY_IN' | 'PIGGY_OUT'
   direction: 'CREDIT' | 'DEBIT'
   amount: Money
   balanceAfter: Money

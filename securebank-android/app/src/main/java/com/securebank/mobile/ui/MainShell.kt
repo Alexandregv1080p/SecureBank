@@ -41,6 +41,12 @@ import com.securebank.mobile.ui.money.PaymentViewModel
 import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
 import com.securebank.mobile.ui.more.MoreScreen
+import com.securebank.mobile.ui.piggy.NewPiggyScreen
+import com.securebank.mobile.ui.piggy.NewPiggyViewModel
+import com.securebank.mobile.ui.piggy.PiggiesScreen
+import com.securebank.mobile.ui.piggy.PiggiesViewModel
+import com.securebank.mobile.ui.piggy.PiggyDetailScreen
+import com.securebank.mobile.ui.piggy.PiggyDetailViewModel
 import com.securebank.mobile.ui.more.NotificationsScreen
 import com.securebank.mobile.ui.more.NotificationsViewModel
 import com.securebank.mobile.ui.more.SecurityScreen
@@ -87,11 +93,13 @@ fun MainShell(container: AppContainer) {
     ) { padding ->
         NavHost(nav, startDestination = "home", modifier = Modifier.padding(padding)) {
             composable("home") {
-                val vm: HomeViewModel = viewModel(factory = viewModelFactory { initializer { HomeViewModel(container.banking) } })
+                val vm: HomeViewModel = viewModel(factory = viewModelFactory { initializer { HomeViewModel(container.banking, container.piggies) } })
                 HomeScreen(
                     vm,
                     onOpenAccount = { nav.navigate("accounts/$it") },
                     onOpenAccounts = { nav.navigate("accounts") { launchSingleTop = true } },
+                    onOpenPiggy = { nav.navigate("piggies/$it") },
+                    onOpenPiggies = { nav.navigate("piggies") },
                 )
             }
             composable("accounts") {
@@ -123,10 +131,28 @@ fun MainShell(container: AppContainer) {
             }
             composable("more") {
                 MoreScreen(
+                    onPiggies = { nav.navigate("piggies") },
                     onNotifications = { nav.navigate("notifications") },
                     onSecurity = { nav.navigate("security") },
                     onLogout = { scope.launch { container.auth.logout() } },
                 )
+            }
+            composable("piggies") {
+                val vm: PiggiesViewModel = viewModel(factory = viewModelFactory { initializer { PiggiesViewModel(container.piggies, container.banking) } })
+                PiggiesScreen(vm, onOpen = { nav.navigate("piggies/$it") }, onNew = { nav.navigate("piggies/new") }, onBack = { nav.popBackStack() })
+            }
+            composable("piggies/new") {
+                val vm: NewPiggyViewModel = viewModel(factory = viewModelFactory { initializer { NewPiggyViewModel(container.banking, container.piggies) } })
+                NewPiggyScreen(
+                    vm,
+                    onCreated = { id -> nav.navigate("piggies/$id") { popUpTo("piggies/new") { inclusive = true } } },
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable("piggies/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val vm: PiggyDetailViewModel = viewModel(factory = viewModelFactory { initializer { PiggyDetailViewModel(container.piggies, container.banking, id) } })
+                PiggyDetailScreen(vm, onBack = { nav.popBackStack() })
             }
             composable("notifications") {
                 val vm: NotificationsViewModel = viewModel(factory = viewModelFactory { initializer { NotificationsViewModel(container.banking) } })

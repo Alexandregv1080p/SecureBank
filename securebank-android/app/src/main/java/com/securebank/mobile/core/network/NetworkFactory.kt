@@ -18,6 +18,7 @@ class Network(
     val auth: AuthApi,
     val banking: BankingApi,
     val security: SecurityApi,
+    val piggy: PiggyApi,
     val refresher: TokenRefresher,
 )
 
@@ -69,6 +70,7 @@ object NetworkFactory {
             auth = auth,
             banking = retrofit.create(BankingApi::class.java),
             security = retrofit.create(SecurityApi::class.java),
+            piggy = retrofit.create(PiggyApi::class.java),
             refresher = refresher,
         )
     }

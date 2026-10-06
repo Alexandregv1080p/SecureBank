@@ -155,6 +155,87 @@ paths:
       responses:
         "204":
           description: No Content
+  /api/v1/pix/transfers:
+    get:
+      tags:
+      - pix-controller
+      operationId: history
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PixPage"
+    post:
+      tags:
+      - pix-controller
+      operationId: send
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PixResponse"
+  /api/v1/pix/keys:
+    get:
+      tags:
+      - pix-controller
+      operationId: keys
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KeyResponse"
+    post:
+      tags:
+      - pix-controller
+      operationId: registerKey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterKeyRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/KeyResponse"
   /api/v1/piggies:
     get:
       tags:
@@ -663,6 +744,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SessionResponse"
+  /api/v1/pix/keys/lookup:
+    get:
+      tags:
+      - pix-controller
+      operationId: lookup
+      parameters:
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LookupResponse"
   /api/v1/payments/{id}:
     get:
       tags:
@@ -737,6 +838,10 @@ paths:
           - ACCOUNT_BLOCKED
           - ACCOUNT_UNBLOCKED
           - LIMIT_CHANGED
+          - PIX_KEY_CREATED
+          - PIX_KEY_DELETED
+          - PIX_SENT
+          - PIX_FAILED
           - PIGGY_CREATED
           - PIGGY_DEPOSIT
           - PIGGY_WITHDRAW
@@ -916,6 +1021,20 @@ paths:
       responses:
         "204":
           description: No Content
+  /api/v1/pix/keys/{id}:
+    delete:
+      tags:
+      - pix-controller
+      operationId: deleteKey
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
 components:
   schemas:
     LimitRequest:
@@ -1029,6 +1148,83 @@ components:
           minLength: 6
       required:
       - code
+    SendRequest:
+      type: object
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        key:
+          type: string
+          maxLength: 100
+          minLength: 0
+        amount:
+          type: number
+          minimum: 0.01
+        message:
+          type: string
+          maxLength: 140
+          minLength: 0
+      required:
+      - amount
+      - key
+      - sourceAccountId
+    PixResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        endToEndId:
+          type: string
+        sourceAccountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        message:
+          type: string
+        key:
+          type: string
+        counterpartName:
+          type: string
+        direction:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RegisterKeyRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - CPF
+          - EMAIL
+          - PHONE
+          - RANDOM
+      required:
+      - accountId
+      - type
+    KeyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        key:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     CreateRequest:
       type: object
       properties:
@@ -1381,6 +1577,37 @@ components:
       type: object
       properties:
         enabled:
+          type: boolean
+    PixPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PixResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    LookupResponse:
+      type: object
+      properties:
+        type:
+          type: string
+        key:
+          type: string
+        name:
+          type: string
+        document:
+          type: string
+        bank:
+          type: string
+        ownAccount:
           type: boolean
     PaymentPage:
       type: object

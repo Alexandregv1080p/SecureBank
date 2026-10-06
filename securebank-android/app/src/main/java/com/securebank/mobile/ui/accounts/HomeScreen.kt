@@ -39,6 +39,9 @@ fun HomeScreen(
     onOpenAccounts: () -> Unit,
     onOpenPiggy: (String) -> Unit,
     onOpenPiggies: () -> Unit,
+    onPix: () -> Unit,
+    onTransfer: () -> Unit,
+    onPay: () -> Unit,
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
 
@@ -69,6 +72,7 @@ fun HomeScreen(
                         }
                     } else {
                         item { TotalBalance(accounts.value) }
+                        item { QuickActions(onPix, onTransfer, onPay) }
                         item { AccountList(accounts.value, onOpenAccount) }
                         item { PiggySection(state.piggies, onOpenPiggy, onOpenPiggies) }
                     }
@@ -151,5 +155,15 @@ private fun PiggySection(piggies: List<com.securebank.mobile.core.network.Piggy>
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** Os três caminhos mais usados, a um toque do saldo. */
+@Composable
+private fun QuickActions(onPix: () -> Unit, onTransfer: () -> Unit, onPay: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        androidx.compose.material3.Button(onClick = onPix, modifier = Modifier.weight(1f)) { Text("Pix") }
+        androidx.compose.material3.OutlinedButton(onClick = onTransfer, modifier = Modifier.weight(1f)) { Text("Transferir") }
+        androidx.compose.material3.OutlinedButton(onClick = onPay, modifier = Modifier.weight(1f)) { Text("Pagar") }
     }
 }

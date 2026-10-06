@@ -26,6 +26,7 @@ class FormatTest {
         assertEquals("Poupança", Format.accountTypeLabel("SAVINGS"))
         assertEquals("Ag. 0001, conta 123456-7", Format.accountLabel("0001", "123456-7"))
         assertEquals("Transferência", Format.limitLabel("TRANSFER"))
+        assertEquals("Pix", Format.limitLabel("PIX"))
     }
 
     @Test
@@ -36,6 +37,8 @@ class FormatTest {
         assertEquals("Transferência enviada", Format.describe(tx("TRANSFER", "DEBIT")))
         assertEquals("Pagamento", Format.describe(tx("PAYMENT", "DEBIT")))
         assertEquals("Estorno", Format.describe(tx("REFUND", "CREDIT")))
+        assertEquals("Pix enviado", Format.describe(tx("PIX_OUT", "DEBIT")))
+        assertEquals("Pix recebido", Format.describe(tx("PIX_IN", "CREDIT")))
         assertEquals("Guardado no porquinho", Format.describe(tx("PIGGY_IN", "DEBIT")))
         assertEquals("Resgate do porquinho", Format.describe(tx("PIGGY_OUT", "CREDIT")))
     }

@@ -20,6 +20,7 @@ object Format {
         "WITHDRAW" -> "Saque"
         "TRANSFER" -> "Transferência"
         "PAYMENT" -> "Pagamento"
+        "PIX" -> "Pix"
         else -> type
     }
 
@@ -28,6 +29,8 @@ object Format {
         "WITHDRAW" -> "Saque"
         "TRANSFER" -> if (t.direction == "CREDIT") "Transferência recebida" else "Transferência enviada"
         "PAYMENT" -> "Pagamento"
+        "PIX_OUT" -> "Pix enviado"
+        "PIX_IN" -> "Pix recebido"
         "PIGGY_IN" -> "Guardado no porquinho"
         "PIGGY_OUT" -> "Resgate do porquinho"
         else -> "Estorno"

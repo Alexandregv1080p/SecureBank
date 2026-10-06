@@ -20,6 +20,12 @@ private val messages = mapOf(
     "VALIDATION_ERROR" to "Confira os campos informados.",
     "INVALID_VALUE" to "Algum dado informado é inválido.",
     "NOT_A_CUSTOMER" to "Este aplicativo é para clientes. Contas da equipe usam o painel web.",
+    "PIX_KEY_IN_USE" to "Esta chave já está cadastrada.",
+    "PIX_KEY_LIMIT_REACHED" to "Você já tem o máximo de 5 chaves Pix.",
+    "INSUFFICIENT_PIGGY_FUNDS" to "Saldo insuficiente no porquinho.",
+    "PIGGY_CLOSED" to "Este porquinho está fechado.",
+    "PIGGY_HAS_BALANCE" to "Resgate o dinheiro do porquinho antes de fechar.",
+    "PIGGY_LIMIT_REACHED" to "Você já tem o máximo de 20 porquinhos.",
     "SERVICE_UNAVAILABLE" to "Serviço temporariamente indisponível. Tente de novo em instantes.",
 )
 

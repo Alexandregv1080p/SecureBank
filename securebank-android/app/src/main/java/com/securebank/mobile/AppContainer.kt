@@ -12,6 +12,7 @@ import com.securebank.mobile.core.session.SessionManager
 import com.securebank.mobile.data.AuthRepository
 import com.securebank.mobile.data.BankingRepository
 import com.securebank.mobile.data.PiggyRepository
+import com.securebank.mobile.data.PixRepository
 import com.securebank.mobile.data.SecurityRepository
 
 /** Injeção de dependência manual: poucos objetos, todos criados uma vez, sem framework. */
@@ -29,6 +30,7 @@ class AppContainer(context: Context) {
     val banking = BankingRepository(network.banking, network.json)
     val security = SecurityRepository(network.security, network.json)
     val piggies = PiggyRepository(network.piggy, network.json, banking)
+    val pix = PixRepository(network.pix, network.json, banking)
 
     val lockSettings = LockSettings(context)
     val biometric = BiometricGate(context)

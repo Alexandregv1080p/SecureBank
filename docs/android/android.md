@@ -14,6 +14,7 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 | **A4 Movimentação** | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | feita (ver Validação) |
 | **A5 Segurança e avisos** | avisos, MFA, troca de senha, dispositivos conectados, interruptor do bloqueio | feita (ver Validação) |
 | **Porquinhos** | reservas com nome e meta, guardar e resgatar, sem sair do banco | feita (ver abaixo) |
+| **Pix** | chaves, enviar por chave ou copia-e-cola, receber com QR, histórico | feita (ver abaixo) |
 | A6 Testes e entrega | testes de UI, R8/pinning de release, CI, assinatura | pendente |
 
 ## Modelo de segurança
@@ -95,6 +96,23 @@ Reserva com nome e meta opcional, guardada **dentro de uma conta**: guardar tira
 
 Também nesta mudança: o **tema** deixou de usar o lilás padrão do Material (seletores e a barra inferior agora seguem o teal do app).
 
+## Pix
+
+Pix **simulado dentro do próprio banco** (não fala com o Banco Central). Backend em `pix/`; contrato em `docs/api/README.md`.
+
+**Navegação:** a aba **Pix** substituiu "Transferir" na barra inferior (Início, Contas, **Pix**, Pagar, Mais). Transferir entre contas continua em **Mais** e num atalho do Início (Pix, Transferir, Pagar, a um toque do saldo).
+
+* **Área Pix:** Enviar, Receber, Minhas chaves, Histórico e os últimos Pix.
+* **Chaves:** CPF, e-mail, celular ou aleatória (até 5, únicas no banco). **O valor da chave nunca vem do app**: o servidor lê o CPF, o e-mail e o celular do cadastro do cliente, então ninguém registra a chave de outra pessoa. Remover pede confirmação.
+* **Enviar:** chave **ou Pix Copia e Cola** → consulta (mostra só o **nome e o CPF mascarados**, ex.: "Bruno S*** L***", "***.549.***-**") → valor e mensagem → revisão → **biometria na hora de confirmar** → comprovante com o identificador da transação (`E…`, 32 caracteres, formato do Banco Central). "Recentes" reenvia com um toque. Código com valor trava o valor.
+* **Receber:** escolhe a chave e, se quiser, o valor; mostra o **QR code** (desenhado no aparelho com a biblioteca ZXing) e o **Pix Copia e Cola** para copiar. O texto é o BR Code padrão (EMV, CRC16), gerado e lido só no aparelho.
+* **Histórico:** enviados e recebidos, com a contraparte mascarada, paginado.
+* **Idempotência por intenção**, como nas outras operações de dinheiro.
+
+**Segurança do Pix (servidor):** limite **próprio** do Pix (R$ 5.000 por operação e R$ 10.000 por dia, ajustável pelo admin; as contas já existentes ganharam o limite na migração V8); consulta de chave **limitada por taxa** (contra varredura de chaves) e com 404 genérico; tentativa recusada fica na auditoria (`PIX_FAILED`); só Pix concluído vira registro; no extrato aparece como "Pix enviado" e "Pix recebido".
+
+**Limites desta versão:** não lê QR com a câmera (só colar o código); não suporta QR **dinâmico** (cobrança com URL: o app avisa e pede a chave); não há Pix agendado, "Pix saque/troco" nem devolução.
+
 ## Estrutura
 
 ```text
@@ -105,9 +123,10 @@ securebank-android/
 │   │                   AuthInterceptor, TokenAuthenticator, TokenRefresher, NetworkFactory
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
 │   ├── core/security/  AppLock, BiometricGate, LockSettings
+│   ├── core/pix/       BrCode (copia-e-cola e CRC16), QrCode
 │   ├── core/util/      Money, Phone, Format, IdempotencyKeys, IdempotentIntent, RegisterValidation, OperationValidation
-│   ├── data/           AuthRepository, BankingRepository, SecurityRepository, PiggyRepository
-│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento), more/ (avisos, segurança), piggy/ (porquinhos)
+│   ├── data/           AuthRepository, BankingRepository, SecurityRepository, PiggyRepository, PixRepository
+│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento), more/ (avisos, segurança), piggy/ (porquinhos), pix/ (enviar, receber, chaves, histórico)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 

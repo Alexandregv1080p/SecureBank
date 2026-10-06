@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

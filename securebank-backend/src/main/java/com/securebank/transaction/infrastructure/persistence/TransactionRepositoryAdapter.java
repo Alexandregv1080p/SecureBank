@@ -3,6 +3,8 @@ package com.securebank.transaction.infrastructure.persistence;
 import com.securebank.shared.application.PageResult;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.Money;
+import com.securebank.transaction.application.StatementFilter;
+import com.securebank.transaction.application.StatementTotal;
 import com.securebank.transaction.application.TransactionRepository;
 import com.securebank.transaction.domain.Transaction;
 import com.securebank.transaction.domain.TransactionDirection;
@@ -34,21 +36,37 @@ class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
-    public PageResult<Transaction> findStatement(AccountId accountId, Instant from, Instant to, int page, int size) {
-        List<Transaction> items = em
-                .createQuery("select t" + RANGE + " order by t.createdAt desc, t.id desc", TransactionEntity.class)
+    public PageResult<Transaction> findStatement(AccountId accountId, Instant from, Instant to, StatementFilter filter,
+            int page, int size) {
+        String where = RANGE + (filter.category() == null ? "" : " and t.type in :types")
+                + (filter.direction() == null ? "" : " and t.direction = :direction");
+        var items = em.createQuery("select t" + where + " order by t.createdAt desc, t.id desc", TransactionEntity.class);
+        var count = em.createQuery("select count(t)" + where, Long.class);
+        for (var q : List.of(items, count)) {
+            q.setParameter("account", accountId.value()).setParameter("from", from).setParameter("to", to);
+            if (filter.category() != null) {
+                q.setParameter("types", filter.category().types());
+            }
+            if (filter.direction() != null) {
+                q.setParameter("direction", filter.direction());
+            }
+        }
+        List<Transaction> content = items.setFirstResult(page * size).setMaxResults(size).getResultList().stream()
+                .map(TransactionEntity::toDomain).toList();
+        return new PageResult<>(content, page, size, count.getSingleResult());
+    }
+
+    @Override
+    public List<StatementTotal> totals(AccountId accountId, Instant from, Instant to) {
+        return em.createQuery("select t.type, t.direction, sum(t.amount)" + RANGE + " and t.status = :status"
+                        + " group by t.type, t.direction", Object[].class)
                 .setParameter("account", accountId.value())
                 .setParameter("from", from)
                 .setParameter("to", to)
-                .setFirstResult(page * size)
-                .setMaxResults(size)
-                .getResultList().stream().map(TransactionEntity::toDomain).toList();
-        long total = em.createQuery("select count(t)" + RANGE, Long.class)
-                .setParameter("account", accountId.value())
-                .setParameter("from", from)
-                .setParameter("to", to)
-                .getSingleResult();
-        return new PageResult<>(items, page, size, total);
+                .setParameter("status", TransactionStatus.COMPLETED)
+                .getResultList().stream()
+                .map(r -> new StatementTotal((TransactionType) r[0], (TransactionDirection) r[1], (BigDecimal) r[2]))
+                .toList();
     }
 
     @Override

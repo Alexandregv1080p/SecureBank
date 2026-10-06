@@ -67,7 +67,7 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/customers/me").hasAuthority(Permission.MANAGE_PROFILE.name())
                         .requestMatchers(PATCH, "/api/v1/customers/me").hasAuthority(Permission.MANAGE_PROFILE.name())
                         .requestMatchers(POST, "/api/v1/accounts").hasAuthority(Permission.OPEN_ACCOUNT.name())
-                        .requestMatchers(GET, "/api/v1/accounts/*/statement").hasAuthority(Permission.VIEW_STATEMENT.name())
+                        .requestMatchers(GET, "/api/v1/accounts/*/statement", "/api/v1/accounts/*/statement/*").hasAuthority(Permission.VIEW_STATEMENT.name())
                         .requestMatchers(GET, "/api/v1/accounts", "/api/v1/accounts/*", "/api/v1/accounts/*/balance",
                                 "/api/v1/accounts/*/limits").hasAuthority(Permission.VIEW_ACCOUNT.name())
                         .requestMatchers(POST, "/api/v1/accounts/*/deposits").hasAuthority(Permission.DEPOSIT.name())

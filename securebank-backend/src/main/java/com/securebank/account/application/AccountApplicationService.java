@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountApplicationService {
 
     public static final Branch BRANCH = new Branch("0001");
+    public static final int EXPORT_MAX = 5000;
     private static final Instant FOREVER = Instant.parse("2999-01-01T00:00:00Z");
 
     private final AccountRepository accounts;
@@ -125,7 +126,7 @@ public class AccountApplicationService {
 
     @Transactional(readOnly = true)
     public PageResult<Transaction> statement(CustomerId requester, AccountId id, LocalDate from, LocalDate to,
-            int page, int size) {
+            com.securebank.transaction.application.StatementFilter filter, int page, int size) {
         Account account = findOwned(requester, id);
         Instant start = from == null ? Instant.EPOCH : time.startOfDay(from);
         Instant end = to == null ? FOREVER : time.startOfDay(to.plusDays(1));
@@ -133,7 +134,49 @@ public class AccountApplicationService {
             throw new InvalidValueException("'from' must not be after 'to'");
         }
         PageResult.validate(page, size);
-        return transactions.findStatement(account.id(), start, end, page, size);
+        return transactions.findStatement(account.id(), start, end, filter, page, size);
+    }
+
+    /** Exportação: até {@link #EXPORT_MAX} lançamentos do período/filtro, do mais recente ao mais antigo. */
+    @Transactional(readOnly = true)
+    public PageResult<Transaction> exportStatement(CustomerId requester, AccountId id, LocalDate from, LocalDate to,
+            com.securebank.transaction.application.StatementFilter filter) {
+        Account account = findOwned(requester, id);
+        Instant start = from == null ? Instant.EPOCH : time.startOfDay(from);
+        Instant end = to == null ? FOREVER : time.startOfDay(to.plusDays(1));
+        if (!start.isBefore(end)) {
+            throw new InvalidValueException("'from' must not be after 'to'");
+        }
+        return transactions.findStatement(account.id(), start, end, filter, 0, EXPORT_MAX);
+    }
+
+    /** Resumo do mês (fuso do banco): entradas, saídas e resultado, total e por categoria. */
+    @Transactional(readOnly = true)
+    public com.securebank.transaction.application.StatementSummary statementSummary(CustomerId requester,
+            AccountId id, java.time.YearMonth month) {
+        Account account = findOwned(requester, id);
+        var currency = account.balance().currency();
+        var totals = transactions.totals(account.id(), time.startOfDay(month.atDay(1)),
+                time.startOfDay(month.plusMonths(1).atDay(1)));
+        var income = new java.util.EnumMap<com.securebank.transaction.domain.TransactionCategory, Money>(
+                com.securebank.transaction.domain.TransactionCategory.class);
+        var expenses = new java.util.EnumMap<com.securebank.transaction.domain.TransactionCategory, Money>(
+                com.securebank.transaction.domain.TransactionCategory.class);
+        for (var category : com.securebank.transaction.domain.TransactionCategory.values()) {
+            income.put(category, Money.zero(currency));
+            expenses.put(category, Money.zero(currency));
+        }
+        for (var t : totals) {
+            var target = t.direction() == com.securebank.transaction.domain.TransactionDirection.CREDIT ? income : expenses;
+            target.merge(t.type().category(), new Money(t.sum(), currency), Money::plus);
+        }
+        var byCategory = java.util.Arrays.stream(com.securebank.transaction.domain.TransactionCategory.values())
+                .map(c -> new com.securebank.transaction.application.StatementSummary.ByCategory(c, income.get(c),
+                        expenses.get(c)))
+                .toList();
+        return new com.securebank.transaction.application.StatementSummary(month,
+                byCategory.stream().map(c -> c.income()).reduce(Money.zero(currency), Money::plus),
+                byCategory.stream().map(c -> c.expenses()).reduce(Money.zero(currency), Money::plus), byCategory);
     }
 
     /** Bloqueio administrativo (permissão MANAGE_ACCOUNTS): qualquer conta, não só as do chamador. */

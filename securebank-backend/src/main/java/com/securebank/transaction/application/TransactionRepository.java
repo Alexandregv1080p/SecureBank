@@ -13,7 +13,11 @@ public interface TransactionRepository {
     void save(Transaction transaction);
 
     /** Extrato: lançamentos em [from, to), do mais recente para o mais antigo. */
-    PageResult<Transaction> findStatement(AccountId accountId, Instant from, Instant to, int page, int size);
+    PageResult<Transaction> findStatement(AccountId accountId, Instant from, Instant to, StatementFilter filter, int page,
+            int size);
+
+    /** Totais por tipo e sentido dos lançamentos CONCLUÍDOS em [from, to). */
+    java.util.List<StatementTotal> totals(AccountId accountId, Instant from, Instant to);
 
     /** Soma dos débitos concluídos do tipo desde {@code since} (base do limite diário). */
     Money sumCompletedDebitsSince(AccountId accountId, TransactionType type, Instant since, Currency currency);

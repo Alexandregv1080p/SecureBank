@@ -19,6 +19,7 @@ private val messages = mapOf(
     "CONCURRENT_UPDATE" to "A conta foi alterada por outra operação. Tente novamente.",
     "VALIDATION_ERROR" to "Confira os campos informados.",
     "INVALID_VALUE" to "Algum dado informado é inválido.",
+    "NOT_A_CUSTOMER" to "Este aplicativo é para clientes. Contas da equipe usam o painel web.",
     "SERVICE_UNAVAILABLE" to "Serviço temporariamente indisponível. Tente de novo em instantes.",
 )
 

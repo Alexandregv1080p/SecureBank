@@ -8,8 +8,8 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 
 | Fase | Entrega | Estado |
 | ---- | ------- | ------ |
-| **A1 Fundação** | projeto Gradle, tema (mesmos tokens do web), camada de rede, sessão segura, testes da lógica | feita (ver Validação) |
-| A2 Autenticação | cadastro, login, etapa de MFA, restauração da sessão, sair, bloqueio por biometria | pendente |
+| **A1 Fundação** | projeto Gradle, tema (mesmos tokens do web), camada de rede, sessão segura, testes da lógica | feita |
+| **A2 Autenticação** | cadastro, login, etapa de MFA, restauração da sessão, sair, bloqueio por biometria | feita (ver Validação) |
 | A3 Contas | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | pendente |
 | A4 Movimentação | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | pendente |
 | A5 Segurança e avisos | avisos, MFA com QR, troca de senha, dispositivos conectados | pendente |
@@ -34,6 +34,21 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 
 O app não distingue o cliente web do móvel no servidor além do `User-Agent` (`SecureBank-Android/<versão>`), que aparece na lista de dispositivos conectados. Sem o header `X-Client: web`, a API devolve o refresh token no corpo, que é o que o app usa.
 
+## Autenticação (A2)
+
+Fluxo: **Restaurando** (refresh token do Keystore → renova) → **Login** (e-mail e senha) → **código MFA** se a conta tem verificação em duas etapas → **Início**. O cadastro (CPF, celular, e-mail, senha de 12+ caracteres, mesmas regras do web) já entra na conta ao concluir.
+
+* **Contas da equipe não usam o app**: se o token vier sem `cid` (sem cliente), a sessão que o servidor acabou de abrir é encerrada e o app mostra "este aplicativo é para clientes". O app é só de clientes, como o painel de equipe do web é à parte.
+* **Senha e código** saem da memória da tela assim que enviados ou errados; nada é salvo e nenhum campo de senha é logado.
+* **Sessão expirada** (refresh recusado ou reusado) volta ao login com um aviso; falha passageira do servidor **não** desloga.
+* **Sair** revoga a sessão no servidor (se houver rede) e apaga o refresh token do aparelho de qualquer jeito.
+
+### Bloqueio por biometria
+
+`AppLock` bloqueia o app (a) ao abrir com sessão restaurada do disco e (b) ao voltar de segundo plano depois de 30 s. A carência curta evita pedir a digital só por ir ao app autenticador buscar o código. Usa `BIOMETRIC_WEAK + DEVICE_CREDENTIAL` (digital, rosto ou PIN/padrão do aparelho; vale desde a API 23). Sem tela de bloqueio ou biometria cadastrada o bloqueio se desliga sozinho. A preferência (ligado por padrão) ganha um interruptor na A5.
+
+**Limite honesto:** é um portão de interface. Quem comprometer o aparelho com root pode contornar a tela; o que protege o refresh token em si é o Keystore (chave não exportável). Amarrar a chave do Keystore à biometria (`setUserAuthenticationRequired`) seria mais forte, mas traz invalidação de chave ao cadastrar nova digital e foi deixado como melhoria.
+
 ## Estrutura
 
 ```text
@@ -43,8 +58,10 @@ securebank-android/
 │   ├── core/network/   Api.kt (Retrofit), Dtos.kt, ApiError.kt, ErrorMessages.kt,
 │   │                   AuthInterceptor, TokenAuthenticator, TokenRefresher, NetworkFactory
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
-│   ├── core/util/      Money, Phone, IdempotencyKeys
-│   └── ui/             theme/Theme.kt, AppRoot.kt
+│   ├── core/security/  AppLock, BiometricGate, LockSettings
+│   ├── core/util/      Money, Phone, IdempotencyKeys, RegisterValidation
+│   ├── data/           AuthRepository
+│   └── ui/             theme/Theme.kt, AppRoot.kt, components/, auth/ (Login, Register, Lock + ViewModels)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 
@@ -60,8 +77,8 @@ Testes: `./gradlew testDebugUnitTest` (JVM, sem emulador). Lint: `./gradlew lint
 
 | O quê | Resultado |
 | ----- | --------- |
-| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **17 testes passam** (9 rede, 3 claims, 5 util), incluindo renovação única com 5 requisições em 401 simultâneas |
+| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **32 testes passam** (rede 9, claims 3, util 5, validação do cadastro 2, bloqueio 6, autenticação 7), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
 | Build Android completo (AGP, Compose, recursos, manifesto, lint) | **não executado**: precisa do Android SDK, que não existe nesta máquina e cuja licença só o usuário pode aceitar |
-| Telas | só marcadores; o login é a A2 |
+| Telas, ViewModels, Compose, `BiometricGate`, `KeystoreTokenStore`, `MainActivity` | escritas, **nunca compiladas** (dependem do Android SDK); o CI compila no primeiro push |
 
 **Achado da validação:** o primeiro teste de 401 simultâneos **travou** (deadlock). O `Authenticator` bloqueia threads do dispatcher do OkHttp (máx. 5 por host) esperando o refresh, e a chamada de refresh precisava de uma thread desse mesmo dispatcher. Corrigido: o refresh usa um cliente com dispatcher próprio (`NetworkFactory`). Sem o teste, só apareceria em produção com 5 requisições em paralelo ao expirar o token.

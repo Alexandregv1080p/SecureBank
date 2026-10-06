@@ -1,10 +1,15 @@
 package com.securebank.mobile
 
 import android.content.Context
+import android.os.SystemClock
 import com.securebank.mobile.core.network.NetworkFactory
+import com.securebank.mobile.core.security.AppLock
+import com.securebank.mobile.core.security.BiometricGate
+import com.securebank.mobile.core.security.LockSettings
 import com.securebank.mobile.core.session.KeystoreTokenStore
 import com.securebank.mobile.core.session.SecureTokenStore
 import com.securebank.mobile.core.session.SessionManager
+import com.securebank.mobile.data.AuthRepository
 
 /** Injeção de dependência manual: poucos objetos, todos criados uma vez, sem framework. */
 class AppContainer(context: Context) {
@@ -17,6 +22,15 @@ class AppContainer(context: Context) {
         userAgent = "SecureBank-Android/${BuildConfig.VERSION_NAME}",
         certPins = BuildConfig.CERT_PINS,
     )
+    val auth = AuthRepository(network.auth, tokenStore, session, network.json)
+
+    val lockSettings = LockSettings(context)
+    val biometric = BiometricGate(context)
+    val appLock = AppLock(
+        timeoutMs = 30_000,
+        now = SystemClock::elapsedRealtime,
+        enabled = { lockSettings.enabled && biometric.isAvailable() },
+    )
 
     /** Na abertura: recupera a sessão com o refresh token guardado; sem ele (ou sem rede) cai no login. */
     suspend fun restoreSession() {
@@ -24,6 +38,10 @@ class AppContainer(context: Context) {
             session.signOut()
             return
         }
-        if (!network.refresher.refresh(staleToken = null)) session.restoreFailed()
+        if (network.refresher.refresh(staleToken = null)) {
+            appLock.lockNow() // sessão veio do disco: confirma a identidade antes de mostrar o saldo
+        } else {
+            session.restoreFailed()
+        }
     }
 }

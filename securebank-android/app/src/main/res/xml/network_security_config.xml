@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Só HTTPS, e só as autoridades do sistema (certificados instalados pelo usuário não valem). O pinning do
+     certificado da API é feito no OkHttp (CERT_PINS do BuildConfig). O build debug sobrepõe este arquivo. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -81,6 +81,16 @@ public final class Account {
         return credit(TransactionType.REFUND, amount, reference, now);
     }
 
+    /** Guarda dinheiro num porquinho: sai do saldo da conta (o porquinho recebe, na mesma transação). */
+    public Transaction saveToPiggy(Money amount, String reference, Instant now) {
+        return debit(TransactionType.PIGGY_IN, amount, reference, now);
+    }
+
+    /** Resgata dinheiro de um porquinho de volta para o saldo da conta. */
+    public Transaction redeemFromPiggy(Money amount, String reference, Instant now) {
+        return credit(TransactionType.PIGGY_OUT, amount, reference, now);
+    }
+
     /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
     public void ensureCanCredit(Money amount) {
         ensureActive();

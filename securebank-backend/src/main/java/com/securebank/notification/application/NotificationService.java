@@ -4,6 +4,8 @@ import com.securebank.account.application.AccountRepository;
 import com.securebank.authentication.application.UserRepository;
 import com.securebank.notification.domain.Notification;
 import com.securebank.outbox.domain.EventEnvelope;
+import com.securebank.piggy.application.PiggyRepository;
+import com.securebank.shared.domain.PiggyId;
 import com.securebank.shared.application.ApplicationException;
 import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.PageResult;
@@ -28,14 +30,16 @@ public class NotificationService {
     private final ProcessedEvents processed;
     private final AccountRepository accounts;
     private final UserRepository users;
+    private final PiggyRepository piggies;
     private final BankTime time;
 
     public NotificationService(NotificationRepository notifications, ProcessedEvents processed,
-            AccountRepository accounts, UserRepository users, BankTime time) {
+            AccountRepository accounts, UserRepository users, PiggyRepository piggies, BankTime time) {
         this.notifications = notifications;
         this.processed = processed;
         this.accounts = accounts;
         this.users = users;
+        this.piggies = piggies;
         this.time = time;
     }
 
@@ -64,6 +68,10 @@ public class NotificationService {
                     "Sua conta foi bloqueada. Fale com o suporte.");
             case "AccountUnblocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_UNBLOCKED",
                     "Conta desbloqueada", "Sua conta foi desbloqueada.");
+            case "PiggyGoalReached" -> piggies.findById(PiggyId.of(event.text("piggyId")))
+                    .ifPresent(p -> save(p.customerId(), event, "PIGGY_GOAL", "Meta alcançada!",
+                            "Seu porquinho \"" + p.name() + "\" chegou à meta de " + p.goal().amount().toPlainString()
+                                    + " " + p.goal().currency().getCurrencyCode() + "."));
             case "UserLoggedIn" -> users.findById(UserId.of(event.text("userId")))
                     .map(u -> u.customerId())
                     .ifPresent(customerId -> save(customerId, event, "NEW_LOGIN", "Novo acesso à sua conta",

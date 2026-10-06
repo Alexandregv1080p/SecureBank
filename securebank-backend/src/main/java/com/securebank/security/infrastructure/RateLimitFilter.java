@@ -48,7 +48,9 @@ class RateLimitFilter extends OncePerRequestFilter {
                 new Rule("refresh", HttpMethod.POST, "/api/v1/auth/refresh", p.refreshPerMinuteIp(), Duration.ofMinutes(1), false),
                 new Rule("transfer", HttpMethod.POST, "/api/v1/transfers", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("payment", HttpMethod.POST, "/api/v1/payments", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
-                new Rule("withdraw", HttpMethod.POST, "/api/v1/accounts/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true));
+                new Rule("withdraw", HttpMethod.POST, "/api/v1/accounts/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("piggy-save", HttpMethod.POST, "/api/v1/piggies/*/deposits", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("piggy-redeem", HttpMethod.POST, "/api/v1/piggies/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true));
     }
 
     @Override

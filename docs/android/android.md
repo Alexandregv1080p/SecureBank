@@ -12,7 +12,7 @@ Cliente nativo do SecureBank, na pasta `securebank-android/` do mesmo repositór
 | **A2 Autenticação** | cadastro, login, etapa de MFA, restauração da sessão, sair, bloqueio por biometria | feita (ver Validação) |
 | **A3 Contas** | início (saldo total), contas, abrir conta, extrato paginado com filtro de datas, limites do dia | feita (ver Validação) |
 | **A4 Movimentação** | depósito, saque, transferência (formulário → revisão → confirmação), pagamento de boleto | feita (ver Validação) |
-| A5 Segurança e avisos | avisos, MFA com QR, troca de senha, dispositivos conectados | pendente |
+| **A5 Segurança e avisos** | avisos, MFA, troca de senha, dispositivos conectados, interruptor do bloqueio | feita (ver Validação) |
 | A6 Testes e entrega | testes de UI, R8/pinning de release, CI, assinatura | pendente |
 
 ## Modelo de segurança
@@ -71,6 +71,16 @@ Barra inferior: **Início / Contas / Transferir / Pagar**. Depositar e Sacar fic
 * **Saldos sempre atuais:** depois de qualquer operação o `BankingRepository` avisa (`changes`) e Início, Contas, detalhe/extrato e os seletores de conta recarregam sozinhos.
 * Valores seguem como `String` até a borda e vão no corpo como texto; descrição vazia não é enviada.
 
+## Avisos e Segurança (A5)
+
+Quinta aba, **Mais**: Avisos, Segurança e Sair da conta (o "Sair" saiu do Início).
+
+* **Avisos:** lista paginada (20 por vez, "Ver mais"), os não lidos em destaque, "Marcar como lido" por aviso, puxar para atualizar.
+* **Verificação em duas etapas (MFA):** ativar gera o segredo, que aparece **uma vez**; no celular não faz sentido escanear um QR na própria tela, então o app oferece **"Abrir no aplicativo autenticador"** (link `otpauth://`, que os autenticadores tratam) e a chave para digitar ou copiar. A cópia vai marcada como sensível (Android 13+ não mostra a prévia nem sincroniza). Depois, o código de 6 dígitos confirma. Desativar exige um código válido. O segredo some da memória da tela ao concluir ou cancelar e nunca é salvo nem logado (`FLAG_SECURE` em release também impede capturá-lo).
+* **Trocar senha:** senha atual, nova (12+ caracteres) e confirmação; depois de enviar, os três campos são limpos. O servidor encerra as outras sessões e a lista de dispositivos recarrega sozinha.
+* **Dispositivos conectados:** lista das sessões (aparelho em linguagem simples, IP mascarado pelo servidor, início, selos "Este dispositivo" e "2 etapas") e "Encerrar" nas outras.
+* **Bloqueio do app:** interruptor da biometria. **Ligar** é livre; **desligar exige a identidade** (biometria/PIN), para que quem pegar o celular destravado não desligue a proteção. Sem tela de bloqueio ou biometria no aparelho, o painel explica o que cadastrar.
+
 ## Estrutura
 
 ```text
@@ -82,8 +92,8 @@ securebank-android/
 │   ├── core/session/   SessionManager, Claims, SecureTokenStore, KeystoreTokenStore
 │   ├── core/security/  AppLock, BiometricGate, LockSettings
 │   ├── core/util/      Money, Phone, Format, IdempotencyKeys, IdempotentIntent, RegisterValidation, OperationValidation
-│   ├── data/           AuthRepository, BankingRepository
-│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento)
+│   ├── data/           AuthRepository, BankingRepository, SecurityRepository
+│   └── ui/             theme/, AppRoot, MainShell, components/, auth/ (login, cadastro, bloqueio), accounts/ (início, contas, detalhe), money/ (depósito/saque, transferência, pagamento), more/ (avisos, segurança)
 └── app/src/test/       testes JVM (MockWebServer)
 ```
 
@@ -99,7 +109,7 @@ Testes: `./gradlew testDebugUnitTest` (JVM, sem emulador). Lint: `./gradlew lint
 
 | O quê | Resultado |
 | ----- | --------- |
-| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **55 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, bloqueio 7, autenticação 7, contas 5, operações 7, escritas 5), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
+| Lógica pura (util, sessão, rede: `NetworkTest`, `ClaimsTest`, `UtilTest`) compilada e testada como projeto Kotlin/JVM no Docker | **64 testes passam** (rede 9, claims 3, util 5, formatação 5, validação do cadastro 2, senha e dispositivo 2, bloqueio 7, autenticação 7, contas 5, operações 7, escritas 5, segurança e avisos 7), incluindo renovação única com 5 requisições em 401 simultâneas, conta da equipe recusada com a sessão do servidor encerrada e logout local mesmo com o servidor fora |
 | Build Android completo (AGP, Compose, recursos, manifesto, lint) | **não executado**: precisa do Android SDK, que não existe nesta máquina e cuja licença só o usuário pode aceitar |
 | Telas, ViewModels, Compose, `BiometricGate`, `KeystoreTokenStore`, `MainActivity` | escritas, **nunca compiladas** (dependem do Android SDK); o CI compila no primeiro push |
 

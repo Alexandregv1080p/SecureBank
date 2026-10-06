@@ -2,6 +2,7 @@ package com.securebank.mobile.data
 
 import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.network.AmountRequest
+import com.securebank.mobile.core.network.AppNotification
 import com.securebank.mobile.core.network.BankingApi
 import com.securebank.mobile.core.network.Customer
 import com.securebank.mobile.core.network.LimitUsage
@@ -61,6 +62,12 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
         apiCall(json) { api.pay(request, key) }.also { _changes.tryEmit(Unit) }
 
     suspend fun payments(page: Int = 0): Page<Payment> = apiCall(json) { api.payments(page) }
+
+    suspend fun notifications(page: Int = 0, size: Int = 20): Page<AppNotification> = apiCall(json) { api.notifications(page, size) }
+
+    suspend fun markRead(id: String) {
+        apiCall(json) { api.markRead(id) }
+    }
 
     companion object {
         const val STATEMENT_PAGE_SIZE = 20

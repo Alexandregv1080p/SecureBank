@@ -37,7 +37,6 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenAccount: (String) -> Unit,
     onOpenAccounts: () -> Unit,
-    onLogout: () -> Unit,
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
 
@@ -48,15 +47,12 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(
-                            state.firstName?.let { "Olá, $it" } ?: "Olá",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Text("Resumo das suas contas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    TextButton(onClick = onLogout) { Text("Sair") }
+                Column {
+                    Text(
+                        state.firstName?.let { "Olá, $it" } ?: "Olá",
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    Text("Resumo das suas contas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             when (val accounts = state.accounts) {

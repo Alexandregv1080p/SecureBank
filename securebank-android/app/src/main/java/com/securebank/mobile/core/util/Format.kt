@@ -37,5 +37,19 @@ object Format {
 
     fun date(day: java.time.LocalDate): String = date.format(day)
 
+    /** User-Agent da sessão em linguagem simples (a lista de dispositivos mostra o que o servidor guardou). */
+    fun device(userAgent: String?): String {
+        val ua = userAgent?.trim().orEmpty()
+        return when {
+            ua.isEmpty() -> "Dispositivo desconhecido"
+            ua.startsWith("SecureBank-Android/") -> "App SecureBank Android ${ua.substringAfter('/')}"
+            ua.contains("Firefox/") -> "Navegador (Firefox)"
+            ua.contains("Edg/") -> "Navegador (Edge)"
+            ua.contains("Chrome/") -> "Navegador (Chrome)"
+            ua.contains("Safari/") -> "Navegador (Safari)"
+            else -> ua.take(60)
+        }
+    }
+
     fun firstName(fullName: String): String = fullName.trim().substringBefore(' ')
 }

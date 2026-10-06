@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -39,6 +40,10 @@ import com.securebank.mobile.ui.money.PaymentScreen
 import com.securebank.mobile.ui.money.PaymentViewModel
 import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
+import com.securebank.mobile.ui.more.MoreScreen
+import com.securebank.mobile.ui.more.NotificationsScreen
+import com.securebank.mobile.ui.more.NotificationsViewModel
+import com.securebank.mobile.ui.more.SecurityScreen
 import kotlinx.coroutines.launch
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
@@ -48,6 +53,7 @@ private val tabs = listOf(
     Tab("accounts", "Contas", Icons.Filled.AccountBox),
     Tab("transfer", "Transferir", Icons.Filled.Send),
     Tab("pay", "Pagar", Icons.Filled.CheckCircle),
+    Tab("more", "Mais", Icons.Filled.Menu),
 )
 
 /** Área logada: barra inferior nas telas de topo; o detalhe da conta abre por cima, com "voltar". */
@@ -86,7 +92,6 @@ fun MainShell(container: AppContainer) {
                     vm,
                     onOpenAccount = { nav.navigate("accounts/$it") },
                     onOpenAccounts = { nav.navigate("accounts") { launchSingleTop = true } },
-                    onLogout = { scope.launch { container.auth.logout() } },
                 )
             }
             composable("accounts") {
@@ -115,6 +120,20 @@ fun MainShell(container: AppContainer) {
             composable("transfer") {
                 val vm: TransferViewModel = viewModel(factory = viewModelFactory { initializer { TransferViewModel(container.banking) } })
                 TransferScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") })
+            }
+            composable("more") {
+                MoreScreen(
+                    onNotifications = { nav.navigate("notifications") },
+                    onSecurity = { nav.navigate("security") },
+                    onLogout = { scope.launch { container.auth.logout() } },
+                )
+            }
+            composable("notifications") {
+                val vm: NotificationsViewModel = viewModel(factory = viewModelFactory { initializer { NotificationsViewModel(container.banking) } })
+                NotificationsScreen(vm, onBack = { nav.popBackStack() })
+            }
+            composable("security") {
+                SecurityScreen(container, onBack = { nav.popBackStack() })
             }
             composable("pay") {
                 val vm: PaymentViewModel = viewModel(factory = viewModelFactory { initializer { PaymentViewModel(container.banking) } })

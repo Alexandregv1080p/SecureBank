@@ -5,7 +5,8 @@ import com.securebank.transaction.domain.TransactionType;
 public enum LimitType {
     WITHDRAW(TransactionType.WITHDRAW),
     TRANSFER(TransactionType.TRANSFER),
-    PAYMENT(TransactionType.PAYMENT);
+    PAYMENT(TransactionType.PAYMENT),
+    PIX(TransactionType.PIX_OUT);
 
     private final TransactionType transactionType;
 

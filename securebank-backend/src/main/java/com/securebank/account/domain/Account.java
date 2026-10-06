@@ -81,6 +81,16 @@ public final class Account {
         return credit(TransactionType.REFUND, amount, reference, now);
     }
 
+    /** Pix enviado: débito na conta de origem. */
+    public Transaction pixOut(Money amount, String reference, Instant now) {
+        return debit(TransactionType.PIX_OUT, amount, reference, now);
+    }
+
+    /** Pix recebido: crédito na conta de destino. */
+    public Transaction pixIn(Money amount, String reference, Instant now) {
+        return credit(TransactionType.PIX_IN, amount, reference, now);
+    }
+
     /** Guarda dinheiro num porquinho: sai do saldo da conta (o porquinho recebe, na mesma transação). */
     public Transaction saveToPiggy(Money amount, String reference, Instant now) {
         return debit(TransactionType.PIGGY_IN, amount, reference, now);

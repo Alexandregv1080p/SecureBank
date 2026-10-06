@@ -35,6 +35,7 @@ public final class Limit {
             case WITHDRAW -> new Limit(accountId, type, Money.brl("1000.00"), Money.brl("3000.00"), now);
             case TRANSFER -> new Limit(accountId, type, Money.brl("5000.00"), Money.brl("10000.00"), now);
             case PAYMENT -> new Limit(accountId, type, Money.brl("10000.00"), Money.brl("20000.00"), now);
+            case PIX -> new Limit(accountId, type, Money.brl("5000.00"), Money.brl("10000.00"), now);
         };
     }
 

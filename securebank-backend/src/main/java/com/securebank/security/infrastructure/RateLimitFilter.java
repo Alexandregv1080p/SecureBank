@@ -50,6 +50,9 @@ class RateLimitFilter extends OncePerRequestFilter {
                 new Rule("payment", HttpMethod.POST, "/api/v1/payments", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("withdraw", HttpMethod.POST, "/api/v1/accounts/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("piggy-save", HttpMethod.POST, "/api/v1/piggies/*/deposits", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("pix-send", HttpMethod.POST, "/api/v1/pix/transfers", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                // consulta de chave revela o nome (mascarado) do dono: limitada para ninguém varrer chaves
+                new Rule("pix-lookup", HttpMethod.GET, "/api/v1/pix/keys/lookup", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("piggy-redeem", HttpMethod.POST, "/api/v1/piggies/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true));
     }
 

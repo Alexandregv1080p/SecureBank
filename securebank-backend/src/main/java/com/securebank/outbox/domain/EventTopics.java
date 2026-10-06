@@ -16,7 +16,7 @@ public final class EventTopics {
     private EventTopics() {}
 
     public static String forEvent(String eventType) {
-        if (eventType.startsWith("Transfer")) {
+        if (eventType.startsWith("Transfer") || eventType.startsWith("Pix")) {
             return TRANSFERS;
         }
         if (eventType.startsWith("Payment")) {

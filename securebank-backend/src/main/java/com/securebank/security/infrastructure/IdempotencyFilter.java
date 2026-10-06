@@ -40,7 +40,7 @@ class IdempotencyFilter extends OncePerRequestFilter {
     private static final int MAX_BODY = 64 * 1024;
     private static final List<String> PATHS = List.of("/api/v1/transfers", "/api/v1/payments",
             "/api/v1/accounts/*/deposits", "/api/v1/accounts/*/withdrawals",
-            "/api/v1/piggies/*/deposits", "/api/v1/piggies/*/withdrawals");
+            "/api/v1/piggies/*/deposits", "/api/v1/piggies/*/withdrawals", "/api/v1/pix/transfers");
 
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final IdempotencyStore store;

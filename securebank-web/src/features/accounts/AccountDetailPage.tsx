@@ -10,7 +10,7 @@ import { messageFor } from '../../lib/errors'
 import { Badge, Button, EmptyState, ErrorState, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { MoneyForm } from './MoneyForm'
 
-const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento' } as const
+const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix' } as const
 
 function describe(t: Transaction): string {
   switch (t.type) {
@@ -22,6 +22,10 @@ function describe(t: Transaction): string {
       return t.direction === 'CREDIT' ? 'Transferência recebida' : 'Transferência enviada'
     case 'PAYMENT':
       return 'Pagamento'
+    case 'PIX_OUT':
+      return 'Pix enviado'
+    case 'PIX_IN':
+      return 'Pix recebido'
     case 'PIGGY_IN':
       return 'Guardado no porquinho'
     case 'PIGGY_OUT':

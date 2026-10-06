@@ -15,7 +15,7 @@ export interface Account {
 
 export interface Transaction {
   id: string
-  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'REFUND' | 'PIGGY_IN' | 'PIGGY_OUT'
+  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'REFUND' | 'PIGGY_IN' | 'PIGGY_OUT' | 'PIX_OUT' | 'PIX_IN'
   direction: 'CREDIT' | 'DEBIT'
   amount: Money
   balanceAfter: Money
@@ -32,7 +32,7 @@ export interface Page<T> {
 }
 
 export interface LimitUsage {
-  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT'
+  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'PIX'
   perOperation: Money
   daily: Money
   usedToday: Money

@@ -15,7 +15,7 @@ vale sem novo login.
 
 | Papel    | Permissões                                                                                               |
 | -------- | -------------------------------------------------------------------------------------------------------- |
-| CUSTOMER | `MANAGE_PROFILE`, `VIEW_ACCOUNT`, `VIEW_STATEMENT`, `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `CREATE_TRANSFER`, `VIEW_TRANSFER`, `CREATE_PAYMENT`, `VIEW_PAYMENT`, `VIEW_NOTIFICATIONS`, `VIEW_PIGGY`, `MANAGE_PIGGY` |
+| CUSTOMER | `MANAGE_PROFILE`, `VIEW_ACCOUNT`, `VIEW_STATEMENT`, `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `CREATE_TRANSFER`, `VIEW_TRANSFER`, `CREATE_PAYMENT`, `VIEW_PAYMENT`, `VIEW_NOTIFICATIONS`, `VIEW_PIGGY`, `MANAGE_PIGGY`, `VIEW_PIX`, `MANAGE_PIX`, `SEND_PIX` |
 | SUPPORT  | `VIEW_CUSTOMER`, `VIEW_AUDIT`                                                                            |
 | ADMIN    | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `MANAGE_USERS`, `MANAGE_LIMITS`, `MANAGE_ACCOUNTS`                          |
 

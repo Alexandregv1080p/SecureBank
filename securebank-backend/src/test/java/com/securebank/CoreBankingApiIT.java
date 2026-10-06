@@ -365,7 +365,7 @@ class CoreBankingApiIT {
         deposit(c, account, "20000.00").andExpect(status().isCreated());
 
         mvc.perform(as(c, get("/api/v1/accounts/" + account + "/limits")))
-                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$", hasSize(4)))
                 .andExpect(jsonPath("$[?(@.type=='TRANSFER')].perOperation.amount").value("5000.00"))
                 .andExpect(jsonPath("$[?(@.type=='TRANSFER')].usedToday.amount").value("0.00"));
 

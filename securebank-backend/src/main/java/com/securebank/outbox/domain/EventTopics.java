@@ -23,7 +23,7 @@ public final class EventTopics {
             return PAYMENTS;
         }
         if (eventType.startsWith("Account") || eventType.startsWith("Piggy")
-                || eventType.startsWith("Investment")) {
+                || eventType.startsWith("Investment") || eventType.startsWith("Fx")) {
             return ACCOUNTS;
         }
         if (eventType.startsWith("User")) {

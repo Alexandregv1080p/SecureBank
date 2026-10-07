@@ -91,7 +91,7 @@ class StatementApiIT {
                 .andExpect(jsonPath("$.byCategory[?(@.category=='SAVINGS')].income.amount").value("20.00"))
                 .andExpect(jsonPath("$.byCategory[?(@.category=='SAVINGS')].expenses.amount").value("100.00"))
                 .andExpect(jsonPath("$.byCategory[?(@.category=='PIX')].income.amount").value("0.00"))
-                .andExpect(jsonPath("$.byCategory", hasSize(6)));
+                .andExpect(jsonPath("$.byCategory", hasSize(7)));
     }
 
     @Test

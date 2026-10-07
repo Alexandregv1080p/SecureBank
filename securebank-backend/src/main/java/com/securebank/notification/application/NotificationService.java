@@ -81,6 +81,10 @@ public class NotificationService {
                     "Seu " + event.text("product") + " venceu e já pode ser resgatado.");
             case "InvestmentRedeemed" -> notifyOwner(event, event.text("accountId"), "INVEST_REDEEMED", "Resgate realizado",
                     "Você resgatou " + event.text("amount") + " " + event.text("currency") + " líquidos de " + event.text("product") + ".");
+            case "FxBought" -> notifyOwner(event, event.text("accountId"), "FX_BOUGHT", "Compra de moeda realizada",
+                    "Você comprou " + event.text("foreignAmount") + " " + event.text("currency") + " por R$ " + event.text("brlAmount") + ".");
+            case "FxSold" -> notifyOwner(event, event.text("accountId"), "FX_SOLD", "Venda de moeda realizada",
+                    "Você vendeu " + event.text("foreignAmount") + " " + event.text("currency") + " e recebeu R$ " + event.text("brlAmount") + ".");
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",

@@ -6,7 +6,8 @@ public enum LimitType {
     WITHDRAW(TransactionType.WITHDRAW),
     TRANSFER(TransactionType.TRANSFER),
     PAYMENT(TransactionType.PAYMENT),
-    PIX(TransactionType.PIX_OUT);
+    PIX(TransactionType.PIX_OUT),
+    FX(TransactionType.FX_BUY);
 
     private final TransactionType transactionType;
 

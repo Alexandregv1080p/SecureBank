@@ -121,6 +121,16 @@ public final class Account {
         return credit(TransactionType.INVEST_IN, amount, reference, now);
     }
 
+    /** Compra de moeda estrangeira: o custo em reais sai do saldo (a carteira recebe na mesma transação). */
+    public Transaction buyForeignCurrency(Money brl, String reference, Instant now) {
+        return debit(TransactionType.FX_BUY, brl, reference, now);
+    }
+
+    /** Venda de moeda estrangeira: os reais entram no saldo. */
+    public Transaction sellForeignCurrency(Money brl, String reference, Instant now) {
+        return credit(TransactionType.FX_SELL, brl, reference, now);
+    }
+
     /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
     public void ensureCanCredit(Money amount) {
         ensureActive();

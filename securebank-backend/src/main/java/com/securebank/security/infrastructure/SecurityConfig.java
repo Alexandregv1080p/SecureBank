@@ -98,6 +98,9 @@ class SecurityConfig {
                                 .hasAuthority(Permission.VIEW_INVESTMENTS.name())
                         .requestMatchers(POST, "/api/v1/investments", "/api/v1/investments/*/redeem")
                                 .hasAuthority(Permission.MANAGE_INVESTMENTS.name())
+                        .requestMatchers(GET, "/api/v1/fx/rates", "/api/v1/fx/wallets", "/api/v1/fx/operations")
+                                .hasAuthority(Permission.VIEW_FX.name())
+                        .requestMatchers(POST, "/api/v1/fx/buy", "/api/v1/fx/sell").hasAuthority(Permission.TRADE_FX.name())
                         .requestMatchers(GET, "/api/v1/notifications").hasAuthority(Permission.VIEW_NOTIFICATIONS.name())
                         .requestMatchers(POST, "/api/v1/notifications/*/read").hasAuthority(Permission.VIEW_NOTIFICATIONS.name())
                         // equipe

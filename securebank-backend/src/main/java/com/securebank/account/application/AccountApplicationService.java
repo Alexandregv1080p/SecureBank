@@ -198,6 +198,19 @@ public class AccountApplicationService {
         return account;
     }
 
+    /** Consulta da equipe (MANAGE_ACCOUNTS): qualquer conta, sem ser a dona. */
+    @Transactional(readOnly = true)
+    public Account getAny(AccountId id) {
+        return findAny(id);
+    }
+
+    /** Limites configurados e uso de hoje de qualquer conta (equipe, MANAGE_LIMITS). */
+    @Transactional(readOnly = true)
+    public List<LimitUsage.Status> limitsOf(AccountId id) {
+        Account account = findAny(id);
+        return limitUsage.allOf(account.id(), account.balance().currency());
+    }
+
     private Account findAny(AccountId id) {
         return accounts.findById(id).orElseThrow(() -> ApplicationException.notFound("Account"));
     }

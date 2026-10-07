@@ -6,6 +6,8 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +28,12 @@ class FxAdminController {
 
     FxAdminController(FxApplicationService fx) {
         this.fx = fx;
+    }
+
+    /** Cotações vigentes para a tela de operação (o cliente lê as dele em /fx/rates). */
+    @GetMapping("/rates")
+    List<FxController.RateResponse> rates() {
+        return fx.rates().stream().map(FxController.RateResponse::of).toList();
     }
 
     @PutMapping("/rates/{currency}")

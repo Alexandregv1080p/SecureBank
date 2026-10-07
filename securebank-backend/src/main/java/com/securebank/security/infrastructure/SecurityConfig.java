@@ -105,6 +105,10 @@ class SecurityConfig {
                         .requestMatchers(POST, "/api/v1/notifications/*/read").hasAuthority(Permission.VIEW_NOTIFICATIONS.name())
                         // equipe
                         .requestMatchers(GET, "/api/v1/admin/customers/*").hasAuthority(Permission.VIEW_CUSTOMER.name())
+                        .requestMatchers(GET, "/api/v1/admin/accounts/*").hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(GET, "/api/v1/admin/accounts/*/limits").hasAuthority(Permission.MANAGE_LIMITS.name())
+                        .requestMatchers(GET, "/api/v1/admin/fx/rates").hasAuthority(Permission.MANAGE_FX_RATES.name())
+                        .requestMatchers(GET, "/api/v1/admin/users").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(PUT, "/api/v1/admin/accounts/*/limits/*").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(PUT, "/api/v1/admin/fx/rates/*").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(POST, "/api/v1/admin/accounts/*/block", "/api/v1/admin/accounts/*/unblock")

@@ -49,6 +49,11 @@ public class UserAdminApplicationService {
         return user;
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<User> listStaff() {
+        return users.findStaff();
+    }
+
     public void disable(UserId target) {
         if (target.equals(actors.current().userId())) {
             throw ApplicationException.conflict("CANNOT_DISABLE_SELF", "You cannot disable your own user");

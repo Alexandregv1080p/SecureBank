@@ -23,6 +23,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,6 +63,18 @@ class AdminController {
         }
     }
 
+    /** Visão da equipe de uma conta: sem saldo (a equipe não precisa dele para bloquear nem ajustar limites). */
+    record AccountAdminView(UUID id, UUID customerId, String branch, String accountNumber, String type, String status) {
+
+        static AccountAdminView of(Account a) {
+            return new AccountAdminView(a.id().value(), a.customerId().value(), a.branch().value(),
+                    a.accountNumber().value(), a.type().name(), a.status().name());
+        }
+    }
+
+    /** Limite configurado com o uso de hoje. */
+    record LimitUsageView(String type, MoneyResponse perOperation, MoneyResponse daily, MoneyResponse usedToday) {}
+
     record AccountStatusView(UUID id, String status) {
 
         static AccountStatusView of(Account a) {
@@ -95,6 +108,24 @@ class AdminController {
     @GetMapping("/customers/{id}")
     CustomerView customer(@PathVariable String id) {
         return CustomerView.of(customers.get(CustomerId.of(id)));
+    }
+
+    @GetMapping("/accounts/{id}")
+    AccountAdminView account(@PathVariable String id) {
+        return AccountAdminView.of(accounts.getAny(AccountId.of(id)));
+    }
+
+    @GetMapping("/accounts/{id}/limits")
+    List<LimitUsageView> accountLimits(@PathVariable String id) {
+        return accounts.limitsOf(AccountId.of(id)).stream()
+                .map(s -> new LimitUsageView(s.limit().type().name(), MoneyResponse.of(s.limit().perOperation()),
+                        MoneyResponse.of(s.limit().daily()), MoneyResponse.of(s.usedToday())))
+                .toList();
+    }
+
+    @GetMapping("/users")
+    List<UserView> staff() {
+        return users.listStaff().stream().map(UserView::of).toList();
     }
 
     @PutMapping("/accounts/{accountId}/limits/{type}")

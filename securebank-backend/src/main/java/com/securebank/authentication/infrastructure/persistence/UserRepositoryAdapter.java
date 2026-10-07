@@ -35,6 +35,14 @@ class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public java.util.List<User> findStaff() {
+        return em.createQuery("select u from UserEntity u where u.role <> :customer order by u.createdAt, u.id",
+                        UserEntity.class)
+                .setParameter("customer", com.securebank.authorization.domain.Role.CUSTOMER)
+                .getResultList().stream().map(UserEntity::toDomain).toList();
+    }
+
+    @Override
     public void save(User user) {
         UserEntity entity = em.find(UserEntity.class, user.id().value());
         if (entity == null) {

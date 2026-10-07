@@ -20,6 +20,7 @@ class Network(
     val security: SecurityApi,
     val piggy: PiggyApi,
     val investment: InvestmentApi,
+    val fx: FxApi,
     val pix: PixApi,
     val refresher: TokenRefresher,
 )
@@ -74,6 +75,7 @@ object NetworkFactory {
             security = retrofit.create(SecurityApi::class.java),
             piggy = retrofit.create(PiggyApi::class.java),
             investment = retrofit.create(InvestmentApi::class.java),
+            fx = retrofit.create(FxApi::class.java),
             pix = retrofit.create(PixApi::class.java),
             refresher = refresher,
         )

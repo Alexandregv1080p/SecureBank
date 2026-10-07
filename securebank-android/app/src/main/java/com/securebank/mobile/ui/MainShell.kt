@@ -42,6 +42,10 @@ import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
 import com.securebank.mobile.ui.more.MoreScreen
 import com.securebank.mobile.ui.piggy.NewPiggyScreen
+import com.securebank.mobile.ui.fx.FxScreen
+import com.securebank.mobile.ui.fx.FxTradeScreen
+import com.securebank.mobile.ui.fx.FxTradeViewModel
+import com.securebank.mobile.ui.fx.FxViewModel
 import com.securebank.mobile.ui.invest.ApplyInvestmentScreen
 import com.securebank.mobile.ui.invest.ApplyInvestmentViewModel
 import com.securebank.mobile.ui.invest.InvestmentDetailScreen
@@ -158,6 +162,7 @@ fun MainShell(container: AppContainer) {
                     onTransfer = { nav.navigate("transfer") },
                     onPiggies = { nav.navigate("piggies") },
                     onInvestments = { nav.navigate("investments") },
+                    onFx = { nav.navigate("fx") },
                     onNotifications = { nav.navigate("notifications") },
                     onSecurity = { nav.navigate("security") },
                     onLogout = { scope.launch { container.auth.logout() } },
@@ -207,6 +212,19 @@ fun MainShell(container: AppContainer) {
             composable("pix/schedules") {
                 val vm: PixSchedulesViewModel = viewModel(factory = viewModelFactory { initializer { PixSchedulesViewModel(container.pix, container.banking) } })
                 PixSchedulesScreen(vm, onBack = { nav.popBackStack() })
+            }
+            composable("fx") {
+                val vm: FxViewModel = viewModel(factory = viewModelFactory { initializer { FxViewModel(container.fx, container.banking) } })
+                FxScreen(vm, onBuy = { nav.navigate("fx/buy/$it") }, onSell = { nav.navigate("fx/sell/$it") }, onBack = { nav.popBackStack() })
+            }
+            composable(
+                "fx/{side}/{currency}",
+                arguments = listOf(navArgument("side") { type = NavType.StringType }, navArgument("currency") { type = NavType.StringType }),
+            ) { entry ->
+                val currency = entry.arguments?.getString("currency").orEmpty()
+                val buying = entry.arguments?.getString("side") != "sell"
+                val vm: FxTradeViewModel = viewModel(factory = viewModelFactory { initializer { FxTradeViewModel(container.fx, container.banking, buying, currency) } })
+                FxTradeScreen(container, vm, currency, onDone = { nav.popBackStack() }, onBack = { nav.popBackStack() })
             }
             composable("investments") {
                 val vm: InvestmentsViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentsViewModel(container.investments, container.banking) } })

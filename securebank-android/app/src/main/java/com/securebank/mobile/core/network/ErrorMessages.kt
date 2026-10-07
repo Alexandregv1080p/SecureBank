@@ -34,6 +34,8 @@ private val messages = mapOf(
     "INVESTMENT_NOT_MATURED" to "Este investimento só pode ser resgatado no vencimento.",
     "INVESTMENT_ALREADY_REDEEMED" to "Este investimento já foi resgatado.",
     "INVESTMENT_LIMIT_REACHED" to "Você já tem o máximo de 50 investimentos ativos.",
+    "FX_RATE_CHANGED" to "A cotação mudou. Confira o novo valor e tente de novo.",
+    "INSUFFICIENT_FX_FUNDS" to "Saldo insuficiente na carteira em moeda estrangeira.",
     "INSUFFICIENT_PIGGY_FUNDS" to "Saldo insuficiente no porquinho.",
     "PIGGY_CLOSED" to "Este porquinho está fechado.",
     "PIGGY_HAS_BALANCE" to "Resgate o dinheiro do porquinho antes de fechar.",

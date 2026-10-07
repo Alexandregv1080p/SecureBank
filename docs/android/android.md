@@ -104,6 +104,10 @@ Na tela da conta: **resumo do mês** (entradas, saídas, resultado e por categor
 
 Renda fixa **simulada** (tipo CDB), em **Mais → Investimentos**: total aplicado (líquido hoje), suas aplicações e os produtos (CDB Liquidez Diária 10,50% a.a., CDB 90 dias 11,50%, CDB 365 dias 12,75%; mínimo R$ 1 / R$ 100). **Aplicar**: escolhe a conta e o valor, **biometria** ao confirmar, idempotência por intenção. **Detalhe**: aplicado, dias rendendo, bruto, rendimento, IR e líquido; **Resgatar** (com biometria) quando liberado: em branco resgata tudo; com um valor, resgata esse líquido e o resto segue rendendo. Ao vencer um produto com prazo chega um aviso na tela Avisos. O rendimento é por dia completo, com juros compostos; em produto com prazo ele para no vencimento e o resgate só abre nessa data. IR regressivo sobre o rendimento (22,5% até 180 dias, 20% até 360, 17,5% até 720, 15% acima). Aplicar e resgatar viram lançamentos no extrato (categoria Investimentos) e avisos. Os produtos e taxas ficam numa tabela do servidor; cada aplicação guarda a taxa do dia em que foi feita.
 
+## Câmbio
+
+Câmbio **simulado** em **Mais → Câmbio**: uma carteira por moeda (dólar e euro) com o saldo, a cotação de **compra** e a de **venda** (a diferença é o spread, 1,5% de cada lado do valor comercial) e as últimas operações. **Comprar/Vender**: escolhe a conta e a quantidade, o app mostra na hora quanto você paga ou recebe (mesma regra de arredondamento do servidor: compra para cima, venda para baixo), biometria ao confirmar. O app manda ao servidor a cotação que a pessoa **viu**; se ela mudou no meio do caminho, o servidor recusa (`FX_RATE_CHANGED`) e a tela recarrega a nova cotação para a pessoa decidir. "Vender tudo" preenche o saldo da carteira. A compra consome o limite de câmbio da conta (aparece em Limites) e as operações entram no extrato (categoria Câmbio) e nos avisos. As cotações ficam numa tabela do servidor (`fx_rates`); não há fonte externa: para mudar o valor, altere a tabela (não há tela de admin para isso ainda).
+
 ## Pix
 
 Pix **simulado dentro do próprio banco** (não fala com o Banco Central). Backend em `pix/`; contrato em `docs/api/README.md`.

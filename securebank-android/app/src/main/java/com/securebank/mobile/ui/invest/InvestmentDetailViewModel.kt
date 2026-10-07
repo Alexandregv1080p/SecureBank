@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.Investment
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.util.IdempotentIntent
+import com.securebank.mobile.core.util.Money
+import com.securebank.mobile.core.util.OperationValidation
 import com.securebank.mobile.data.BankingRepository
 import com.securebank.mobile.data.InvestmentRepository
 import com.securebank.mobile.ui.Load
@@ -21,6 +23,9 @@ data class InvestmentDetailState(
     val investment: Load<Investment> = Load.Loading,
     val loading: Boolean = false,
     val error: String? = null,
+    val amount: String = "",
+    val amountError: String? = null,
+    val message: String? = null,
 )
 
 class InvestmentDetailViewModel(
@@ -49,14 +54,30 @@ class InvestmentDetailViewModel(
         }
     }
 
-    /** Só chamar DEPOIS da confirmação de identidade. */
-    fun redeem() {
-        if (_state.value.loading) return
-        _state.update { it.copy(loading = true, error = null) }
+    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+
+    /** Valida o valor do resgate parcial; a tela pede a biometria e só então chama [redeem]. */
+    fun validatePartial(): Boolean {
+        val error = OperationValidation.amount(_state.value.amount)
+        _state.update { it.copy(amountError = error) }
+        return error == null
+    }
+
+    /** Só chamar DEPOIS da confirmação de identidade. [partial]: resgata só o valor digitado; senão, tudo. */
+    fun redeem(partial: Boolean) {
+        val s = _state.value
+        if (s.loading) return
+        val amount = if (partial) Money.parse(s.amount) ?: return else null
+        _state.update { it.copy(loading = true, error = null, message = null) }
         viewModelScope.launch {
             try {
-                val updated = intent.run(id) { key -> repository.redeem(id, key) }
-                _state.update { it.copy(investment = Load.Ready(updated)) }
+                val updated = intent.run(Pair(id, amount)) { key -> repository.redeem(id, key, amount) }
+                _state.update {
+                    it.copy(
+                        investment = Load.Ready(updated), amount = "",
+                        message = updated.paidAmount?.let { p -> "Resgatado ${Money.format(p.amount)}. O valor já está na sua conta." },
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

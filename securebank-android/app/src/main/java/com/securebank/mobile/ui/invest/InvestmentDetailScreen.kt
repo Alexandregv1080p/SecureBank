@@ -27,6 +27,10 @@ import com.securebank.mobile.ui.components.ErrorState
 import com.securebank.mobile.ui.components.MoneyText
 import com.securebank.mobile.ui.components.Panel
 import com.securebank.mobile.ui.components.PrimaryButton
+import com.securebank.mobile.ui.components.SbTextField
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.text.input.KeyboardType
 import com.securebank.mobile.ui.components.Skeleton
 import com.securebank.mobile.ui.rememberIdentityConfirmation
 
@@ -55,10 +59,19 @@ fun InvestmentDetailScreen(container: AppContainer, viewModel: InvestmentDetailV
                     MoneyText(Money.format(i.net.amount), style = MaterialTheme.typography.displaySmall)
                 }
                 Values(i)
+                s.message?.let { Banner(it, isError = false) }
                 s.error?.let { Banner(it) }
                 if (i.active) {
                     if (i.canRedeem) {
-                        PrimaryButton("Resgatar tudo", onClick = { confirm { viewModel.redeem() } }, loading = s.loading)
+                        SbTextField(
+                            "Valor a resgatar (R$)", s.amount, viewModel::onAmount, error = s.amountError,
+                            keyboardType = KeyboardType.Decimal, hint = "Líquido, já descontado o IR. Deixe em branco para resgatar tudo.",
+                            enabled = !s.loading,
+                        )
+                        OutlinedButton(
+                            onClick = { if (s.amount.isBlank() || viewModel.validatePartial()) confirm { viewModel.redeem(partial = s.amount.isNotBlank()) } },
+                            enabled = !s.loading, modifier = Modifier.fillMaxWidth(),
+                        ) { Text(if (s.amount.isBlank()) "Resgatar tudo" else "Resgatar este valor") }
                     } else {
                         Text(
                             "Este investimento só pode ser resgatado no vencimento: ${i.maturesAt?.let { Format.dateTime(it) }.orEmpty()}.",

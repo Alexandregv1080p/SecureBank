@@ -4,6 +4,7 @@ import com.securebank.mobile.core.network.ApplyInvestmentRequest
 import com.securebank.mobile.core.network.Investment
 import com.securebank.mobile.core.network.InvestmentApi
 import com.securebank.mobile.core.network.InvestmentProduct
+import com.securebank.mobile.core.network.RedeemInvestmentRequest
 import com.securebank.mobile.core.network.apiCall
 import kotlinx.serialization.json.Json
 
@@ -20,6 +21,7 @@ class InvestmentRepository(private val api: InvestmentApi, private val json: Jso
     suspend fun apply(accountId: String, productCode: String, amount: String, key: String): Investment =
         apiCall(json) { api.apply(ApplyInvestmentRequest(accountId, productCode, amount), key) }.also { banking.notifyChanged() }
 
-    suspend fun redeem(id: String, key: String): Investment =
-        apiCall(json) { api.redeem(id, key) }.also { banking.notifyChanged() }
+    /** [amount] nulo resgata tudo; com valor, resgata esse líquido (se for o total ou mais, resgata tudo). */
+    suspend fun redeem(id: String, key: String, amount: String? = null): Investment =
+        apiCall(json) { api.redeem(id, RedeemInvestmentRequest(amount), key) }.also { banking.notifyChanged() }
 }

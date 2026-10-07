@@ -64,7 +64,7 @@ class InvestmentRepositoryTest {
     }
 
     @Test
-    fun redeemSendsTheKeyAndNoBody() = runBlocking {
+    fun redeemSendsTheKeyAndAnEmptyBodyForAFullRedeem() = runBlocking {
         server.enqueue(json(investment.replace("ACTIVE", "REDEEMED"), 201))
 
         val redeemed = repo.redeem("i1", "key-redeem-01")
@@ -73,6 +73,18 @@ class InvestmentRepositoryTest {
         val request = server.takeRequest()
         assertEquals("/api/v1/investments/i1/redeem", request.path)
         assertEquals("key-redeem-01", request.getHeader("Idempotency-Key"))
+        assertEquals("{}", request.body.readUtf8())
+    }
+
+    @Test
+    fun aPartialRedeemSendsTheAmountAndReadsWhatWasPaid() = runBlocking {
+        server.enqueue(json(investment.replace("\"canRedeem\":false", "\"canRedeem\":true,\"paidAmount\":${money("300.00")}"), 201))
+
+        val updated = repo.redeem("i1", "key-redeem-03", "300.00")
+
+        assertEquals("300.00", updated.paidAmount?.amount)
+        assertTrue(updated.active) // segue ativa com o que sobrou
+        assertEquals("""{"amount":"300.00"}""", server.takeRequest().body.readUtf8())
     }
 
     @Test

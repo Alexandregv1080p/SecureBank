@@ -39,9 +39,15 @@ data class Investment(
     val net: Money,
     val canRedeem: Boolean,
     val redeemedAt: String? = null,
+    /** Quanto caiu na conta neste resgate (só na resposta do resgate). */
+    val paidAmount: Money? = null,
 ) {
     val active: Boolean get() = status == "ACTIVE"
 }
+
+/** [amount] = líquido que o cliente quer receber; nulo resgata tudo. */
+@Serializable
+data class RedeemInvestmentRequest(val amount: String? = null)
 
 @Serializable
 data class ApplyInvestmentRequest(val accountId: String, val productCode: String, val amount: String)
@@ -55,5 +61,5 @@ interface InvestmentApi {
     suspend fun apply(@Body body: ApplyInvestmentRequest, @Header("Idempotency-Key") key: String): Investment
 
     @POST("investments/{id}/redeem")
-    suspend fun redeem(@Path("id") id: String, @Header("Idempotency-Key") key: String): Investment
+    suspend fun redeem(@Path("id") id: String, @Body body: RedeemInvestmentRequest, @Header("Idempotency-Key") key: String): Investment
 }

@@ -38,7 +38,8 @@ public class InvestmentApplicationService {
     static final int MAX_ACTIVE_PER_CUSTOMER = 50;
 
     /** Aplicação com o valor que ela tem agora. */
-    public record View(Investment investment, Investment.Valuation valuation, boolean canRedeem) {}
+    /** [paid]: quanto caiu na conta neste resgate (só na resposta do resgate; nulo ao consultar). */
+    public record View(Investment investment, Investment.Valuation valuation, boolean canRedeem, Money paid) {}
 
     private final InvestmentRepository investments;
     private final InvestmentProductRepository products;
@@ -75,12 +76,12 @@ public class InvestmentApplicationService {
     @Transactional(readOnly = true)
     public List<View> list(CustomerId requester) {
         Instant now = time.now();
-        return investments.findByCustomer(requester).stream().map(i -> view(i, now)).toList();
+        return investments.findByCustomer(requester).stream().map(i -> view(i, now, null)).toList();
     }
 
     @Transactional(readOnly = true)
     public View get(CustomerId requester, InvestmentId id) {
-        return view(findOwned(requester, id), time.now());
+        return view(findOwned(requester, id), time.now(), null);
     }
 
     /** Roda sem transação própria: abre uma por tentativa e repete em conflito de versão. */
@@ -89,9 +90,21 @@ public class InvestmentApplicationService {
         return retry.execute(() -> doApply(requester, accountId, productCode, amount));
     }
 
+    /** [amount] nulo resgata tudo; com valor, resgata esse LÍQUIDO (se for o total ou mais, resgata tudo). */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public View redeem(CustomerId requester, InvestmentId id) {
-        return retry.execute(() -> doRedeem(requester, id));
+    public View redeem(CustomerId requester, InvestmentId id, BigDecimal amount) {
+        return retry.execute(() -> doRedeem(requester, id, amount));
+    }
+
+    /** Avisa os vencimentos novos (uma vez cada). @return quantos foram avisados. */
+    public int notifyMatured() {
+        var matured = investments.claimMatured(time.now(), 100);
+        for (var m : matured) {
+            outbox.record("InvestmentMatured", "Investment", m.id().toString(),
+                    Map.of("investmentId", m.id().toString(), "accountId", m.accountId().toString(),
+                            "product", m.productName()));
+        }
+        return matured.size();
     }
 
     private View doApply(CustomerId requester, AccountId accountId, String productCode, BigDecimal amount) {
@@ -116,16 +129,17 @@ public class InvestmentApplicationService {
                 .detail(investment.id().toString()));
         outbox.record("InvestmentApplied", "Investment", investment.id().toString(),
                 payload(investment, money, product.name()));
-        return view(investment, now);
+        return view(investment, now, null);
     }
 
-    private View doRedeem(CustomerId requester, InvestmentId id) {
+    private View doRedeem(CustomerId requester, InvestmentId id, BigDecimal amount) {
         customers.requireActive(requester);
         Investment investment = findOwned(requester, id);
         Account account = accountService.findOwned(requester, investment.accountId());
         Instant now = time.now();
 
-        Money net = investment.redeem(now); // recusa se já resgatada ou antes do vencimento
+        Money wanted = amount == null ? null : new Money(amount, account.balance().currency());
+        Money net = investment.redeem(now, wanted); // recusa se já resgatada ou antes do vencimento
         Transaction credit = account.redeemInvestment(net, reference(investment), now);
         accounts.save(account);
         investments.save(investment);
@@ -134,7 +148,7 @@ public class InvestmentApplicationService {
                 .detail(investment.id().toString()));
         outbox.record("InvestmentRedeemed", "Investment", investment.id().toString(),
                 payload(investment, net, investment.productName()));
-        return view(investment, now);
+        return view(investment, now, net);
     }
 
     private Investment findOwned(CustomerId requester, InvestmentId id) {
@@ -142,8 +156,8 @@ public class InvestmentApplicationService {
                 .orElseThrow(() -> ApplicationException.notFound("Investment"));
     }
 
-    private static View view(Investment i, Instant now) {
-        return new View(i, i.valuation(now), i.canRedeem(now));
+    private static View view(Investment i, Instant now, Money paid) {
+        return new View(i, i.valuation(now), i.canRedeem(now), paid);
     }
 
     /** Referência do lançamento no extrato (cabe nos 64 caracteres da coluna). */

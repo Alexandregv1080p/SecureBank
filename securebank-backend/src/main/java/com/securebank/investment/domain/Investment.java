@@ -27,7 +27,7 @@ public final class Investment {
     private final AccountId accountId;
     private final String productCode;
     private final String productName;
-    private final Money principal;
+    private Money principal; // diminui no resgate parcial
     private final BigDecimal annualRate;
     private final Integer termDays; // nulo = liquidez diária
     private final Instant appliedAt;
@@ -102,6 +102,42 @@ public final class Investment {
 
     private Valuation build(int days, Money gross, Money tax) {
         return new Valuation(days, gross, gross.minus(principal), tax, taxRate(days), gross.minus(tax));
+    }
+
+    /**
+     * Resgata o líquido desejado ([wanted]); nulo, ou igual/maior que o líquido de hoje, resgata tudo. Parcial: o cliente
+     * recebe exatamente [wanted] e o principal diminui na mesma proporção (a data da aplicação não muda, então o que
+     * sobra continua rendendo como antes). @return o líquido a creditar na conta.
+     */
+    public Money redeem(Instant now, Money wanted) {
+        if (wanted == null) {
+            return redeem(now);
+        }
+        if (status != InvestmentStatus.ACTIVE) {
+            throw new InvestmentAlreadyRedeemedException();
+        }
+        if (!isMatured(now)) {
+            throw new InvestmentNotMaturedException();
+        }
+        if (!wanted.isPositive()) {
+            throw new InvalidValueException("Amount must be greater than zero");
+        }
+        Valuation v = valuation(now);
+        v.net().requireSameCurrency(wanted);
+        if (wanted.compareTo(v.net()) >= 0) {
+            return redeem(now);
+        }
+        BigDecimal fraction = wanted.amount().divide(v.net().amount(), 12, RoundingMode.HALF_EVEN);
+        BigDecimal cut = principal.amount().multiply(fraction).setScale(2, RoundingMode.HALF_UP);
+        if (cut.signum() == 0) {
+            throw new InvalidValueException("Amount is too small to redeem");
+        }
+        if (cut.compareTo(principal.amount()) >= 0) {
+            return redeem(now);
+        }
+        // ponytail: arredondamento ao centavo no principal pode deslocar o que sobra em até R$ 0,01; sem corrigir
+        principal = principal.minus(new Money(cut, principal.currency()));
+        return wanted;
     }
 
     /** Resgata tudo. Produto com prazo só no vencimento. @return o líquido a creditar na conta. */

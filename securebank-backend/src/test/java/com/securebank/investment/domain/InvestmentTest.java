@@ -131,6 +131,64 @@ class InvestmentTest {
     }
 
     @Test
+    void aPartialRedeemPaysExactlyWhatWasAskedAndTheRestKeepsYielding() {
+        var inv = daily("1000.00");
+        Instant at = plusDays(100);
+        Money before = inv.valuation(at).net();
+
+        Money paid = inv.redeem(at, Money.brl("300.00"));
+
+        assertThat(paid).isEqualTo(Money.brl("300.00"));
+        assertThat(inv.status()).isEqualTo(InvestmentStatus.ACTIVE);
+        assertThat(inv.principal().isLessThan(Money.brl("1000.00"))).isTrue();
+        Money after = inv.valuation(at).net();
+        assertThat(after.amount()).isBetween(before.minus(paid).amount().subtract(new BigDecimal("0.02")),
+                before.minus(paid).amount().add(new BigDecimal("0.02"))); // sobra o que não foi resgatado (±1 centavo)
+        assertThat(inv.valuation(plusDays(200)).gross().isGreaterThan(inv.valuation(at).gross())).isTrue(); // segue rendendo
+    }
+
+    @Test
+    void askingForTheWholeNetOrMoreRedeemsEverything() {
+        var inv = daily("1000.00");
+        Money net = inv.valuation(plusDays(50)).net();
+
+        Money paid = inv.redeem(plusDays(50), net.plus(Money.brl("500.00")));
+
+        assertThat(paid).isEqualTo(net);
+        assertThat(inv.status()).isEqualTo(InvestmentStatus.REDEEMED);
+    }
+
+    @Test
+    void severalPartialRedeemsNeverPayMoreThanTheWholeWasWorth() {
+        var inv = daily("1000.00");
+        Money worth = inv.valuation(plusDays(30)).net();
+        Money total = Money.zero(worth.currency());
+
+        for (int i = 0; i < 3; i++) {
+            total = total.plus(inv.redeem(plusDays(30), Money.brl("100.00")));
+        }
+        total = total.plus(inv.redeem(plusDays(30))); // o resto
+
+        assertThat(total.amount()).isBetween(worth.amount().subtract(new BigDecimal("0.05")), worth.amount().add(new BigDecimal("0.05")));
+    }
+
+    @Test
+    void aPartialRedeemRespectsTheSameRulesAsAFullOne() {
+        var term = Investment.apply(CUSTOMER, ACCOUNT, TERM_90, Money.brl("1000.00"), T0);
+        assertThatThrownBy(() -> term.redeem(plusDays(10), Money.brl("100.00")))
+                .isInstanceOf(InvestmentNotMaturedException.class);
+        assertThat(term.redeem(plusDays(90), Money.brl("100.00"))).isEqualTo(Money.brl("100.00"));
+
+        var inv = daily("1000.00");
+        assertThatThrownBy(() -> inv.redeem(plusDays(5), Money.brl("0.00"))).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> inv.redeem(plusDays(5), Money.brl("0.00").minus(Money.brl("1.00"))))
+                .isInstanceOf(InvalidValueException.class);
+        inv.redeem(plusDays(5));
+        assertThatThrownBy(() -> inv.redeem(plusDays(6), Money.brl("1.00")))
+                .isInstanceOf(InvestmentAlreadyRedeemedException.class);
+    }
+
+    @Test
     void ownershipIsByCustomer() {
         var inv = daily("10.00");
 

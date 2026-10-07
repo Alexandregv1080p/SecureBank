@@ -77,6 +77,8 @@ public class NotificationService {
                             + scheduleReason(event.text("reason")) + ".");
             case "InvestmentApplied" -> notifyOwner(event, event.text("accountId"), "INVEST_APPLIED", "Aplicação realizada",
                     "Você aplicou " + event.text("amount") + " " + event.text("currency") + " em " + event.text("product") + ".");
+            case "InvestmentMatured" -> notifyOwner(event, event.text("accountId"), "INVEST_MATURED", "Investimento venceu",
+                    "Seu " + event.text("product") + " venceu e já pode ser resgatado.");
             case "InvestmentRedeemed" -> notifyOwner(event, event.text("accountId"), "INVEST_REDEEMED", "Resgate realizado",
                     "Você resgatou " + event.text("amount") + " " + event.text("currency") + " líquidos de " + event.text("product") + ".");
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",

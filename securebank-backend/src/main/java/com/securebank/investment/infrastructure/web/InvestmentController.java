@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/investments")
 class InvestmentController {
 
+    /** [amount] = líquido desejado; ausente = resgata tudo. */
+    record RedeemRequest(@DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount) {}
+
     record ApplyRequest(
             @NotNull UUID accountId,
             @NotBlank @Size(max = 30) String productCode,
@@ -49,7 +52,7 @@ class InvestmentController {
     record InvestmentResponse(UUID id, UUID accountId, String productCode, String productName, MoneyResponse principal,
             String annualRatePercent, Integer termDays, Instant appliedAt, Instant maturesAt, String status,
             int daysHeld, MoneyResponse gross, MoneyResponse yield, MoneyResponse tax, String taxRatePercent,
-            MoneyResponse net, boolean canRedeem, Instant redeemedAt) {
+            MoneyResponse net, boolean canRedeem, Instant redeemedAt, MoneyResponse paidAmount) {
 
         static InvestmentResponse of(View v) {
             var i = v.investment();
@@ -58,7 +61,8 @@ class InvestmentController {
                     MoneyResponse.of(i.principal()), percent(i.annualRate()), i.termDays(), i.appliedAt(),
                     i.maturesAt(), i.status().name(), val.days(), MoneyResponse.of(val.gross()),
                     MoneyResponse.of(val.yield()), MoneyResponse.of(val.tax()), percent(val.taxRate()),
-                    MoneyResponse.of(val.net()), v.canRedeem(), i.redeemedAt());
+                    MoneyResponse.of(val.net()), v.canRedeem(), i.redeemedAt(),
+                    v.paid() == null ? null : MoneyResponse.of(v.paid()));
         }
     }
 
@@ -98,7 +102,8 @@ class InvestmentController {
 
     @PostMapping("/{id}/redeem")
     @ResponseStatus(HttpStatus.CREATED)
-    InvestmentResponse redeem(@PathVariable String id) {
-        return InvestmentResponse.of(investments.redeem(current.customerId(), InvestmentId.of(id)));
+    InvestmentResponse redeem(@PathVariable String id, @Valid @RequestBody(required = false) RedeemRequest request) {
+        return InvestmentResponse.of(investments.redeem(current.customerId(), InvestmentId.of(id),
+                request == null ? null : request.amount()));
     }
 }

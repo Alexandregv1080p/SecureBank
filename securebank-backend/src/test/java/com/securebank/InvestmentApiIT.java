@@ -240,7 +240,115 @@ class InvestmentApiIT {
                 .andExpect(jsonPath("$.code").value("INVESTMENT_LIMIT_REACHED"));
     }
 
+    @Test
+    void partialRedeemPaysTheAskedAmountAndKeepsTheRestApplied() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "1000.00");
+        String id = read(mvc.perform(apply(token, account, "CDB_DAILY", "1000.00", key())).andReturn(), "$.id");
+
+        mvc.perform(redeemAmount(token, id, "400.00", key()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.paidAmount.amount").value("400.00"))
+                .andExpect(jsonPath("$.principal.amount").value("600.00")); // dia 0: líquido = principal
+        assertThat(balance(token, account)).isEqualTo("400.00");
+        mvc.perform(as(token, get("/api/v1/investments/" + id)))
+                .andExpect(jsonPath("$.net.amount").value("600.00"))
+                .andExpect(jsonPath("$.paidAmount").doesNotExist());
+
+        mvc.perform(redeemAmount(token, id, "9999.00", key())) // mais que o líquido: resgata o que resta
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REDEEMED"))
+                .andExpect(jsonPath("$.paidAmount.amount").value("600.00"));
+        assertThat(balance(token, account)).isEqualTo("1000.00");
+    }
+
+    @Test
+    void partialRedeemValidatesTheAmountAndTheMaturity() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "500.00");
+        String term = read(mvc.perform(apply(token, account, "CDB_90", "300.00", key())).andReturn(), "$.id");
+        String daily = read(mvc.perform(apply(token, account, "CDB_DAILY", "200.00", key())).andReturn(), "$.id");
+
+        mvc.perform(redeemAmount(token, term, "100.00", key()))
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("INVESTMENT_NOT_MATURED"));
+        mvc.perform(redeemAmount(token, daily, "0", key())).andExpect(status().isBadRequest());
+        mvc.perform(redeemAmount(token, daily, "-5", key())).andExpect(status().isBadRequest());
+        mvc.perform(redeemAmount(token, daily, "1.234", key())).andExpect(status().isBadRequest());
+        assertThat(balance(token, account)).isEqualTo("0.00");
+    }
+
+    @Test
+    void partialRedeemsRunInParallelWithoutPayingMoreThanTheTotal() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "1000.00");
+        String id = read(mvc.perform(apply(token, account, "CDB_DAILY", "1000.00", key())).andReturn(), "$.id");
+
+        ExecutorService pool = Executors.newFixedThreadPool(6);
+        List<Future<Integer>> results = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            Callable<Integer> call = () -> mvc.perform(redeemAmount(token, id, "300.00", key())).andReturn().getResponse().getStatus();
+            results.add(pool.submit(call));
+        }
+        int created = 0;
+        for (Future<Integer> f : results) {
+            if (f.get() == 201) {
+                created++;
+            }
+        }
+        pool.shutdown();
+
+        // 1000 dá para no máximo 3 resgates de 300 inteiros + o que resta (4º pode pagar 100); nunca mais que o total
+        assertThat(new BigDecimal(balance(token, account))).isLessThanOrEqualTo(new BigDecimal("1000.00"));
+        assertThat(created).isBetween(3, 4);
+    }
+
+    // ---------- aviso de vencimento ----------
+
+    @Autowired com.securebank.investment.application.InvestmentApplicationService investmentService;
+
+    @Test
+    void aMaturedTermInvestmentIsAnnouncedExactlyOnce() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "800.00");
+        String term = read(mvc.perform(apply(token, account, "CDB_90", "300.00", key())).andReturn(), "$.id");
+        String notYet = read(mvc.perform(apply(token, account, "CDB_365", "300.00", key())).andReturn(), "$.id");
+        String daily = read(mvc.perform(apply(token, account, "CDB_DAILY", "100.00", key())).andReturn(), "$.id");
+        jdbc.update("update investments set applied_at = applied_at - interval '91 days',"
+                + " matures_at = matures_at - interval '91 days' where id = ?::uuid", term);
+
+        assertThat(investmentService.notifyMatured()).isEqualTo(1);
+        assertThat(investmentService.notifyMatured()).isZero(); // não repete
+
+        assertThat(jdbc.queryForObject("select count(*) from outbox_events where event_type = 'InvestmentMatured'"
+                + " and aggregate_id = ?", Integer.class, term)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from outbox_events where event_type = 'InvestmentMatured'"
+                + " and aggregate_id in (?, ?)", Integer.class, notYet, daily)).isZero();
+    }
+
+    @Test
+    void aRedeemedOrFutureInvestmentIsNeverAnnounced() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "300.00");
+        String term = read(mvc.perform(apply(token, account, "CDB_90", "300.00", key())).andReturn(), "$.id");
+        jdbc.update("update investments set applied_at = applied_at - interval '91 days',"
+                + " matures_at = matures_at - interval '91 days' where id = ?::uuid", term);
+        mvc.perform(redeem(token, term, key())).andExpect(status().isCreated()); // resgatou antes do job rodar
+
+        assertThat(investmentService.notifyMatured()).isZero();
+    }
+
     // ---------- helpers ----------
+
+    private MockHttpServletRequestBuilder redeemAmount(String token, String id, String amount, String key) {
+        return redeem(token, id, key).contentType(MediaType.APPLICATION_JSON).content("{\"amount\":\"" + amount + "\"}");
+    }
+
 
     private MockHttpServletRequestBuilder apply(String token, String account, String product, String amount, String key) {
         return as(token, post("/api/v1/investments")).header("Idempotency-Key", key)

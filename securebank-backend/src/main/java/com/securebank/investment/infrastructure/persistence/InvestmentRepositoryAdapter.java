@@ -46,6 +46,24 @@ class InvestmentRepositoryAdapter implements InvestmentRepository, InvestmentPro
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public List<com.securebank.investment.application.MaturedInvestment> claimMatured(java.time.Instant now, int limit) {
+        List<Object[]> rows = em.createNativeQuery("""
+                update investments set maturity_notified_at = :now
+                where id in (select id from investments
+                             where status = 'ACTIVE' and matures_at is not null and matures_at <= :now
+                               and maturity_notified_at is null
+                             order by matures_at limit :limit for update skip locked)
+                returning id, account_id, product_name""")
+                .setParameter("now", now)
+                .setParameter("limit", limit)
+                .getResultList();
+        return rows.stream().map(r -> new com.securebank.investment.application.MaturedInvestment(
+                new InvestmentId((java.util.UUID) r[0]), new com.securebank.shared.domain.AccountId((java.util.UUID) r[1]),
+                (String) r[2])).toList();
+    }
+
+    @Override
     public void save(Investment investment) {
         InvestmentEntity entity = em.find(InvestmentEntity.class, investment.id().value());
         if (entity == null) {

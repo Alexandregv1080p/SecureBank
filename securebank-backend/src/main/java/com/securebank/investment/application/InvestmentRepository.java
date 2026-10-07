@@ -15,6 +15,12 @@ public interface InvestmentRepository {
 
     long countActiveByCustomer(CustomerId customerId);
 
+    /**
+     * Marca como avisadas (e devolve) até [limit] aplicações com prazo vencidas e ainda ativas. Atômico e seguro com
+     * várias instâncias (SKIP LOCKED): cada vencimento é avisado uma vez só.
+     */
+    List<MaturedInvestment> claimMatured(java.time.Instant now, int limit);
+
     /** A versão otimista é conferida no flush: dois resgates simultâneos da mesma aplicação não passam os dois. */
     void save(Investment investment);
 }

@@ -100,6 +100,10 @@ Também nesta mudança: o **tema** deixou de usar o lilás padrão do Material (
 
 Na tela da conta: **resumo do mês** (entradas, saídas, resultado e por categoria, com navegação entre meses até o atual), **filtros** por categoria (Depósitos e saques, Transferências, Pagamentos, Pix, Porquinhos) e por sentido (entradas/saídas), combináveis com o período, e **Exportar CSV**, que respeita período e filtros e grava no arquivo que o usuário escolher (seletor de documentos do sistema: o app não pede permissão de armazenamento). As categorias são derivadas do tipo do lançamento no servidor (nada novo é gravado).
 
+## Investimentos
+
+Renda fixa **simulada** (tipo CDB), em **Mais → Investimentos**: total aplicado (líquido hoje), suas aplicações e os produtos (CDB Liquidez Diária 10,50% a.a., CDB 90 dias 11,50%, CDB 365 dias 12,75%; mínimo R$ 1 / R$ 100). **Aplicar**: escolhe a conta e o valor, **biometria** ao confirmar, idempotência por intenção. **Detalhe**: aplicado, dias rendendo, bruto, rendimento, IR e líquido; **Resgatar tudo** (com biometria) quando liberado. O rendimento é por dia completo, com juros compostos; em produto com prazo ele para no vencimento e o resgate só abre nessa data. IR regressivo sobre o rendimento (22,5% até 180 dias, 20% até 360, 17,5% até 720, 15% acima). Aplicar e resgatar viram lançamentos no extrato (categoria Investimentos) e avisos. Os produtos e taxas ficam numa tabela do servidor; cada aplicação guarda a taxa do dia em que foi feita.
+
 ## Pix
 
 Pix **simulado dentro do próprio banco** (não fala com o Banco Central). Backend em `pix/`; contrato em `docs/api/README.md`.

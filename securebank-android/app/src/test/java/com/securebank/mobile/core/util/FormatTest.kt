@@ -15,7 +15,7 @@ class FormatTest {
 
     @Test
     fun categoriesAndMonthsAreInPortuguese() {
-        assertEquals(listOf("Depósitos e saques", "Transferências", "Pagamentos", "Pix", "Porquinhos"), Format.categories.map(Format::categoryLabel))
+        assertEquals(listOf("Depósitos e saques", "Transferências", "Pagamentos", "Pix", "Porquinhos", "Investimentos"), Format.categories.map(Format::categoryLabel))
         assertEquals("outubro de 2026", Format.month(java.time.YearMonth.of(2026, 10)))
         assertEquals("março de 2027", Format.month(java.time.YearMonth.of(2027, 3)))
     }
@@ -46,6 +46,8 @@ class FormatTest {
         assertEquals("Estorno", Format.describe(tx("REFUND", "CREDIT")))
         assertEquals("Pix enviado", Format.describe(tx("PIX_OUT", "DEBIT")))
         assertEquals("Pix recebido", Format.describe(tx("PIX_IN", "CREDIT")))
+        assertEquals("Aplicação em renda fixa", Format.describe(tx("INVEST_OUT", "DEBIT")))
+        assertEquals("Resgate de investimento", Format.describe(tx("INVEST_IN", "CREDIT")))
         assertEquals("Devolução de Pix enviada", Format.describe(tx("PIX_RETURN_OUT", "DEBIT")))
         assertEquals("Devolução de Pix recebida", Format.describe(tx("PIX_RETURN_IN", "CREDIT")))
         assertEquals("Guardado no porquinho", Format.describe(tx("PIGGY_IN", "DEBIT")))

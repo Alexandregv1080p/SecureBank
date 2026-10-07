@@ -42,6 +42,12 @@ import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
 import com.securebank.mobile.ui.more.MoreScreen
 import com.securebank.mobile.ui.piggy.NewPiggyScreen
+import com.securebank.mobile.ui.invest.ApplyInvestmentScreen
+import com.securebank.mobile.ui.invest.ApplyInvestmentViewModel
+import com.securebank.mobile.ui.invest.InvestmentDetailScreen
+import com.securebank.mobile.ui.invest.InvestmentDetailViewModel
+import com.securebank.mobile.ui.invest.InvestmentsScreen
+import com.securebank.mobile.ui.invest.InvestmentsViewModel
 import com.securebank.mobile.ui.pix.PixChargesScreen
 import com.securebank.mobile.ui.pix.PixChargesViewModel
 import com.securebank.mobile.ui.pix.PixHistoryScreen
@@ -151,6 +157,7 @@ fun MainShell(container: AppContainer) {
                 MoreScreen(
                     onTransfer = { nav.navigate("transfer") },
                     onPiggies = { nav.navigate("piggies") },
+                    onInvestments = { nav.navigate("investments") },
                     onNotifications = { nav.navigate("notifications") },
                     onSecurity = { nav.navigate("security") },
                     onLogout = { scope.launch { container.auth.logout() } },
@@ -200,6 +207,24 @@ fun MainShell(container: AppContainer) {
             composable("pix/schedules") {
                 val vm: PixSchedulesViewModel = viewModel(factory = viewModelFactory { initializer { PixSchedulesViewModel(container.pix, container.banking) } })
                 PixSchedulesScreen(vm, onBack = { nav.popBackStack() })
+            }
+            composable("investments") {
+                val vm: InvestmentsViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentsViewModel(container.investments, container.banking) } })
+                InvestmentsScreen(vm, onApply = { nav.navigate("investments/apply/$it") }, onOpen = { nav.navigate("investments/$it") }, onBack = { nav.popBackStack() })
+            }
+            composable("investments/apply/{code}", arguments = listOf(navArgument("code") { type = NavType.StringType })) { entry ->
+                val code = entry.arguments?.getString("code").orEmpty()
+                val vm: ApplyInvestmentViewModel = viewModel(factory = viewModelFactory { initializer { ApplyInvestmentViewModel(container.investments, container.banking, code) } })
+                ApplyInvestmentScreen(
+                    container, vm,
+                    onOpen = { id -> nav.navigate("investments/$id") { popUpTo("investments") } },
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable("investments/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val vm: InvestmentDetailViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentDetailViewModel(container.investments, container.banking, id) } })
+                InvestmentDetailScreen(container, vm, onBack = { nav.popBackStack() })
             }
             composable("piggies") {
                 val vm: PiggiesViewModel = viewModel(factory = viewModelFactory { initializer { PiggiesViewModel(container.piggies, container.banking) } })

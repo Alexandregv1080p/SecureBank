@@ -36,7 +36,11 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /accounts`                        | Abre conta (`CHECKING`/`SAVINGS`) e cria os limites padrão         |
 | `GET /accounts`, `GET /accounts/{id}`   | Contas do cliente                                                 |
 | `GET /accounts/{id}/balance`            | Saldo                                                             |
-| `GET /accounts/{id}/statement`          | Extrato paginado (`from`, `to`, `category`, `direction`, `page`, `size ≤ 100`), mais recente primeiro. Categorias (derivadas do tipo): `CASH` (depósito/saque), `TRANSFERS`, `PAYMENTS` (pagamento/estorno), `PIX` (inclui devoluções), `SAVINGS` (porquinhos); `direction`: `CREDIT`/`DEBIT` |
+| `GET /accounts/{id}/statement`          | Extrato paginado (`from`, `to`, `category`, `direction`, `page`, `size ≤ 100`), mais recente primeiro. Categorias (derivadas do tipo): `CASH` (depósito/saque), `TRANSFERS`, `PAYMENTS` (pagamento/estorno), `PIX` (inclui devoluções), `SAVINGS` (porquinhos), `INVESTMENTS`; `direction`: `CREDIT`/`DEBIT` |
+| `GET /investments/products`             | Produtos de renda fixa simulados (`CDB_DAILY` liquidez diária, `CDB_90`, `CDB_365`) com taxa ao ano, prazo e mínimo |
+| `POST /investments`                     | Aplica (`Idempotency-Key`): `{accountId, productCode, amount}`; sai do saldo (`INVEST_OUT`). Erros: `INVESTMENT_BELOW_MINIMUM`, `INVESTMENT_LIMIT_REACHED` (50 ativas) |
+| `GET /investments`, `GET /investments/{id}` | Aplicações com o valor de hoje: `gross`, `yield`, `tax`, `net` ("se resgatar agora"), `daysHeld`, `canRedeem`. Aplicação de outro cliente = 404 |
+| `POST /investments/{id}/redeem`         | Resgata tudo (`Idempotency-Key`); o líquido volta à conta (`INVEST_IN`). Produto com prazo só no vencimento (`INVESTMENT_NOT_MATURED`); resgate repetido: `INVESTMENT_ALREADY_REDEEMED` |
 | `GET /accounts/{id}/statement/summary?month=YYYY-MM` | Resumo do mês (fuso de São Paulo): entradas, saídas, resultado e o mesmo por categoria; só lançamentos concluídos |
 | `GET /accounts/{id}/statement/export`   | CSV do extrato (mesmos filtros), até 5.000 linhas (`X-Truncated: true` se houver mais); campo `reference` neutraliza fórmulas de planilha |
 | `GET /accounts/{id}/limits`             | Limites com o consumo do dia                                      |
@@ -104,7 +108,7 @@ curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer
 
 ## Idempotência
 
-`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`
+`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`, `/investments`, `/investments/{id}/redeem`
 e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
 → `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
 [`consistency.md`](../architecture/consistency.md).

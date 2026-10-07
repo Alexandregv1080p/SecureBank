@@ -530,6 +530,55 @@ paths:
       responses:
         "204":
           description: No Content
+  /api/v1/investments:
+    get:
+      tags:
+      - investment-controller
+      operationId: list_5
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvestmentResponse"
+    post:
+      tags:
+      - investment-controller
+      operationId: apply
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvestmentResponse"
+  /api/v1/investments/{id}/redeem:
+    post:
+      tags:
+      - investment-controller
+      operationId: redeem
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvestmentResponse"
   /api/v1/auth/register:
     post:
       tags:
@@ -695,7 +744,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: list_5
+      operationId: list_6
       responses:
         "200":
           description: OK
@@ -986,7 +1035,7 @@ paths:
     get:
       tags:
       - notification-controller
-      operationId: list_6
+      operationId: list_7
       parameters:
       - name: page
         in: query
@@ -1009,6 +1058,38 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/NotificationPage"
+  /api/v1/investments/{id}:
+    get:
+      tags:
+      - investment-controller
+      operationId: get_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvestmentResponse"
+  /api/v1/investments/products:
+    get:
+      tags:
+      - investment-controller
+      operationId: products
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductResponse"
   /api/v1/audit:
     get:
       tags:
@@ -1052,6 +1133,8 @@ paths:
           - PIGGY_DEPOSIT
           - PIGGY_WITHDRAW
           - PIGGY_CLOSED
+          - INVESTMENT_APPLIED
+          - INVESTMENT_REDEEMED
           - USER_CREATED
           - USER_DISABLED
           - USER_ENABLED
@@ -1104,7 +1187,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: get_4
+      operationId: get_5
       parameters:
       - name: id
         in: path
@@ -1152,6 +1235,7 @@ paths:
           - PAYMENTS
           - PIX
           - SAVINGS
+          - INVESTMENTS
       - name: direction
         in: query
         required: false
@@ -1238,6 +1322,7 @@ paths:
           - PAYMENTS
           - PIX
           - SAVINGS
+          - INVESTMENTS
       - name: direction
         in: query
         required: false
@@ -1714,6 +1799,69 @@ components:
         createdAt:
           type: string
           format: date-time
+    ApplyRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        productCode:
+          type: string
+          maxLength: 30
+          minLength: 0
+        amount:
+          type: number
+          minimum: 0.01
+      required:
+      - accountId
+      - amount
+      - productCode
+    InvestmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        productCode:
+          type: string
+        productName:
+          type: string
+        principal:
+          $ref: "#/components/schemas/MoneyResponse"
+        annualRatePercent:
+          type: string
+        termDays:
+          type: integer
+          format: int32
+        appliedAt:
+          type: string
+          format: date-time
+        maturesAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        daysHeld:
+          type: integer
+          format: int32
+        gross:
+          $ref: "#/components/schemas/MoneyResponse"
+        yield:
+          $ref: "#/components/schemas/MoneyResponse"
+        tax:
+          $ref: "#/components/schemas/MoneyResponse"
+        taxRatePercent:
+          type: string
+        net:
+          $ref: "#/components/schemas/MoneyResponse"
+        canRedeem:
+          type: boolean
+        redeemedAt:
+          type: string
+          format: date-time
     RegisterRequest:
       type: object
       properties:
@@ -2108,6 +2256,22 @@ components:
           format: date-time
         read:
           type: boolean
+    ProductResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        annualRatePercent:
+          type: string
+        termDays:
+          type: integer
+          format: int32
+        minAmount:
+          type: string
     AuditLogResponse:
       type: object
       properties:

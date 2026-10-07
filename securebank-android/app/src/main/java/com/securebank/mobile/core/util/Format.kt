@@ -27,7 +27,7 @@ object Format {
     }
 
     /** Categorias do extrato (derivadas do tipo no servidor). */
-    val categories = listOf("CASH", "TRANSFERS", "PAYMENTS", "PIX", "SAVINGS")
+    val categories = listOf("CASH", "TRANSFERS", "PAYMENTS", "PIX", "SAVINGS", "INVESTMENTS")
 
     fun categoryLabel(category: String) = when (category) {
         "CASH" -> "Depósitos e saques"
@@ -35,6 +35,7 @@ object Format {
         "PAYMENTS" -> "Pagamentos"
         "PIX" -> "Pix"
         "SAVINGS" -> "Porquinhos"
+        "INVESTMENTS" -> "Investimentos"
         else -> category
     }
 
@@ -51,6 +52,8 @@ object Format {
         "PIX_RETURN_IN" -> "Devolução de Pix recebida"
         "PIGGY_IN" -> "Guardado no porquinho"
         "PIGGY_OUT" -> "Resgate do porquinho"
+        "INVEST_OUT" -> "Aplicação em renda fixa"
+        "INVEST_IN" -> "Resgate de investimento"
         else -> "Estorno"
     }
 

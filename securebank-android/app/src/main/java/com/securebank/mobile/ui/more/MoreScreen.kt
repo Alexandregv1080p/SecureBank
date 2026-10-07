@@ -21,7 +21,7 @@ import com.securebank.mobile.BuildConfig
 import com.securebank.mobile.ui.components.Panel
 
 @Composable
-fun MoreScreen(onTransfer: () -> Unit, onPiggies: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
+fun MoreScreen(onTransfer: () -> Unit, onPiggies: () -> Unit, onInvestments: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -32,6 +32,8 @@ fun MoreScreen(onTransfer: () -> Unit, onPiggies: () -> Unit, onNotifications: (
                 MoreRow("Transferir entre contas", "Para outra conta do SecureBank por agência e número.", onTransfer)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 MoreRow("Porquinhos", "Reservas com meta, separadas do saldo da conta.", onPiggies)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                MoreRow("Investimentos", "Renda fixa simulada com rendimento diário.", onInvestments)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 MoreRow("Avisos", "Movimentações e acessos recentes na sua conta.", onNotifications)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)

@@ -11,6 +11,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Currency;
 
 /**
  * Aplicação em renda fixa. O dinheiro SAI da conta (INVEST_OUT) e volta no resgate (INVEST_IN) já com o rendimento
@@ -21,13 +22,16 @@ import java.time.Instant;
 public final class Investment {
 
     private static final MathContext MC = new MathContext(34);
+    static final int PRINCIPAL_SCALE = 8;
 
     private final InvestmentId id;
     private final CustomerId customerId;
     private final AccountId accountId;
     private final String productCode;
     private final String productName;
-    private Money principal; // diminui no resgate parcial
+    /** Principal com 8 casas: o resgate parcial corta uma fração exata e o que sobra não perde centavos no arredondamento. */
+    private BigDecimal principalExact;
+    private final Currency currency;
     private final BigDecimal annualRate;
     private final Integer termDays; // nulo = liquidez diária
     private final Instant appliedAt;
@@ -41,14 +45,16 @@ public final class Investment {
     public record Valuation(int days, Money gross, Money yield, Money tax, BigDecimal taxRate, Money net) {}
 
     private Investment(InvestmentId id, CustomerId customerId, AccountId accountId, String productCode,
-            String productName, Money principal, BigDecimal annualRate, Integer termDays, Instant appliedAt,
-            Instant maturesAt, InvestmentStatus status, Instant redeemedAt, Money redeemedGross, Money redeemedTax) {
+            String productName, BigDecimal principalExact, Currency currency, BigDecimal annualRate, Integer termDays,
+            Instant appliedAt, Instant maturesAt, InvestmentStatus status, Instant redeemedAt, Money redeemedGross,
+            Money redeemedTax) {
         this.id = id;
         this.customerId = customerId;
         this.accountId = accountId;
         this.productCode = productCode;
         this.productName = productName;
-        this.principal = principal;
+        this.principalExact = principalExact;
+        this.currency = currency;
         this.annualRate = annualRate;
         this.termDays = termDays;
         this.appliedAt = appliedAt;
@@ -74,16 +80,17 @@ public final class Investment {
             throw new InvestmentBelowMinimumException(product.minAmount().toPlainString());
         }
         Instant maturity = product.kind() == InvestmentKind.TERM ? now.plus(Duration.ofDays(product.termDays())) : null;
-        return new Investment(InvestmentId.newId(), customerId, accountId, product.code(), product.name(), principal,
-                product.annualRate(), product.kind() == InvestmentKind.TERM ? product.termDays() : null, now, maturity,
+        return new Investment(InvestmentId.newId(), customerId, accountId, product.code(), product.name(),
+                principal.amount().setScale(PRINCIPAL_SCALE), principal.currency(), product.annualRate(), product.kind() == InvestmentKind.TERM ? product.termDays() : null, now, maturity,
                 InvestmentStatus.ACTIVE, null, null, null);
     }
 
     public static Investment restore(InvestmentId id, CustomerId customerId, AccountId accountId, String productCode,
-            String productName, Money principal, BigDecimal annualRate, Integer termDays, Instant appliedAt,
-            Instant maturesAt, InvestmentStatus status, Instant redeemedAt, Money redeemedGross, Money redeemedTax) {
-        return new Investment(id, customerId, accountId, productCode, productName, principal, annualRate, termDays,
-                appliedAt, maturesAt, status, redeemedAt, redeemedGross, redeemedTax);
+            String productName, BigDecimal principalExact, Currency currency, BigDecimal annualRate, Integer termDays,
+            Instant appliedAt, Instant maturesAt, InvestmentStatus status, Instant redeemedAt, Money redeemedGross,
+            Money redeemedTax) {
+        return new Investment(id, customerId, accountId, productCode, productName, principalExact, currency, annualRate,
+                termDays, appliedAt, maturesAt, status, redeemedAt, redeemedGross, redeemedTax);
     }
 
     /** Valor em {@code at}. Depois do resgate, é sempre o valor efetivamente pago. */
@@ -93,15 +100,15 @@ public final class Investment {
         }
         int days = heldDays(at);
         BigDecimal daily = BigDecimal.valueOf(Math.pow(BigDecimal.ONE.add(annualRate).doubleValue(), 1.0 / 365));
-        BigDecimal grossAmount = principal.amount().multiply(daily.pow(days, MC), MC).setScale(2, RoundingMode.HALF_EVEN);
-        Money gross = new Money(grossAmount, principal.currency());
-        BigDecimal yield = grossAmount.subtract(principal.amount());
-        Money tax = new Money(yield.multiply(taxRate(days)).setScale(2, RoundingMode.HALF_UP), principal.currency());
+        BigDecimal grossAmount = principalExact.multiply(daily.pow(days, MC), MC).setScale(2, RoundingMode.HALF_EVEN);
+        Money gross = new Money(grossAmount, currency);
+        BigDecimal yield = grossAmount.subtract(principal().amount());
+        Money tax = new Money(yield.multiply(taxRate(days)).setScale(2, RoundingMode.HALF_UP), currency);
         return build(days, gross, tax);
     }
 
     private Valuation build(int days, Money gross, Money tax) {
-        return new Valuation(days, gross, gross.minus(principal), tax, taxRate(days), gross.minus(tax));
+        return new Valuation(days, gross, gross.minus(principal()), tax, taxRate(days), gross.minus(tax));
     }
 
     /**
@@ -127,16 +134,16 @@ public final class Investment {
         if (wanted.compareTo(v.net()) >= 0) {
             return redeem(now);
         }
-        BigDecimal fraction = wanted.amount().divide(v.net().amount(), 12, RoundingMode.HALF_EVEN);
-        BigDecimal cut = principal.amount().multiply(fraction).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal fraction = wanted.amount().divide(v.net().amount(), 18, RoundingMode.HALF_EVEN);
+        BigDecimal cut = principalExact.multiply(fraction).setScale(PRINCIPAL_SCALE, RoundingMode.HALF_EVEN);
         if (cut.signum() == 0) {
             throw new InvalidValueException("Amount is too small to redeem");
         }
-        if (cut.compareTo(principal.amount()) >= 0) {
-            return redeem(now);
+        BigDecimal remaining = principalExact.subtract(cut);
+        if (remaining.setScale(2, RoundingMode.HALF_UP).signum() <= 0) {
+            return redeem(now); // não deixa um resto de menos de 1 centavo preso na aplicação
         }
-        // ponytail: arredondamento ao centavo no principal pode deslocar o que sobra em até R$ 0,01; sem corrigir
-        principal = principal.minus(new Money(cut, principal.currency()));
+        principalExact = remaining;
         return wanted;
     }
 
@@ -194,7 +201,9 @@ public final class Investment {
     public AccountId accountId() { return accountId; }
     public String productCode() { return productCode; }
     public String productName() { return productName; }
-    public Money principal() { return principal; }
+    /** Principal em reais, arredondado ao centavo para exibição (o valor exato tem 8 casas). */
+    public Money principal() { return new Money(principalExact.setScale(2, RoundingMode.HALF_UP), currency); }
+    public BigDecimal principalExact() { return principalExact; }
     public BigDecimal annualRate() { return annualRate; }
     public Integer termDays() { return termDays; }
     public Instant appliedAt() { return appliedAt; }

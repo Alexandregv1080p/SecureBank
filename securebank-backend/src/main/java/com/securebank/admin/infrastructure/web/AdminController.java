@@ -6,6 +6,7 @@ import com.securebank.authentication.application.UserAdminApplicationService;
 import com.securebank.authentication.domain.User;
 import com.securebank.authorization.domain.Role;
 import com.securebank.customer.application.CustomerApplicationService;
+import com.securebank.customer.application.CustomerSearchService;
 import com.securebank.customer.domain.Customer;
 import com.securebank.limit.application.LimitApplicationService;
 import com.securebank.limit.domain.Limit;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,6 +53,8 @@ class AdminController {
                     c.phone().value(), c.status().name(), c.createdAt());
         }
     }
+
+    record CustomerPage(List<CustomerView> items, int page, int size, long totalElements) {}
 
     record LimitRequest(
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal perOperation,
@@ -93,16 +97,33 @@ class AdminController {
     }
 
     private final CustomerApplicationService customers;
+    private final CustomerSearchService customerSearch;
     private final AccountApplicationService accounts;
     private final LimitApplicationService limits;
     private final UserAdminApplicationService users;
 
-    AdminController(CustomerApplicationService customers, AccountApplicationService accounts,
-            LimitApplicationService limits, UserAdminApplicationService users) {
+    AdminController(CustomerApplicationService customers, CustomerSearchService customerSearch,
+            AccountApplicationService accounts, LimitApplicationService limits, UserAdminApplicationService users) {
         this.customers = customers;
+        this.customerSearch = customerSearch;
         this.accounts = accounts;
         this.limits = limits;
         this.users = users;
+    }
+
+    /** Busca por nome, e-mail, telefone ou CPF completo (mínimo 3 caracteres). */
+    @GetMapping("/customers")
+    CustomerPage searchCustomers(@RequestParam String q, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var result = customerSearch.search(q, page, size);
+        return new CustomerPage(result.items().stream().map(CustomerView::of).toList(), result.page(), result.size(),
+                result.totalElements());
+    }
+
+    @GetMapping("/customers/{id}/accounts")
+    List<AccountAdminView> customerAccounts(@PathVariable String id) {
+        customers.get(CustomerId.of(id)); // 404 se o cliente não existe
+        return accounts.listForStaff(CustomerId.of(id)).stream().map(AccountAdminView::of).toList();
     }
 
     @GetMapping("/customers/{id}")

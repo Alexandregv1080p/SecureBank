@@ -198,6 +198,12 @@ public class AccountApplicationService {
         return account;
     }
 
+    /** Contas de um cliente, para a equipe (VIEW_CUSTOMER). */
+    @Transactional(readOnly = true)
+    public List<Account> listForStaff(CustomerId customerId) {
+        return accounts.findByCustomer(customerId);
+    }
+
     /** Consulta da equipe (MANAGE_ACCOUNTS): qualquer conta, sem ser a dona. */
     @Transactional(readOnly = true)
     public Account getAny(AccountId id) {

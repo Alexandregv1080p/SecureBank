@@ -45,7 +45,7 @@ class InvestmentEntity {
         accountId = i.accountId().value();
         productCode = i.productCode();
         productName = i.productName();
-        principal = i.principal().amount();
+        principal = i.principalExact();
         currency = i.principal().currency().getCurrencyCode();
         annualRate = i.annualRate();
         termDays = i.termDays();
@@ -60,7 +60,7 @@ class InvestmentEntity {
     Investment toDomain() {
         Currency cur = Currency.getInstance(currency);
         return Investment.restore(new InvestmentId(id), new CustomerId(customerId), new AccountId(accountId),
-                productCode, productName, new Money(principal, cur), annualRate, termDays, appliedAt, maturesAt, status,
+                productCode, productName, principal, cur, annualRate, termDays, appliedAt, maturesAt, status,
                 redeemedAt, redeemedGross == null ? null : new Money(redeemedGross, cur),
                 redeemedTax == null ? null : new Money(redeemedTax, cur));
     }

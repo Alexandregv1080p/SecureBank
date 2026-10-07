@@ -189,6 +189,66 @@ class InvestmentTest {
     }
 
     @Test
+    void whatRemainsAfterAPartialRedeemMatchesTheNetMinusWhatWasPaidToTheCent() {
+        // antes o principal era cortado ao centavo e o que sobrava podia desviar até R$ 0,01: agora tem 8 casas
+        for (int day : new int[] {0, 1, 17, 90, 100, 365, 400, 800}) {
+            for (String wanted : new String[] {"0.01", "0.07", "1.00", "33.33", "123.45", "299.99", "500.00", "999.00"}) {
+                var inv = daily("1000.00");
+                Instant at = plusDays(day);
+                Money before = inv.valuation(at).net();
+                if (before.compareTo(Money.brl(wanted)) <= 0) {
+                    continue;
+                }
+
+                inv.redeem(at, Money.brl(wanted));
+
+                BigDecimal expected = before.amount().subtract(new BigDecimal(wanted));
+                BigDecimal actual = inv.valuation(at).net().amount();
+                assertThat(actual.subtract(expected).abs()).as("dia %d, resgate %s", day, wanted)
+                        .isLessThanOrEqualTo(new BigDecimal("0.01")); // só o arredondamento do último centavo
+            }
+        }
+    }
+
+    @Test
+    void manySmallPartialRedeemsAddUpToTheWholeValueWithoutDrift() {
+        var inv = daily("1000.00");
+        Instant at = plusDays(120);
+        Money worth = inv.valuation(at).net();
+        Money paid = Money.zero(worth.currency());
+
+        for (int i = 0; i < 40; i++) {
+            paid = paid.plus(inv.redeem(at, Money.brl("7.77")));
+        }
+        paid = paid.plus(inv.redeem(at)); // o que sobrou
+
+        assertThat(inv.status()).isEqualTo(InvestmentStatus.REDEEMED);
+        assertThat(paid.amount().subtract(worth.amount()).abs()).isLessThanOrEqualTo(new BigDecimal("0.02"));
+    }
+
+    @Test
+    void thePrincipalIsShownRoundedButKeptExact() {
+        var inv = daily("1000.00");
+        inv.redeem(plusDays(100), Money.brl("333.33"));
+
+        assertThat(inv.principalExact().scale()).isEqualTo(8);
+        assertThat(inv.principal().amount().scale()).isEqualTo(2);
+        assertThat(inv.principal().amount()).isEqualByComparingTo(inv.principalExact().setScale(2, java.math.RoundingMode.HALF_UP));
+    }
+
+    @Test
+    void aSingleRemainingCentStaysApplied() {
+        var inv = daily("1.00");
+
+        Money paid = inv.redeem(plusDays(0), Money.brl("0.99"));
+
+        assertThat(paid).isEqualTo(Money.brl("0.99"));
+        assertThat(inv.status()).isEqualTo(InvestmentStatus.ACTIVE);
+        assertThat(inv.principal()).isEqualTo(Money.brl("0.01"));
+        assertThat(inv.valuation(plusDays(0)).net()).isEqualTo(Money.brl("0.01"));
+    }
+
+    @Test
     void ownershipIsByCustomer() {
         var inv = daily("10.00");
 

@@ -1141,6 +1141,25 @@ paths:
         schema:
           type: string
           format: date
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CASH
+          - TRANSFERS
+          - PAYMENTS
+          - PIX
+          - SAVINGS
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CREDIT
+          - DEBIT
       - name: page
         in: query
         required: false
@@ -1162,6 +1181,78 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/StatementResponse"
+  /api/v1/accounts/{id}/statement/summary:
+    get:
+      tags:
+      - account-controller
+      operationId: summary
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+  /api/v1/accounts/{id}/statement/export:
+    get:
+      tags:
+      - account-controller
+      operationId: export
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CASH
+          - TRANSFERS
+          - PAYMENTS
+          - PIX
+          - SAVINGS
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CREDIT
+          - DEBIT
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              schema:
+                type: string
   /api/v1/accounts/{id}/limits:
     get:
       tags:
@@ -2094,6 +2185,30 @@ components:
         totalElements:
           type: integer
           format: int64
+    CategoryResponse:
+      type: object
+      properties:
+        category:
+          type: string
+        income:
+          $ref: "#/components/schemas/MoneyResponse"
+        expenses:
+          $ref: "#/components/schemas/MoneyResponse"
+    SummaryResponse:
+      type: object
+      properties:
+        month:
+          type: string
+        income:
+          $ref: "#/components/schemas/MoneyResponse"
+        expenses:
+          $ref: "#/components/schemas/MoneyResponse"
+        net:
+          $ref: "#/components/schemas/MoneyResponse"
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryResponse"
     LimitResponse:
       type: object
       properties:

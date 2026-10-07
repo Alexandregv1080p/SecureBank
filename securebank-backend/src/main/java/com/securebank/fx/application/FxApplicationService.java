@@ -99,6 +99,28 @@ public class FxApplicationService {
         return operations.findByCustomer(requester, page, size);
     }
 
+    /** Maior salto aceito de uma vez na cotação comercial (proteção contra erro de digitação de quem opera). */
+    static final BigDecimal MAX_RATE_JUMP = new BigDecimal("0.20");
+    static final BigDecimal MAX_SPREAD = new BigDecimal("0.10");
+
+    /** Ajuste da cotação por quem tem MANAGE_FX_RATES. Vale para operações novas; o que já foi feito não muda. */
+    public FxRate changeRate(String currency, BigDecimal mid, BigDecimal spread) {
+        FxRate current = rate(currency);
+        if (spread.compareTo(MAX_SPREAD) > 0) {
+            throw ApplicationException.unprocessable("FX_SPREAD_TOO_LARGE", "The spread cannot exceed 10%");
+        }
+        BigDecimal jump = mid.subtract(current.mid()).abs().divide(current.mid(), 6, java.math.RoundingMode.HALF_UP);
+        if (jump.compareTo(MAX_RATE_JUMP) > 0) {
+            throw ApplicationException.unprocessable("FX_RATE_CHANGE_TOO_LARGE",
+                    "The rate cannot move more than 20% at once; change it in steps");
+        }
+        FxRate changed = new FxRate(current.currency(), mid, spread, time.now());
+        rates.save(changed);
+        audit.record(AuditEntry.of(AuditEvent.FX_RATE_CHANGED).detail(currency.toUpperCase() + " " + current.mid().toPlainString()
+                + "->" + mid.toPlainString() + " spread " + current.spread().toPlainString() + "->" + spread.toPlainString()));
+        return changed;
+    }
+
     /** Roda sem transação própria: abre uma por tentativa e repete em conflito de versão. */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FxOperation buy(CustomerId requester, AccountId accountId, String currency, BigDecimal amount,

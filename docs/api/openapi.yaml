@@ -12,6 +12,30 @@ servers:
 security:
 - bearerAuth: []
 paths:
+  /api/v1/admin/fx/rates/{currency}:
+    put:
+      tags:
+      - fx-admin-controller
+      operationId: changeRate
+      parameters:
+      - name: currency
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RateResponse"
   /api/v1/admin/accounts/{accountId}/limits/{type}:
     put:
       tags:
@@ -1233,6 +1257,7 @@ paths:
           - INVESTMENT_REDEEMED
           - FX_BOUGHT
           - FX_SOLD
+          - FX_RATE_CHANGED
           - USER_CREATED
           - USER_DISABLED
           - USER_ENABLED
@@ -1533,6 +1558,34 @@ paths:
           description: No Content
 components:
   schemas:
+    RateRequest:
+      type: object
+      properties:
+        mid:
+          type: number
+          minimum: 0.000001
+        spreadPercent:
+          type: number
+          minimum: 0
+      required:
+      - mid
+      - spreadPercent
+    RateResponse:
+      type: object
+      properties:
+        currency:
+          type: string
+        mid:
+          type: string
+        buyRate:
+          type: string
+        sellRate:
+          type: string
+        spreadPercent:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
     LimitRequest:
       type: object
       properties:
@@ -2428,22 +2481,6 @@ components:
           type: string
         balance:
           $ref: "#/components/schemas/MoneyResponse"
-    RateResponse:
-      type: object
-      properties:
-        currency:
-          type: string
-        mid:
-          type: string
-        buyRate:
-          type: string
-        sellRate:
-          type: string
-        spreadPercent:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
     HistoryResponse:
       type: object
       properties:

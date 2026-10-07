@@ -37,6 +37,14 @@ class FxRepositoryAdapter implements FxRateRepository, FxWalletRepository, FxOpe
     }
 
     @Override
+    public void save(FxRate rate) {
+        RateEntity entity = em.find(RateEntity.class, rate.currency().getCurrencyCode());
+        entity.midRate = rate.mid();
+        entity.spread = rate.spread();
+        entity.updatedAt = rate.updatedAt();
+    }
+
+    @Override
     public Optional<FxWallet> find(CustomerId customerId, String currencyCode) {
         return em.createQuery("select w from FxWalletEntity w where w.customerId = :c and w.currency = :cur",
                         WalletEntity.class)

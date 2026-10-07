@@ -17,7 +17,7 @@ vale sem novo login.
 | -------- | -------------------------------------------------------------------------------------------------------- |
 | CUSTOMER | `MANAGE_PROFILE`, `VIEW_ACCOUNT`, `VIEW_STATEMENT`, `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `CREATE_TRANSFER`, `VIEW_TRANSFER`, `CREATE_PAYMENT`, `VIEW_PAYMENT`, `VIEW_NOTIFICATIONS`, `VIEW_PIGGY`, `MANAGE_PIGGY`, `VIEW_PIX`, `MANAGE_PIX`, `SEND_PIX` |
 | SUPPORT  | `VIEW_CUSTOMER`, `VIEW_AUDIT`                                                                            |
-| ADMIN    | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `MANAGE_USERS`, `MANAGE_LIMITS`, `MANAGE_ACCOUNTS`                          |
+| ADMIN    | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `MANAGE_USERS`, `MANAGE_LIMITS`, `MANAGE_ACCOUNTS`, `MANAGE_FX_RATES`            |
 
 A equipe **não** opera contas de clientes (não tem permissões de cliente nem `cid`). `MANAGE_ACCOUNTS` é uma extensão da spec
 (bloqueio/desbloqueio de conta). Qualquer usuário autenticado gerencia a própria sessão, senha e MFA (`/security/**`).
@@ -33,6 +33,7 @@ outro dono responde **404**, idêntico a inexistente — ids não podem ser sond
 | --------------------------------------------- | ----------------- |
 | `GET /admin/customers/{id}`                   | `VIEW_CUSTOMER`   |
 | `PUT /admin/accounts/{id}/limits/{type}`      | `MANAGE_LIMITS`   |
+| `PUT /admin/fx/rates/{currency}`              | `MANAGE_FX_RATES` |
 | `POST /admin/accounts/{id}/block`, `/unblock` | `MANAGE_ACCOUNTS` |
 | `POST /admin/users`, `/{id}/disable`, `/enable` | `MANAGE_USERS`  |
 | `GET /audit`                                  | `VIEW_AUDIT`      |

@@ -9,4 +9,7 @@ public interface FxRateRepository {
     List<FxRate> findAll();
 
     Optional<FxRate> findByCurrency(String code);
+
+    /** Atualiza a cotação de uma moeda já suportada. */
+    void save(FxRate rate);
 }

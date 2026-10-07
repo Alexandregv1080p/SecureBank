@@ -35,7 +35,7 @@ export function AuditPage() {
           </Select>
         </Field>
         <Field label="Usuário (identificador)" htmlFor="user" error={userInvalid ? 'Informe um identificador completo (UUID).' : undefined}>
-          <Input id="user" value={userInput} placeholder="00000000-0000-0000-0000-000000000000" aria-invalid={userInvalid} onChange={(e) => { setUserInput(e.target.value); setPage(0) }} />
+          <Input id="user" value={userInput} placeholder="Identificador do usuário" aria-invalid={userInvalid} onChange={(e) => { setUserInput(e.target.value); setPage(0) }} />
         </Field>
       </div>
 
@@ -44,7 +44,30 @@ export function AuditPage() {
       {logs.data?.items.length === 0 && <EmptyState title="Nenhum evento">Nada encontrado com estes filtros.</EmptyState>}
       {!!logs.data?.items.length && (
         <>
-          <div className="overflow-x-auto rounded-ui border border-line bg-surface">
+          <ul className="divide-y divide-line rounded-ui border border-line bg-surface md:hidden">
+            {logs.data.items.map((l) => (
+              <li key={l.id} className="flex flex-col gap-1.5 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <Badge tone={isAlertEvent(l.event) ? 'warn' : 'neutral'}>{auditEventLabel(l.event)}</Badge>
+                  <span className="shrink-0 text-xs text-muted">{formatDateTime(l.occurredAt)}</span>
+                </div>
+                <p className="text-xs text-muted">
+                  Usuário <span className="font-mono">{shortId(l.userId)}</span>
+                  {l.accountId && (
+                    <>
+                      {' · '}Conta{' '}
+                      <Link className="font-mono text-accent hover:underline" to={`/equipe/contas?id=${l.accountId}`}>
+                        {shortId(l.accountId)}
+                      </Link>
+                    </>
+                  )}
+                  {l.ip && <> · {l.ip}</>}
+                </p>
+                {l.detail && <p className="break-all text-xs">{l.detail}</p>}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto rounded-ui border border-line bg-surface md:block">
             <table className="w-full min-w-[44rem] text-left text-sm">
               <thead className="border-b border-line text-xs text-muted">
                 <tr>

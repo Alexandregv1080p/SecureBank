@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, sectionsFor, shortId, staffSections } from './staff'
+import { auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
 
 describe('seções do painel por papel', () => {
   it('o administrador vê todas as seções', () => {
@@ -78,5 +78,26 @@ describe('valores da tela de câmbio', () => {
     expect(parseSpread('11')).toBeNull()
     expect(parseSpread('-1')).toBeNull()
     expect(parseSpread('1,555')).toBeNull()
+  })
+})
+
+describe('busca de clientes', () => {
+  it('exige 3 caracteres, sem contar espaços nas pontas', () => {
+    expect(searchError('')).not.toBeNull()
+    expect(searchError('  ab ')).not.toBeNull()
+    expect(searchError('ana')).toBeNull()
+    expect(searchError(' ana ')).toBeNull()
+    expect(searchError('123.456.789-09')).toBeNull()
+  })
+
+  it('traduz o estado da conta', () => {
+    expect(accountStatusLabel('ACTIVE')).toBe('Ativa')
+    expect(accountStatusLabel('BLOCKED')).toBe('Bloqueada')
+    expect(accountStatusLabel('CLOSED')).toBe('Encerrada')
+    expect(accountStatusLabel('X')).toBe('X')
+  })
+
+  it('a busca de cliente tem rótulo na auditoria', () => {
+    expect(auditEventLabel('CUSTOMER_SEARCHED')).toBe('Busca de cliente')
   })
 })

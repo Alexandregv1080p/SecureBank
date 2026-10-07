@@ -27,7 +27,7 @@ export function FxRatesPage() {
 
 function RateCard({ rate }: { rate: FxRateAdmin }) {
   const client = useQueryClient()
-  const [mid, setMid] = useState(Number(rate.mid).toString())
+  const [mid, setMid] = useState(Number(rate.mid).toString().replace('.', ','))
   const [spread, setSpread] = useState(rate.spreadPercent.replace('.', ','))
   const midValue = parseRate(mid)
   const spreadValue = parseSpread(spread)

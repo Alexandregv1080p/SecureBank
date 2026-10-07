@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ArrowsLeftRight, Barcode, Bell, ClipboardText, CurrencyCircleDollar, House, ShieldCheck, SignOut, UserGear, Users, Wallet, Bank } from '@phosphor-icons/react'
 import { bankingApi } from '../services/banking'
 import { logout } from '../services/auth'
@@ -25,6 +26,12 @@ const staffIcons: Record<string, typeof House> = {
 
 export function AppShell() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const navRef = useRef<HTMLElement>(null)
+  // No celular o menu rola de lado: leva a aba ativa para a vista (senão "Contas e limites" fica escondida).
+  useEffect(() => {
+    navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [location.pathname])
   const roles = useAuth((s) => s.claims?.roles ?? [])
   const isCustomer = roles.includes('CUSTOMER')
   const unread = useQuery({
@@ -57,7 +64,7 @@ export function AppShell() {
             <SignOut size={20} />
           </button>
         </div>
-        <nav aria-label="Principal" className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:overflow-visible md:pb-0">
+        <nav ref={navRef} aria-label="Principal" className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:overflow-visible md:pb-0">
           {items.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}

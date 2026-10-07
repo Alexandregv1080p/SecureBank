@@ -63,6 +63,9 @@ export const staffApi = {
     return api<Page<AuditLog>>(`/audit?${q}`)
   },
   customer: (id: string) => api<CustomerView>(`/admin/customers/${id}`),
+  searchCustomers: (q: string, page: number) =>
+    api<Page<CustomerView>>(`/admin/customers?${new URLSearchParams({ q, page: String(page), size: '10' })}`),
+  customerAccounts: (id: string) => api<AccountAdmin[]>(`/admin/customers/${id}/accounts`),
   account: (id: string) => api<AccountAdmin>(`/admin/accounts/${id}`),
   limits: (accountId: string) => api<LimitAdmin[]>(`/admin/accounts/${accountId}/limits`),
   changeLimit: (accountId: string, type: string, perOperation: string, daily: string) =>

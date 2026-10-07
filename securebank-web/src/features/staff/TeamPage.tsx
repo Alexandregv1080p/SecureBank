@@ -25,22 +25,25 @@ export function TeamPage() {
       {users.isError && <ErrorState message={messageFor(users.error)} onRetry={() => users.refetch()} />}
       {users.data && (
         <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
-          {users.data.map((u) => (
+          {[...users.data].sort((a, b) => Number(b.status === 'ACTIVE') - Number(a.status === 'ACTIVE') || a.email.localeCompare(b.email)).map((u) => (
             <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-              <div>
-                <p className="flex items-center gap-2 font-medium">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 break-all font-medium">
                   {u.email}
                   {u.id === me && <Badge>você</Badge>}
                   {u.status !== 'ACTIVE' && <Badge tone="warn">Desativado</Badge>}
                 </p>
                 <p className="text-sm text-muted">{roleLabel(u.role)}</p>
               </div>
-              {u.id !== me &&
-                (u.status === 'ACTIVE' ? (
+              {u.id !== me && (
+                <span className="ml-auto shrink-0">
+                  {u.status === 'ACTIVE' ? (
                   <ConfirmButton label="Desativar" confirmLabel="Confirmar desativação" loading={toggle.isPending} onConfirm={() => toggle.mutate(u)} />
-                ) : (
-                  <Button variant="secondary" loading={toggle.isPending} onClick={() => toggle.mutate(u)}>Reativar</Button>
-                ))}
+                  ) : (
+                    <Button variant="secondary" loading={toggle.isPending} onClick={() => toggle.mutate(u)}>Reativar</Button>
+                  )}
+                </span>
+              )}
             </li>
           ))}
         </ul>

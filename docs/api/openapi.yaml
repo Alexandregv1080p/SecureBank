@@ -1271,6 +1271,7 @@ paths:
           - FX_BOUGHT
           - FX_SOLD
           - FX_RATE_CHANGED
+          - CUSTOMER_SEARCHED
           - USER_CREATED
           - USER_DISABLED
           - USER_ENABLED
@@ -1315,6 +1316,38 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/RateResponse"
+  /api/v1/admin/customers:
+    get:
+      tags:
+      - admin-controller
+      operationId: searchCustomers
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerPage"
   /api/v1/admin/customers/{id}:
     get:
       tags:
@@ -1333,6 +1366,26 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerView"
+  /api/v1/admin/customers/{id}/accounts:
+    get:
+      tags:
+      - admin-controller
+      operationId: customerAccounts
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountAdminView"
   /api/v1/admin/accounts/{id}:
     get:
       tags:
@@ -2595,6 +2648,22 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuditLogResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    CustomerPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerView"
         page:
           type: integer
           format: int32

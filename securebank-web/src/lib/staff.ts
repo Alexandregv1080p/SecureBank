@@ -10,7 +10,7 @@ export interface StaffSection {
 
 export const staffSections: StaffSection[] = [
   { to: '/equipe/auditoria', label: 'Auditoria', description: 'Trilha de eventos de segurança e de operações críticas.', roles: ['ADMIN', 'SUPPORT'] },
-  { to: '/equipe/clientes', label: 'Clientes', description: 'Consulta de um cliente pelo identificador.', roles: ['ADMIN', 'SUPPORT'] },
+  { to: '/equipe/clientes', label: 'Clientes', description: 'Busca por nome, e-mail, telefone ou CPF, com as contas de cada cliente.', roles: ['ADMIN', 'SUPPORT'] },
   { to: '/equipe/contas', label: 'Contas e limites', description: 'Bloquear ou desbloquear uma conta e ajustar limites.', roles: ['ADMIN'] },
   { to: '/equipe/cambio', label: 'Câmbio', description: 'Cotação comercial e spread de cada moeda.', roles: ['ADMIN'] },
   { to: '/equipe/usuarios', label: 'Equipe', description: 'Criar, desativar e reativar usuários da equipe.', roles: ['ADMIN'] },
@@ -68,6 +68,7 @@ export const auditEvents: Record<string, string> = {
   USER_CREATED: 'Usuário da equipe criado',
   USER_DISABLED: 'Usuário desativado',
   USER_ENABLED: 'Usuário reativado',
+  CUSTOMER_SEARCHED: 'Busca de cliente',
   ACCESS_DENIED: 'Acesso negado',
 }
 
@@ -100,3 +101,10 @@ export function parseSpread(input: string): string | null {
   const text = input.trim().replace(',', '.')
   return /^\d{1,2}(\.\d{1,2})?$/.test(text) && Number(text) <= 10 ? text : null
 }
+
+/** Mensagem se a busca ainda não pode ser feita (o servidor exige 3 caracteres e confere de novo); nulo = pode buscar. */
+export function searchError(query: string): string | null {
+  return query.trim().length < 3 ? 'Digite pelo menos 3 caracteres.' : null
+}
+
+export const accountStatusLabel = (status: string) => ({ ACTIVE: 'Ativa', BLOCKED: 'Bloqueada', CLOSED: 'Encerrada' })[status] ?? status

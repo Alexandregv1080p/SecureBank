@@ -31,13 +31,12 @@ Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra:
 | Seção | Quem | O que faz |
 | --- | --- | --- |
 | Auditoria | ADMIN, SUPPORT | Trilha paginada com filtro por evento e usuário; o id da conta leva direto a Contas e limites |
-| Clientes | ADMIN, SUPPORT | Consulta por id (CPF mascarado) |
+| Clientes | ADMIN, SUPPORT | Busca por nome, e-mail, telefone ou CPF completo (CPF mascarado), com paginação, e as contas do cliente; cada busca é auditada |
 | Contas e limites | ADMIN | Bloquear/desbloquear (confirmação em dois passos) e ajustar limites por tipo, com uso de hoje |
 | Câmbio | ADMIN | Cotação comercial e spread por moeda, com prévia de compra/venda e trava de 20% (confirmada pelo servidor) |
 | Equipe | ADMIN | Listar, criar, desativar e reativar usuários da equipe (não desativa a si mesmo) |
 
-Ações sensíveis (bloquear, desativar) pedem um segundo clique. Toda alteração entra na auditoria. Não há busca por nome ou lista de clientes: a API de
-equipe é por identificador, então os ids chegam pela auditoria.
+Ações sensíveis (bloquear, desativar) pedem um segundo clique. Toda alteração entra na auditoria. No celular, a auditoria vira lista de cartões (a tabela fica para telas largas) e o menu rola de lado levando a aba ativa para a vista.
 
 ## Dinheiro e idempotência no front
 

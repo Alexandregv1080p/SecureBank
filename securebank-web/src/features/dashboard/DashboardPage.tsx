@@ -1,24 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { ArrowsLeftRight, Barcode } from '@phosphor-icons/react'
 import { bankingApi } from '../../services/banking'
 import { useAuth } from '../../stores/auth'
 import { formatBRL } from '../../lib/money'
 import { formatDateTime, accountLabel, accountTypeLabel } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
-import { Alert, Button, EmptyState, ErrorState, PageHeader, Panel, Skeleton } from '../../components/ui'
+import { Button, EmptyState, ErrorState, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { useAccounts, sumAmounts } from '../accounts/hooks'
 
 export function DashboardPage() {
   const isCustomer = useAuth((s) => s.claims?.roles.includes('CUSTOMER'))
-  if (!isCustomer) {
-    return (
-      <>
-        <PageHeader title="Área da equipe" />
-        <Alert tone="info">Esta conta é da equipe do banco e não possui contas bancárias. Use a aba Segurança para gerenciar seu acesso.</Alert>
-      </>
-    )
-  }
+  if (!isCustomer) return <Navigate to="/equipe" replace />
   return <CustomerDashboard />
 }
 

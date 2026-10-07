@@ -724,6 +724,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/TokenResponse"
   /api/v1/admin/users:
+    get:
+      tags:
+      - admin-controller
+      operationId: staff
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserView"
     post:
       tags:
       - admin-controller
@@ -1288,6 +1301,20 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/AuditPage"
+  /api/v1/admin/fx/rates:
+    get:
+      tags:
+      - fx-admin-controller
+      operationId: rates_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RateResponse"
   /api/v1/admin/customers/{id}:
     get:
       tags:
@@ -1306,6 +1333,44 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerView"
+  /api/v1/admin/accounts/{id}:
+    get:
+      tags:
+      - admin-controller
+      operationId: account
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountAdminView"
+  /api/v1/admin/accounts/{id}/limits:
+    get:
+      tags:
+      - admin-controller
+      operationId: accountLimits
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LimitUsageView"
   /api/v1/accounts/{id}:
     get:
       tags:
@@ -2558,6 +2623,34 @@ components:
         createdAt:
           type: string
           format: date-time
+    AccountAdminView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        branch:
+          type: string
+        accountNumber:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+    LimitUsageView:
+      type: object
+      properties:
+        type:
+          type: string
+        perOperation:
+          $ref: "#/components/schemas/MoneyResponse"
+        daily:
+          $ref: "#/components/schemas/MoneyResponse"
+        usedToday:
+          $ref: "#/components/schemas/MoneyResponse"
     StatementResponse:
       type: object
       properties:

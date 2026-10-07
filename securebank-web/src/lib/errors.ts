@@ -19,6 +19,11 @@ const messages: Record<string, string> = {
   CONCURRENT_UPDATE: 'A conta foi alterada por outra operação. Tente novamente.',
   VALIDATION_ERROR: 'Confira os campos informados.',
   INVALID_VALUE: 'Algum dado informado é inválido.',
+  FX_RATE_CHANGE_TOO_LARGE: 'A cotação não pode mudar mais de 20% de uma vez. Faça o ajuste em etapas.',
+  FX_SPREAD_TOO_LARGE: 'O spread não pode passar de 10%.',
+  USER_ALREADY_EXISTS: 'Já existe um usuário com este e-mail.',
+  CANNOT_DISABLE_SELF: 'Você não pode desativar o seu próprio usuário.',
+  WEAK_PASSWORD: 'A senha não atende à política de segurança.',
 }
 
 export function messageFor(error: unknown): string {

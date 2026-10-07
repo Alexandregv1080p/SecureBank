@@ -22,6 +22,23 @@ depósito, saque, extrato paginado com filtro de datas), transferência (formul�
 avisos (marcar como lido) e Segurança (MFA com QR code, troca de senha, dispositivos conectados). Usuário da equipe vê só uma página
 informativa e a Segurança. Todas têm estados de carregamento (skeleton), vazio e erro com "Tentar novamente".
 
+## Painel da equipe (`/equipe`)
+
+Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite
+(`lib/staff.ts`), mas **quem decide é sempre o servidor**: cada chamada confere a permissão (`VIEW_AUDIT`, `VIEW_CUSTOMER`, `MANAGE_ACCOUNTS`,
+`MANAGE_LIMITS`, `MANAGE_FX_RATES`, `MANAGE_USERS`). Seções:
+
+| Seção | Quem | O que faz |
+| --- | --- | --- |
+| Auditoria | ADMIN, SUPPORT | Trilha paginada com filtro por evento e usuário; o id da conta leva direto a Contas e limites |
+| Clientes | ADMIN, SUPPORT | Consulta por id (CPF mascarado) |
+| Contas e limites | ADMIN | Bloquear/desbloquear (confirmação em dois passos) e ajustar limites por tipo, com uso de hoje |
+| Câmbio | ADMIN | Cotação comercial e spread por moeda, com prévia de compra/venda e trava de 20% (confirmada pelo servidor) |
+| Equipe | ADMIN | Listar, criar, desativar e reativar usuários da equipe (não desativa a si mesmo) |
+
+Ações sensíveis (bloquear, desativar) pedem um segundo clique. Toda alteração entra na auditoria. Não há busca por nome ou lista de clientes: a API de
+equipe é por identificador, então os ids chegam pela auditoria.
+
 ## Dinheiro e idempotência no front
 
 * Valores são strings até a borda; só a **exibição** usa `Intl` (`pt-BR`/BRL). A entrada aceita `1.234,56` ou `1234.56` e é normalizada para `"1234.56"`
@@ -44,4 +61,4 @@ dentro de cartões (listas com divisórias), sem emoji. Painel lateral no deskto
 ## Testes e pendências
 
 `npm test` (Vitest): normalização de valores, telefone, chaves de idempotência. Testes de componente e E2E ficam para a Fase 8.
-Pendências: tela de administração para a equipe; recuperação de MFA/senha.
+Pendências: recuperação de MFA/senha.

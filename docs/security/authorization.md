@@ -32,8 +32,10 @@ outro dono responde **404**, idêntico a inexistente — ids não podem ser sond
 | Rota                                          | Permissão         |
 | --------------------------------------------- | ----------------- |
 | `GET /admin/customers/{id}`                   | `VIEW_CUSTOMER`   |
-| `PUT /admin/accounts/{id}/limits/{type}`      | `MANAGE_LIMITS`   |
-| `PUT /admin/fx/rates/{currency}`              | `MANAGE_FX_RATES` |
+| `GET /admin/accounts/{id}`                    | `MANAGE_ACCOUNTS` |
+| `GET /admin/accounts/{id}/limits`, `PUT .../limits/{type}` | `MANAGE_LIMITS` |
+| `GET /admin/fx/rates`, `PUT /admin/fx/rates/{currency}` | `MANAGE_FX_RATES` |
+| `GET /admin/users`                            | `MANAGE_USERS`    |
 | `POST /admin/accounts/{id}/block`, `/unblock` | `MANAGE_ACCOUNTS` |
 | `POST /admin/users`, `/{id}/disable`, `/enable` | `MANAGE_USERS`  |
 | `GET /audit`                                  | `VIEW_AUDIT`      |

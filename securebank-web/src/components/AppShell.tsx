@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet, useNavigate } from 'react-router'
-import { ArrowsLeftRight, Barcode, Bell, House, ShieldCheck, SignOut, Wallet } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Barcode, Bell, ClipboardText, CurrencyCircleDollar, House, ShieldCheck, SignOut, UserGear, Users, Wallet, Bank } from '@phosphor-icons/react'
 import { bankingApi } from '../services/banking'
 import { logout } from '../services/auth'
+import { sectionsFor } from '../lib/staff'
 import { useAuth } from '../stores/auth'
 
 const nav = [
@@ -13,6 +14,14 @@ const nav = [
   { to: '/notificacoes', label: 'Avisos', icon: Bell },
   { to: '/seguranca', label: 'Segurança', icon: ShieldCheck },
 ]
+
+const staffIcons: Record<string, typeof House> = {
+  '/equipe/auditoria': ClipboardText,
+  '/equipe/clientes': Users,
+  '/equipe/contas': Bank,
+  '/equipe/cambio': CurrencyCircleDollar,
+  '/equipe/usuarios': UserGear,
+}
 
 export function AppShell() {
   const navigate = useNavigate()
@@ -31,7 +40,13 @@ export function AppShell() {
     navigate('/entrar', { replace: true })
   }
 
-  const items = isCustomer ? nav : nav.filter((i) => i.to === '/seguranca')
+  const items = isCustomer
+    ? nav
+    : [
+        { to: '/equipe', label: 'Painel', icon: House, end: true },
+        ...sectionsFor(roles).map((s) => ({ to: s.to, label: s.label, icon: staffIcons[s.to] ?? House, end: false })),
+        nav[nav.length - 1],
+      ]
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[15rem_1fr]">

@@ -1,6 +1,7 @@
-import { Link, Navigate, useLocation } from 'react-router'
+import { Link, Navigate, Outlet, useLocation } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { Skeleton } from '../components/ui'
+import { canAccess, isStaff } from '../lib/staff'
 import { useAuth } from '../stores/auth'
 
 /** Só deixa passar quem tem sessão. A sessão é recuperada pelo cookie HttpOnly na abertura do app. */
@@ -16,6 +17,15 @@ export function RequireAuth() {
   }
   if (status === 'anonymous') return <Navigate to="/entrar" replace state={{ from: location.pathname }} />
   return <AppShell />
+}
+
+/** Área da equipe: cliente nunca entra; cada seção também confere o papel (o servidor confere em toda chamada). */
+export function RequireStaff() {
+  const roles = useAuth((s) => s.claims?.roles ?? [])
+  const location = useLocation()
+  if (!isStaff(roles)) return <Navigate to="/" replace />
+  if (location.pathname !== '/equipe' && !canAccess(roles, location.pathname)) return <Navigate to="/equipe" replace />
+  return <Outlet />
 }
 
 export function NotFound() {

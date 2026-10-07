@@ -58,6 +58,8 @@ class RateLimitFilter extends OncePerRequestFilter {
                 new Rule("pix-charge-view", HttpMethod.GET, "/api/v1/pix/charges/*", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("pix-schedule", HttpMethod.POST, "/api/v1/pix/schedules", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("pix-lookup", HttpMethod.GET, "/api/v1/pix/keys/lookup", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("invest", HttpMethod.POST, "/api/v1/investments", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("invest-redeem", HttpMethod.POST, "/api/v1/investments/*/redeem", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("piggy-redeem", HttpMethod.POST, "/api/v1/piggies/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true));
     }
 

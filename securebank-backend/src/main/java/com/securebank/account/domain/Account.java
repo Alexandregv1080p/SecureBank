@@ -111,6 +111,16 @@ public final class Account {
         return credit(TransactionType.PIGGY_OUT, amount, reference, now);
     }
 
+    /** Aplica dinheiro em renda fixa: sai do saldo (a aplicação nasce na mesma transação). */
+    public Transaction invest(Money amount, String reference, Instant now) {
+        return debit(TransactionType.INVEST_OUT, amount, reference, now);
+    }
+
+    /** Resgate de uma aplicação: o líquido (principal + rendimento − IR) volta para o saldo. */
+    public Transaction redeemInvestment(Money amount, String reference, Instant now) {
+        return credit(TransactionType.INVEST_IN, amount, reference, now);
+    }
+
     /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
     public void ensureCanCredit(Money amount) {
         ensureActive();

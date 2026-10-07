@@ -75,6 +75,10 @@ public class NotificationService {
             case "PixScheduleFailed" -> notifyOwner(event, event.text("accountId"), "PIX_SCHEDULE_FAILED", "Pix agendado não realizado",
                     "Seu Pix agendado de " + event.text("amount") + " " + event.text("currency") + " não foi realizado: "
                             + scheduleReason(event.text("reason")) + ".");
+            case "InvestmentApplied" -> notifyOwner(event, event.text("accountId"), "INVEST_APPLIED", "Aplicação realizada",
+                    "Você aplicou " + event.text("amount") + " " + event.text("currency") + " em " + event.text("product") + ".");
+            case "InvestmentRedeemed" -> notifyOwner(event, event.text("accountId"), "INVEST_REDEEMED", "Resgate realizado",
+                    "Você resgatou " + event.text("amount") + " " + event.text("currency") + " líquidos de " + event.text("product") + ".");
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",

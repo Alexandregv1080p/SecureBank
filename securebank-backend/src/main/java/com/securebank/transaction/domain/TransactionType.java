@@ -8,7 +8,9 @@ public enum TransactionType {
     /** Pix enviado (débito) e recebido (crédito). */
     PIX_OUT(TransactionCategory.PIX), PIX_IN(TransactionCategory.PIX),
     /** Devolução de Pix: paga por quem recebeu (débito) e recebida por quem enviou (crédito). */
-    PIX_RETURN_OUT(TransactionCategory.PIX), PIX_RETURN_IN(TransactionCategory.PIX);
+    PIX_RETURN_OUT(TransactionCategory.PIX), PIX_RETURN_IN(TransactionCategory.PIX),
+    /** Aplicação em renda fixa (débito da conta) e resgate (crédito, já com o rendimento líquido). */
+    INVEST_OUT(TransactionCategory.INVESTMENTS), INVEST_IN(TransactionCategory.INVESTMENTS);
 
     private final TransactionCategory category;
 

@@ -42,7 +42,7 @@ class IdempotencyFilter extends OncePerRequestFilter {
             "/api/v1/accounts/*/deposits", "/api/v1/accounts/*/withdrawals",
             "/api/v1/piggies/*/deposits", "/api/v1/piggies/*/withdrawals", "/api/v1/pix/transfers",
             "/api/v1/pix/transfers/*/refund", "/api/v1/pix/charges/*/pay",
-            "/api/v1/pix/schedules");
+            "/api/v1/pix/schedules", "/api/v1/investments", "/api/v1/investments/*/redeem");
 
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final IdempotencyStore store;

@@ -24,7 +24,7 @@ export function TeamPage() {
       {users.isPending && <Skeleton className="h-40" />}
       {users.isError && <ErrorState message={messageFor(users.error)} onRetry={() => users.refetch()} />}
       {users.data && (
-        <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
+        <ul className="divide-y divide-line card overflow-hidden">
           {[...users.data].sort((a, b) => Number(b.status === 'ACTIVE') - Number(a.status === 'ACTIVE') || a.email.localeCompare(b.email)).map((u) => (
             <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
               <div className="min-w-0">

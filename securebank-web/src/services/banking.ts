@@ -1,5 +1,5 @@
 import { api } from '../lib/api'
-import type { Account, Customer, LimitUsage, Notification, Page, Payment, Transaction, Transfer } from './types'
+import type { Account, Customer, FxWallet, Investment, LimitUsage, Notification, Page, Payment, Piggy, StatementSummary, Transaction, Transfer } from './types'
 
 const idem = (key: string) => ({ 'Idempotency-Key': key })
 
@@ -15,6 +15,10 @@ export const bankingApi = {
     if (to) q.set('to', to)
     return api<Page<Transaction>>(`/accounts/${id}/statement?${q}`)
   },
+  statementSummary: (id: string, month: string) => api<StatementSummary>(`/accounts/${id}/statement/summary?month=${month}`),
+  investments: () => api<Investment[]>('/investments'),
+  piggies: () => api<Piggy[]>('/piggies'),
+  fxWallets: () => api<FxWallet[]>('/fx/wallets'),
   deposit: (id: string, amount: string, key: string) =>
     api<Transaction>(`/accounts/${id}/deposits`, { method: 'POST', body: { amount }, headers: idem(key) }),
   withdraw: (id: string, amount: string, key: string) =>

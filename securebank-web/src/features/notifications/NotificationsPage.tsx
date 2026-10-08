@@ -24,7 +24,7 @@ export function NotificationsPage() {
       {list.data?.items.length === 0 && <EmptyState title="Nenhum aviso">Quando algo acontecer na sua conta, você vê aqui.</EmptyState>}
       {!!list.data?.items.length && (
         <>
-          <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
+          <ul className="divide-y divide-line card overflow-hidden">
             {list.data.items.map((n) => (
               <li key={n.id} className="flex items-start justify-between gap-4 px-5 py-4">
                 <div>

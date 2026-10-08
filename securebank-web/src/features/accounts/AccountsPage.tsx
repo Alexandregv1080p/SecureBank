@@ -22,10 +22,10 @@ export function AccountsPage() {
       {accounts.isError && <ErrorState message={messageFor(accounts.error)} onRetry={() => accounts.refetch()} />}
       {accounts.data?.length === 0 && <EmptyState title="Nenhuma conta aberta">Use o formulário abaixo para abrir a primeira.</EmptyState>}
       {!!accounts.data?.length && (
-        <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
+        <ul className="divide-y divide-line card overflow-hidden">
           {accounts.data.map((a) => (
             <li key={a.id}>
-              <Link to={`/contas/${a.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-bg">
+              <Link to={`/contas/${a.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-surface-2">
                 <div>
                   <p className="flex items-center gap-2 font-medium">
                     {accountTypeLabel(a.type)}

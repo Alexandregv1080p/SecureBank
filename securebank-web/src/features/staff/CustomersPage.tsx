@@ -63,14 +63,14 @@ export function CustomersPage() {
       {results.data && results.data.items.length === 0 && <EmptyState title="Nenhum cliente encontrado">Confira a grafia, ou use o CPF completo.</EmptyState>}
       {!!results.data?.items.length && (
         <div className="mb-8">
-          <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
+          <ul className="divide-y divide-line card overflow-hidden">
             {results.data.items.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
                   onClick={() => select(c.id)}
                   aria-current={c.id === id}
-                  className={`flex w-full flex-wrap items-center justify-between gap-2 px-5 py-3 text-left hover:bg-bg ${c.id === id ? 'bg-accent-soft' : ''}`}
+                  className={`flex w-full flex-wrap items-center justify-between gap-2 px-5 py-3 text-left hover:bg-surface-2 ${c.id === id ? 'bg-accent-soft' : ''}`}
                 >
                   <span className="min-w-0">
                     <span className="block font-medium">{c.name}</span>

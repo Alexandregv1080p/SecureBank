@@ -3,37 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { ArrowDown, ArrowUp, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { bankingApi } from '../../services/banking'
-import type { Transaction } from '../../services/types'
+import { describeTransaction as describe } from '../../lib/transactions'
 import { formatBRL } from '../../lib/money'
 import { accountLabel, accountTypeLabel, formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
 import { Badge, Button, EmptyState, ErrorState, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { MoneyForm } from './MoneyForm'
 
-const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix' } as const
-
-function describe(t: Transaction): string {
-  switch (t.type) {
-    case 'DEPOSIT':
-      return 'Depósito'
-    case 'WITHDRAW':
-      return 'Saque'
-    case 'TRANSFER':
-      return t.direction === 'CREDIT' ? 'Transferência recebida' : 'Transferência enviada'
-    case 'PAYMENT':
-      return 'Pagamento'
-    case 'PIX_OUT':
-      return 'Pix enviado'
-    case 'PIX_IN':
-      return 'Pix recebido'
-    case 'PIGGY_IN':
-      return 'Guardado no porquinho'
-    case 'PIGGY_OUT':
-      return 'Resgate do porquinho'
-    default:
-      return 'Estorno'
-  }
-}
+const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix', FX: 'Câmbio' } as const
 
 export function AccountDetailPage() {
   const { id = '' } = useParams()
@@ -139,7 +116,7 @@ function Statement({ accountId }: { accountId: string }) {
       {statement.data?.items.length === 0 && <EmptyState title="Nenhuma movimentação">Não há lançamentos neste período.</EmptyState>}
       {!!statement.data?.items.length && (
         <>
-          <ul className="divide-y divide-line rounded-ui border border-line bg-surface">
+          <ul className="divide-y divide-line card overflow-hidden">
             {statement.data.items.map((t) => {
               const credit = t.direction === 'CREDIT'
               return (

@@ -54,8 +54,16 @@ Rótulo sempre acima do campo, erro abaixo (`role=alert`), foco visível, contra
 
 ## Design
 
-Linguagem sóbria de banco, um único acento (teal), neutros frios, um só raio (10 px), tipografia Geist (números em Geist Mono tabular), sem cartões
-dentro de cartões (listas com divisórias), sem emoji. Painel lateral no desktop, barra superior rolável no celular.
+Escuro índigo como padrão, com cartões de vidro (translúcidos, borda fina, mesma luz vinda de cima) sobre um fundo com brilho violeta; o tema claro é uma alternativa
+escolhida no botão do topo e lembrada no navegador (`/theme.js` aplica antes da primeira pintura, porque a CSP não permite script inline). Um só acento de interface
+(violeta); as outras cores existem para separar séries nos gráficos e para estados (ok, aviso, erro). Tipografia Geist, números em Geist Mono tabular, sentence case.
+Referência visual: dashboards bancários escuros com métricas em cartões, anéis de progresso e coluna lateral; nada de código ou imagem de terceiros.
+
+O início do cliente segue essa linha: saldo total e **gráfico de entradas e saídas** dos últimos 6 meses (somando as contas), três métricas do mês com variação sobre o
+mês anterior, **onde está o dinheiro** (em conta, investido, porquinhos, moeda estrangeira), **saídas por categoria** (rosca), movimentações recentes e as contas.
+Os gráficos são SVG próprio (sem biblioteca): o de área mede a largura do cartão para o texto nunca encolher, mostra os valores ao passar o mouse e entrega uma
+tabela escondida para leitor de tela. Entrada escalonada dos blocos e linha que se desenha, desligadas por `prefers-reduced-motion`. Barra superior (telas largas) com
+avisos, tema e a pessoa logada; no celular o menu rola de lado e leva a aba ativa para a vista. Painel lateral no desktop.
 
 ## Testes e pendências
 

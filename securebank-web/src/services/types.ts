@@ -15,7 +15,22 @@ export interface Account {
 
 export interface Transaction {
   id: string
-  type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'REFUND' | 'PIGGY_IN' | 'PIGGY_OUT' | 'PIX_OUT' | 'PIX_IN'
+  type:
+    | 'DEPOSIT'
+    | 'WITHDRAW'
+    | 'TRANSFER'
+    | 'PAYMENT'
+    | 'REFUND'
+    | 'PIGGY_IN'
+    | 'PIGGY_OUT'
+    | 'PIX_OUT'
+    | 'PIX_IN'
+    | 'PIX_RETURN_OUT'
+    | 'PIX_RETURN_IN'
+    | 'INVEST_OUT'
+    | 'INVEST_IN'
+    | 'FX_BUY'
+    | 'FX_SELL'
   direction: 'CREDIT' | 'DEBIT'
   amount: Money
   balanceAfter: Money
@@ -32,7 +47,7 @@ export interface Page<T> {
 }
 
 export interface LimitUsage {
-  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'PIX'
+  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'PIX' | 'FX'
   perOperation: Money
   daily: Money
   usedToday: Money
@@ -85,4 +100,42 @@ export interface Customer {
   document: string
   email: string
   phone: string
+}
+
+export interface CategoryTotal {
+  category: string
+  income: Money
+  expenses: Money
+}
+
+/** Resumo do mês de uma conta (só lançamentos concluídos). */
+export interface StatementSummary {
+  month: string
+  income: Money
+  expenses: Money
+  net: Money
+  byCategory: CategoryTotal[]
+}
+
+export interface Investment {
+  id: string
+  productName: string
+  principal: Money
+  net: Money
+  yield: Money
+  status: 'ACTIVE' | 'REDEEMED'
+  annualRatePercent: string
+}
+
+export interface Piggy {
+  id: string
+  name: string
+  balance: Money
+  goal: Money | null
+  progressPercent: number | null
+}
+
+export interface FxWallet {
+  currency: string
+  balance: Money
 }

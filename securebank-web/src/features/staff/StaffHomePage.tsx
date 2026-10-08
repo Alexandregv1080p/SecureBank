@@ -12,7 +12,7 @@ export function StaffHomePage() {
       <ul className="grid gap-4 sm:grid-cols-2">
         {sections.map((s) => (
           <li key={s.to}>
-            <Link to={s.to} className="block h-full rounded-ui border border-line bg-surface p-5 transition hover:bg-bg">
+            <Link to={s.to} className="block h-full card overflow-hidden p-5 transition hover:bg-surface-2">
               <p className="font-medium">{s.label}</p>
               <p className="mt-1 text-sm text-muted">{s.description}</p>
             </Link>

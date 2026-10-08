@@ -4,8 +4,8 @@ import { WarningCircle, CheckCircle, Info } from '@phosphor-icons/react'
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-accent text-accent-fg hover:bg-accent-hover',
-  secondary: 'border border-line bg-surface text-ink hover:bg-bg',
+  primary: 'bg-accent text-accent-fg shadow-[0_10px_24px_-14px_var(--accent)] hover:bg-accent-hover hover:shadow-[0_12px_28px_-12px_var(--accent)]',
+  secondary: 'border border-line bg-surface-2 text-ink hover:border-accent/50 hover:bg-surface',
   danger: 'bg-danger text-white hover:opacity-90 dark:text-[#2a0d09]',
   ghost: 'text-muted hover:bg-accent-soft hover:text-ink',
 }
@@ -20,7 +20,7 @@ export function Button({ variant = 'primary', loading, disabled, className = '',
     <button
       {...rest}
       disabled={disabled || loading}
-      className={`inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-ui px-4 text-sm font-medium transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-ui px-4 text-sm font-medium transition duration-200 active:translate-y-px active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
     >
       {loading && <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />}
       {children}
@@ -55,7 +55,7 @@ export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
 }
 
 const inputClass =
-  'min-h-10 w-full rounded-ui border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus-visible:border-accent aria-[invalid=true]:border-danger'
+  'min-h-10 w-full rounded-ui border border-line bg-surface-2 px-3 text-sm text-ink transition placeholder:text-muted/70 hover:border-muted/50 focus-visible:border-accent aria-[invalid=true]:border-danger'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className = '', ...props },
@@ -132,7 +132,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
 
 export function Panel({ title, action, children }: { title?: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-ui border border-line bg-surface">
+    <section className="card">
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           {title && <h2 className="text-sm font-semibold">{title}</h2>}

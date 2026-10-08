@@ -44,7 +44,7 @@ export function AuditPage() {
       {logs.data?.items.length === 0 && <EmptyState title="Nenhum evento">Nada encontrado com estes filtros.</EmptyState>}
       {!!logs.data?.items.length && (
         <>
-          <ul className="divide-y divide-line rounded-ui border border-line bg-surface md:hidden">
+          <ul className="divide-y divide-line card overflow-hidden md:hidden">
             {logs.data.items.map((l) => (
               <li key={l.id} className="flex flex-col gap-1.5 px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
@@ -67,7 +67,7 @@ export function AuditPage() {
               </li>
             ))}
           </ul>
-          <div className="hidden overflow-x-auto rounded-ui border border-line bg-surface md:block">
+          <div className="hidden overflow-x-auto card overflow-hidden md:block">
             <table className="w-full min-w-[44rem] text-left text-sm">
               <thead className="border-b border-line text-xs text-muted">
                 <tr>

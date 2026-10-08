@@ -14,6 +14,8 @@ import { CustomersPage } from '../features/staff/CustomersPage'
 import { FxRatesPage } from '../features/staff/FxRatesPage'
 import { StaffHomePage } from '../features/staff/StaffHomePage'
 import { TeamPage } from '../features/staff/TeamPage'
+import { FxPage } from '../features/fx/FxPage'
+import { FxTradePage } from '../features/fx/FxTradePage'
 import { ApplyInvestmentPage } from '../features/investments/ApplyInvestmentPage'
 import { InvestmentDetailPage } from '../features/investments/InvestmentDetailPage'
 import { InvestmentsPage } from '../features/investments/InvestmentsPage'
@@ -46,6 +48,8 @@ export const router = createBrowserRouter([
       {
         element: <RequireCustomer />,
         children: [
+          { path: '/cambio', element: <FxPage /> },
+          { path: '/cambio/:side/:currency', element: <FxTradePage /> },
           { path: '/investimentos', element: <InvestmentsPage /> },
           { path: '/investimentos/aplicar/:code', element: <ApplyInvestmentPage /> },
           { path: '/investimentos/:id', element: <InvestmentDetailPage /> },

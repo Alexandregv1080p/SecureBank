@@ -31,6 +31,7 @@ const nav = [
   { to: '/pix', label: 'Pix', icon: PixLogo },
   { to: '/porquinhos', label: 'Porquinhos', icon: PiggyBank },
   { to: '/investimentos', label: 'Investimentos', icon: TrendUp },
+  { to: '/cambio', label: 'Câmbio', icon: CurrencyCircleDollar },
   { to: '/transferir', label: 'Transferir', icon: ArrowsLeftRight },
   { to: '/pagar', label: 'Pagar', icon: Barcode },
   { to: '/notificacoes', label: 'Avisos', icon: Bell },

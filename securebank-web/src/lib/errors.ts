@@ -27,6 +27,8 @@ const messages: Record<string, string> = {
   INVESTMENT_NOT_MATURED: 'Este investimento só pode ser resgatado no vencimento.',
   INVESTMENT_ALREADY_REDEEMED: 'Este investimento já foi resgatado.',
   INVESTMENT_LIMIT_REACHED: 'Você já tem o máximo de 50 investimentos ativos.',
+  FX_RATE_CHANGED: 'A cotação mudou. Confira o novo valor e tente de novo.',
+  INSUFFICIENT_FX_FUNDS: 'Saldo insuficiente na carteira em moeda estrangeira.',
   PIX_KEY_IN_USE: 'Esta chave já está cadastrada.',
   PIX_KEY_LIMIT_REACHED: 'Você já tem o máximo de 5 chaves Pix.',
   PIX_REFUND_EXPIRED: 'O prazo de 90 dias para devolver este Pix acabou.',

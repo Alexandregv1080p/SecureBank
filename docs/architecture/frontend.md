@@ -48,6 +48,13 @@ Renda fixa simulada. A tela inicial mostra o **total aplicado (líquido de hoje)
 `Idempotency-Key` por intenção). **Detalhe:** valores de hoje (bruto, rendimento, IR e líquido; o servidor calcula, o front só mostra) e o **resgate**: em branco resgata tudo; com um valor resgata esse
 líquido e o resto segue rendendo. Produto com prazo mostra o vencimento com a data completa e bloqueia o resgate até lá.
 
+## Câmbio (`/cambio`)
+
+Câmbio simulado de dólar e euro. A tela inicial tem um cartão por moeda (saldo da carteira, cotação de **compra** e de **venda**, spread) e as últimas operações. **Comprar/Vender:** conta, quantidade (na venda, "Vender tudo" e
+o limite é a carteira), a estimativa em reais na hora e o **comprovante** (imprimível) ao concluir. A estimativa usa a mesma regra do servidor, em inteiros (compra arredonda o custo para cima, venda arredonda o recebido para
+baixo), e o servidor é quem vale. O site manda a cotação que a pessoa **viu**: se a equipe a mudou no meio do caminho, a operação é recusada (`FX_RATE_CHANGED`), nada acontece, a tela recarrega a cotação nova e a pessoa
+decide de novo. Para cotações o front evita `toFixed` (erra metades como 5,56525) e usa inteiros.
+
 ## Painel da equipe (`/equipe`)
 
 Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite

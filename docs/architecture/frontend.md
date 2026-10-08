@@ -41,6 +41,13 @@ Lista em cartões (nome, saldo, barra de progresso da meta, selo "Meta alcançad
 e a tela de cada um: saldo e meta com quanto falta, **guardar** e **resgatar** (o valor não passa do saldo da conta, no guardar, nem do porquinho, no resgatar; idempotência por intenção),
 editar nome e meta (meta em branco remove) e **fechar**, que devolve o que houver para a conta (com confirmação em dois passos). Limite de 20 porquinhos ativos, confirmado pelo servidor.
 
+## Investimentos (`/investimentos`)
+
+Renda fixa simulada. A tela inicial mostra o **total aplicado (líquido de hoje)**, as aplicações (com "Disponível para resgate" nas de prazo vencido) e os três produtos com taxa, prazo e mínimo.
+**Aplicar:** regras do produto ao lado (resgate, IR regressivo, "tudo é simulado"), conta e valor (mínimo do produto e saldo da conta conferidos antes), revisão e confirmação (uma
+`Idempotency-Key` por intenção). **Detalhe:** valores de hoje (bruto, rendimento, IR e líquido; o servidor calcula, o front só mostra) e o **resgate**: em branco resgata tudo; com um valor resgata esse
+líquido e o resto segue rendendo. Produto com prazo mostra o vencimento com a data completa e bloqueia o resgate até lá.
+
 ## Painel da equipe (`/equipe`)
 
 Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite

@@ -117,14 +117,37 @@ export interface StatementSummary {
   byCategory: CategoryTotal[]
 }
 
+export interface InvestmentProduct {
+  code: string
+  name: string
+  kind: 'DAILY' | 'TERM'
+  annualRatePercent: string
+  termDays: number | null
+  minAmount: string
+}
+
+/** Aplicação. Bruto, rendimento, IR e líquido são "se resgatar agora"; depois do resgate, o que foi pago. */
 export interface Investment {
   id: string
+  accountId: string
+  productCode: string
   productName: string
   principal: Money
-  net: Money
-  yield: Money
-  status: 'ACTIVE' | 'REDEEMED'
   annualRatePercent: string
+  termDays: number | null
+  appliedAt: string
+  maturesAt: string | null
+  status: 'ACTIVE' | 'REDEEMED'
+  daysHeld: number
+  gross: Money
+  yield: Money
+  tax: Money
+  taxRatePercent: string
+  net: Money
+  canRedeem: boolean
+  redeemedAt: string | null
+  /** Quanto caiu na conta neste resgate (só na resposta do resgate). */
+  paidAmount?: Money | null
 }
 
 export interface Piggy {

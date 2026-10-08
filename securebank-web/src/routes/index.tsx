@@ -14,6 +14,9 @@ import { CustomersPage } from '../features/staff/CustomersPage'
 import { FxRatesPage } from '../features/staff/FxRatesPage'
 import { StaffHomePage } from '../features/staff/StaffHomePage'
 import { TeamPage } from '../features/staff/TeamPage'
+import { ApplyInvestmentPage } from '../features/investments/ApplyInvestmentPage'
+import { InvestmentDetailPage } from '../features/investments/InvestmentDetailPage'
+import { InvestmentsPage } from '../features/investments/InvestmentsPage'
 import { NewPiggyPage } from '../features/piggies/NewPiggyPage'
 import { PiggiesPage } from '../features/piggies/PiggiesPage'
 import { PiggyDetailPage } from '../features/piggies/PiggyDetailPage'
@@ -43,6 +46,9 @@ export const router = createBrowserRouter([
       {
         element: <RequireCustomer />,
         children: [
+          { path: '/investimentos', element: <InvestmentsPage /> },
+          { path: '/investimentos/aplicar/:code', element: <ApplyInvestmentPage /> },
+          { path: '/investimentos/:id', element: <InvestmentDetailPage /> },
           { path: '/porquinhos', element: <PiggiesPage /> },
           { path: '/porquinhos/novo', element: <NewPiggyPage /> },
           { path: '/porquinhos/:id', element: <PiggyDetailPage /> },

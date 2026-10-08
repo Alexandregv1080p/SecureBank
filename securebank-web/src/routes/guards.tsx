@@ -28,6 +28,12 @@ export function RequireStaff() {
   return <Outlet />
 }
 
+/** Telas do cliente (Pix etc.): a equipe não tem conta nem carteira, então volta para o painel dela. */
+export function RequireCustomer() {
+  const isCustomer = useAuth((s) => s.claims?.roles.includes('CUSTOMER'))
+  return isCustomer ? <Outlet /> : <Navigate to="/equipe" replace />
+}
+
 export function NotFound() {
   return (
     <main className="mx-auto max-w-md px-4 py-24 text-center">

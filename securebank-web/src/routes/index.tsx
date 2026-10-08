@@ -14,7 +14,15 @@ import { CustomersPage } from '../features/staff/CustomersPage'
 import { FxRatesPage } from '../features/staff/FxRatesPage'
 import { StaffHomePage } from '../features/staff/StaffHomePage'
 import { TeamPage } from '../features/staff/TeamPage'
-import { NotFound, RequireAuth, RequireStaff } from './guards'
+import { PixChargesPage } from '../features/pix/PixChargesPage'
+import { PixHistoryPage } from '../features/pix/PixHistoryPage'
+import { PixHomePage } from '../features/pix/PixHomePage'
+import { PixKeysPage } from '../features/pix/PixKeysPage'
+import { PixLayout } from '../features/pix/PixLayout'
+import { PixReceivePage } from '../features/pix/PixReceivePage'
+import { PixSchedulesPage } from '../features/pix/PixSchedulesPage'
+import { PixSendPage } from '../features/pix/PixSendPage'
+import { NotFound, RequireAuth, RequireCustomer, RequireStaff } from './guards'
 
 export const router = createBrowserRouter([
   { path: '/entrar', element: <LoginPage /> },
@@ -29,6 +37,24 @@ export const router = createBrowserRouter([
       { path: '/pagar', element: <PaymentsPage /> },
       { path: '/notificacoes', element: <NotificationsPage /> },
       { path: '/seguranca', element: <SecurityPage /> },
+      {
+        element: <RequireCustomer />,
+        children: [
+          {
+            path: '/pix',
+            element: <PixLayout />,
+            children: [
+              { index: true, element: <PixHomePage /> },
+              { path: 'enviar', element: <PixSendPage /> },
+              { path: 'receber', element: <PixReceivePage /> },
+              { path: 'cobrancas', element: <PixChargesPage /> },
+              { path: 'agendados', element: <PixSchedulesPage /> },
+              { path: 'chaves', element: <PixKeysPage /> },
+              { path: 'historico', element: <PixHistoryPage /> },
+            ],
+          },
+        ],
+      },
       {
         element: <RequireStaff />,
         children: [

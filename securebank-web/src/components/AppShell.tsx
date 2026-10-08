@@ -9,6 +9,7 @@ import {
   ClipboardText,
   CurrencyCircleDollar,
   House,
+  PixLogo,
   ShieldCheck,
   SignOut,
   UserGear,
@@ -25,6 +26,7 @@ import { TopBar } from './TopBar'
 const nav = [
   { to: '/', label: 'Início', icon: House, end: true },
   { to: '/contas', label: 'Contas', icon: Wallet },
+  { to: '/pix', label: 'Pix', icon: PixLogo },
   { to: '/transferir', label: 'Transferir', icon: ArrowsLeftRight },
   { to: '/pagar', label: 'Pagar', icon: Barcode },
   { to: '/notificacoes', label: 'Avisos', icon: Bell },

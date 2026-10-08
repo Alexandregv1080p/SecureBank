@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link, Navigate } from 'react-router'
-import { ArrowDownLeft, ArrowUpRight, ArrowsLeftRight, Barcode, CurrencyCircleDollar, PiggyBank, TrendUp, Wallet } from '@phosphor-icons/react'
+import { ArrowDownLeft, ArrowUpRight, ArrowsLeftRight, Barcode, CurrencyCircleDollar, PiggyBank, PixLogo, TrendUp, Wallet } from '@phosphor-icons/react'
 import { bankingApi } from '../../services/banking'
 import { useAuth } from '../../stores/auth'
 import type { Transaction } from '../../services/types'
@@ -74,8 +74,13 @@ function CustomerDashboard() {
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{firstName ? `Olá, ${firstName}` : 'Olá'}</h1>
         </div>
         <div className="flex gap-2">
-          <Link to="/transferir">
+          <Link to="/pix/enviar">
             <Button>
+              <PixLogo size={18} /> Pix
+            </Button>
+          </Link>
+          <Link to="/transferir">
+            <Button variant="secondary">
               <ArrowsLeftRight size={18} /> Transferir
             </Button>
           </Link>

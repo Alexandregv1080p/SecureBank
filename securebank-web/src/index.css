@@ -207,3 +207,30 @@ h3 {
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
+
+/* Comprovante: ao imprimir (ou salvar em PDF), só o bloco .print-area aparece, em preto sobre branco. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+    color: #111 !important;
+    border-color: #ccc !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -7,7 +7,8 @@ import { formatBRL, parseAmount } from '../../lib/money'
 import { messageFor } from '../../lib/errors'
 import { isUuid, limitLabels } from '../../lib/staff'
 import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
-import { ConfirmButton, DataList, DataRow } from './parts'
+import { ConfirmButton } from '../../components/ConfirmButton'
+import { DataList, DataRow } from './parts'
 import { useIdParam } from './useIdParam'
 
 export function AccountsAdminPage() {

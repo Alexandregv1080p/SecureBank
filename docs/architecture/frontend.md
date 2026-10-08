@@ -22,6 +22,19 @@ depósito, saque, extrato paginado com filtro de datas), transferência (formul�
 avisos (marcar como lido) e Segurança (MFA com QR code, troca de senha, dispositivos conectados). Usuário da equipe vê só uma página
 informativa e a Segurança. Todas têm estados de carregamento (skeleton), vazio e erro com "Tentar novamente".
 
+## Pix (`/pix`)
+
+Menu próprio com sete abas: visão geral (atalhos, limite do dia, últimos Pix), **enviar**, **receber**, **cobranças**, **agendados**, **chaves** e **histórico**.
+
+* **Enviar:** chave ou Pix Copia e Cola → consulta (nome e CPF **mascarados**) → conta, valor, mensagem e, se quiser, **agendamento** (de amanhã a 365 dias) → revisão → comprovante.
+  Um Copia e Cola de **cobrança** (QR dinâmico) é reconhecido: o valor fica travado e o pagamento é feito pela cobrança. O front **nunca acessa a URL** do código (quem fez o
+  QR poderia apontá-la para qualquer servidor): só extrai o identificador (26–35 caracteres) e consulta a própria API.
+* **Receber / Cobrar:** o QR (biblioteca `qrcode`, sempre preto sobre branco) e o texto do Copia e Cola são gerados no navegador (`lib/brcode.ts`: EMV com CRC16, mesma regra do app Android).
+  Cobrança: valor fixo, validade de 1 hora, 1 dia ou 7 dias, uso único; lista com status e cancelamento.
+* **Histórico:** paginado, com **devolução** (total ou parcial, até 90 dias) nos Pix recebidos.
+* **Comprovante** (Pix enviado, cobrança paga e agendamento): botão "Imprimir ou salvar PDF"; ao imprimir só a folha aparece, em preto sobre branco (`@media print`).
+* Cada operação usa uma `Idempotency-Key` por intenção, como nas outras de dinheiro. Cliente apenas: a equipe é redirecionada (`RequireCustomer`).
+
 ## Painel da equipe (`/equipe`)
 
 Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite

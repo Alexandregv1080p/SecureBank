@@ -5,7 +5,7 @@ import { useAuth } from '../../stores/auth'
 import { messageFor } from '../../lib/errors'
 import { roleLabel } from '../../lib/staff'
 import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
-import { ConfirmButton } from './parts'
+import { ConfirmButton } from '../../components/ConfirmButton'
 
 export function TeamPage() {
   const me = useAuth((s) => s.claims?.sub)

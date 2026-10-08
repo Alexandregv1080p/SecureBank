@@ -35,6 +35,12 @@ Menu próprio com sete abas: visão geral (atalhos, limite do dia, últimos Pix)
 * **Comprovante** (Pix enviado, cobrança paga e agendamento): botão "Imprimir ou salvar PDF"; ao imprimir só a folha aparece, em preto sobre branco (`@media print`).
 * Cada operação usa uma `Idempotency-Key` por intenção, como nas outras de dinheiro. Cliente apenas: a equipe é redirecionada (`RequireCustomer`).
 
+## Porquinhos (`/porquinhos`)
+
+Lista em cartões (nome, saldo, barra de progresso da meta, selo "Meta alcançada") com o total guardado; **novo porquinho** (nome até 40 caracteres, meta opcional, conta de origem);
+e a tela de cada um: saldo e meta com quanto falta, **guardar** e **resgatar** (o valor não passa do saldo da conta, no guardar, nem do porquinho, no resgatar; idempotência por intenção),
+editar nome e meta (meta em branco remove) e **fechar**, que devolve o que houver para a conta (com confirmação em dois passos). Limite de 20 porquinhos ativos, confirmado pelo servidor.
+
 ## Painel da equipe (`/equipe`)
 
 Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite

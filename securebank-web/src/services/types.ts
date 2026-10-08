@@ -129,10 +129,14 @@ export interface Investment {
 
 export interface Piggy {
   id: string
+  accountId: string
   name: string
   balance: Money
   goal: Money | null
   progressPercent: number | null
+  goalReached: boolean
+  status: 'ACTIVE' | 'CLOSED'
+  createdAt: string
 }
 
 export interface FxWallet {

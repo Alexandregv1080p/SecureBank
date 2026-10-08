@@ -14,6 +14,9 @@ import { CustomersPage } from '../features/staff/CustomersPage'
 import { FxRatesPage } from '../features/staff/FxRatesPage'
 import { StaffHomePage } from '../features/staff/StaffHomePage'
 import { TeamPage } from '../features/staff/TeamPage'
+import { NewPiggyPage } from '../features/piggies/NewPiggyPage'
+import { PiggiesPage } from '../features/piggies/PiggiesPage'
+import { PiggyDetailPage } from '../features/piggies/PiggyDetailPage'
 import { PixChargesPage } from '../features/pix/PixChargesPage'
 import { PixHistoryPage } from '../features/pix/PixHistoryPage'
 import { PixHomePage } from '../features/pix/PixHomePage'
@@ -40,6 +43,9 @@ export const router = createBrowserRouter([
       {
         element: <RequireCustomer />,
         children: [
+          { path: '/porquinhos', element: <PiggiesPage /> },
+          { path: '/porquinhos/novo', element: <NewPiggyPage /> },
+          { path: '/porquinhos/:id', element: <PiggyDetailPage /> },
           {
             path: '/pix',
             element: <PixLayout />,

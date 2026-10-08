@@ -6,7 +6,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package
 
-FROM eclipse-temurin:21.0.12.1_1-jre-alpine
+FROM eclipse-temurin:24.0.2_12-jre-alpine
 ARG VERSION=dev
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="securebank-api"       org.opencontainers.image.description="SecureBank Core Banking API"       org.opencontainers.image.version="${VERSION}"       org.opencontainers.image.revision="${REVISION}"       org.opencontainers.image.source="https://github.com/Alexandregv1080p/SecureBank"

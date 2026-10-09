@@ -46,6 +46,7 @@ fun MoneyScreen(container: AppContainer, viewModel: MoneyViewModel, onBack: () -
                 error = s.amountError,
                 hint = if (withdraw) withdrawHint(s) else null,
                 keyboardType = KeyboardType.Decimal,
+                mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                 imeAction = ImeAction.Done,
                 onDone = { submit() },
                 enabled = !s.loading,

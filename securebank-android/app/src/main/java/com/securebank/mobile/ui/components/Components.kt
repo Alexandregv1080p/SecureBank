@@ -22,8 +22,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,7 +35,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
@@ -69,13 +73,29 @@ fun SbTextField(
     imeAction: ImeAction = ImeAction.Next,
     onDone: (() -> Unit)? = null,
     enabled: Boolean = true,
+    mask: ((String) -> String)? = null,
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
+    // Texto com cursor próprio. A máscara (CPF, telefone, conta, valor) é aplicada aqui mesmo e o cursor vai para o fim;
+    // se ela só rodasse no ViewModel o cursor ficaria onde estava e o próximo dígito entraria no meio, fora de ordem.
+    // O valor que volta do ViewModel pode estar atrasado em relação ao que já foi digitado: se for algo que este campo
+    // mesmo emitiu, é eco velho e se ignora; só um valor novo (ex.: o ViewModel limpou o campo) substitui o texto.
+    var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val emitted = remember { ArrayDeque<String>() }
+    LaunchedEffect(value) {
+        if (field.text != value && value !in emitted) field = TextFieldValue(value, TextRange(value.length))
+    }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
         OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = field,
+            onValueChange = { next ->
+                val text = mask?.invoke(next.text) ?: next.text
+                field = if (text != next.text) TextFieldValue(text, TextRange(text.length)) else next
+                emitted.addLast(text)
+                if (emitted.size > 16) emitted.removeFirst()
+                onValueChange(text)
+            },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             singleLine = true,

@@ -1,6 +1,7 @@
 package com.securebank.mobile.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
+import com.securebank.mobile.core.util.Validation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,14 +26,14 @@ fun RegisterScreen(viewModel: RegisterViewModel, onBack: () -> Unit) {
             SbTextField("Nome completo", s.name, { viewModel.onChange(RegisterField.Name, it) },
                 error = s.errors[RegisterField.Name], enabled = !s.loading)
             SbTextField("CPF", s.document, { viewModel.onChange(RegisterField.Document, it) },
-                error = s.errors[RegisterField.Document], keyboardType = KeyboardType.Number, hint = "Somente números", enabled = !s.loading)
+                error = s.errors[RegisterField.Document], keyboardType = KeyboardType.Number, hint = "000.000.000-00", mask = Validation::maskCpf, enabled = !s.loading)
             SbTextField("Celular", s.phone, { viewModel.onChange(RegisterField.Phone, it) },
-                error = s.errors[RegisterField.Phone], keyboardType = KeyboardType.Phone, hint = "Com DDD, ex.: 11 99999-8888", enabled = !s.loading)
+                error = s.errors[RegisterField.Phone], keyboardType = KeyboardType.Phone, hint = "Com DDD, ex.: (11) 99999-8888", mask = Validation::maskPhone, enabled = !s.loading)
             SbTextField("E-mail", s.email, { viewModel.onChange(RegisterField.Email, it) },
                 error = s.errors[RegisterField.Email], keyboardType = KeyboardType.Email, enabled = !s.loading)
             SbTextField("Senha", s.password, { viewModel.onChange(RegisterField.Password, it) },
                 error = s.errors[RegisterField.Password], password = true,
-                hint = "Mínimo de 12 caracteres. Uma frase longa vale mais que símbolos.", enabled = !s.loading)
+                hint = "12 a 128 caracteres, sem ser previsível e sem conter o seu e-mail. Uma frase longa vale mais que símbolos.", enabled = !s.loading)
             SbTextField("Confirmar senha", s.confirm, { viewModel.onChange(RegisterField.Confirm, it) },
                 error = s.errors[RegisterField.Confirm], password = true, imeAction = ImeAction.Done,
                 onDone = viewModel::submit, enabled = !s.loading)

@@ -32,6 +32,7 @@ import com.securebank.mobile.core.network.LimitUsage
 import com.securebank.mobile.core.util.Format
 import com.securebank.mobile.core.util.Money
 import com.securebank.mobile.core.util.TransferField
+import com.securebank.mobile.core.util.Validation
 import com.securebank.mobile.ui.Load
 import com.securebank.mobile.ui.components.AccountPicker
 import com.securebank.mobile.ui.components.AuthScaffold
@@ -90,9 +91,9 @@ private fun Form(s: TransferState, accounts: List<Account>, vm: TransferViewMode
         AccountPicker("Conta de origem", accounts, s.sourceId, vm::onSource, s.errors[TransferField.Source])
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SbTextField("Agência", s.branch, vm::onBranch, modifier = Modifier.weight(1f), error = s.errors[TransferField.Branch], keyboardType = KeyboardType.Number)
-            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Ex.: 123456-0 (o hífen entra sozinho)")
+            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Ex.: 123456-0 (o hífen entra sozinho)", mask = Validation::maskAccountNumber)
         }
-        SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal, hint = limitHint(s.limit))
+        SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal, hint = limitHint(s.limit), mask = Validation::sanitizeAmount)
         SbTextField("Descrição (opcional)", s.description, vm::onDescription, error = s.errors[TransferField.Description], imeAction = ImeAction.Done, onDone = vm::review)
         PrimaryButton("Revisar", onClick = vm::review)
     }

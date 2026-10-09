@@ -55,6 +55,8 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
         viewModelScope.launch {
             try {
                 auth.register(s.name.trim(), s.document.filter(Char::isDigit), s.email.trim(), Phone.toE164BR(s.phone)!!, s.password)
+                // cadastro feito: nada do que foi digitado (nem a senha) fica no formulário para a próxima pessoa
+                _state.value = RegisterState()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

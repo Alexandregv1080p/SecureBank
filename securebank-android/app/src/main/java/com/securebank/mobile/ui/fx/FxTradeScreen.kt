@@ -79,6 +79,7 @@ fun FxTradeScreen(container: AppContainer, viewModel: FxTradeViewModel, currency
                         SbTextField(
                             "Quantidade ($currency)", s.amount, viewModel::onAmount, error = s.amountError,
                             keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, enabled = !s.loading,
+                            mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                         )
                         if (!buying) TextButton(onClick = viewModel::sellAll) { Text("Vender tudo") }
                     }

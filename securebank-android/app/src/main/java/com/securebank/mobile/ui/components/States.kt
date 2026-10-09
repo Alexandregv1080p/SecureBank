@@ -3,6 +3,7 @@ package com.securebank.mobile.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,6 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.securebank.mobile.ui.theme.CardShape
+import com.securebank.mobile.ui.theme.Sb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -53,16 +60,34 @@ fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actio
     }
 }
 
-/** Bloco com borda fina (sem cartão dentro de cartão: listas usam divisórias). */
+/** Cartão de vidro: translúcido sobre o degradê do fundo, borda fina (listas usam divisórias, sem cartão dentro de cartão). */
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape = CardShape,
+        color = Sb.colors.glass,
+        border = BorderStroke(1.dp, Sb.colors.glassBorder),
         content = content,
     )
+}
+
+/** Cartão de destaque (saldo): o brilho do acento num canto, sem gradiente chamativo. */
+@Composable
+fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val accent = MaterialTheme.colorScheme.primary
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = Sb.colors.glass,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
+    ) {
+        Box(
+            Modifier.drawBehind {
+                drawRect(Brush.radialGradient(listOf(accent.copy(alpha = 0.38f), Color.Transparent), center = Offset(size.width, 0f), radius = size.width * 0.9f))
+            },
+        ) { content() }
+    }
 }
 
 @Composable

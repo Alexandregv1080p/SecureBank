@@ -9,7 +9,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -27,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.securebank.mobile.AppContainer
+import com.securebank.mobile.ui.theme.Sb
 import com.securebank.mobile.ui.accounts.AccountDetailScreen
 import com.securebank.mobile.ui.accounts.AccountDetailViewModel
 import com.securebank.mobile.ui.accounts.AccountsScreen
@@ -95,9 +99,11 @@ fun MainShell(container: AppContainer) {
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         bottomBar = {
             if (route in tabs.map { it.route }) {
-                NavigationBar {
+                NavigationBar(containerColor = Sb.colors.panel.copy(alpha = if (Sb.colors.dark) 0.82f else 0.94f)) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = route == tab.route,
@@ -110,6 +116,13 @@ fun MainShell(container: AppContainer) {
                             },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(tab.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         )
                     }
                 }
@@ -118,7 +131,7 @@ fun MainShell(container: AppContainer) {
     ) { padding ->
         NavHost(nav, startDestination = "home", modifier = Modifier.padding(padding)) {
             composable("home") {
-                val vm: HomeViewModel = viewModel(factory = viewModelFactory { initializer { HomeViewModel(container.banking, container.piggies) } })
+                val vm: HomeViewModel = viewModel(factory = viewModelFactory { initializer { HomeViewModel(container.banking, container.piggies, container.investments, container.fx) } })
                 HomeScreen(
                     vm,
                     onOpenAccount = { nav.navigate("accounts/$it") },
@@ -159,6 +172,8 @@ fun MainShell(container: AppContainer) {
             }
             composable("more") {
                 MoreScreen(
+                    darkTheme = container.theme.dark.collectAsStateWithLifecycle().value,
+                    onToggleTheme = container.theme::setDark,
                     onTransfer = { nav.navigate("transfer") },
                     onPiggies = { nav.navigate("piggies") },
                     onInvestments = { nav.navigate("investments") },

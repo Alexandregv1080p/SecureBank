@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 /** Tela de entrada: título, subtítulo e conteúdo rolável que sobe junto com o teclado. */
 @Composable
 fun AuthScaffold(title: String, subtitle: String?, content: @Composable () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(modifier = Modifier.fillMaxSize(), color = androidx.compose.ui.graphics.Color.Transparent, contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground) {
         Column(
             modifier = Modifier.safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

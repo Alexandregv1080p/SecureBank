@@ -9,6 +9,7 @@ import com.securebank.mobile.core.security.LockSettings
 import com.securebank.mobile.core.session.KeystoreTokenStore
 import com.securebank.mobile.core.session.SecureTokenStore
 import com.securebank.mobile.core.session.SessionManager
+import com.securebank.mobile.core.ui.ThemeSettings
 import com.securebank.mobile.data.AuthRepository
 import com.securebank.mobile.data.BankingRepository
 import com.securebank.mobile.data.FxRepository
@@ -37,6 +38,7 @@ class AppContainer(context: Context) {
     val pix = PixRepository(network.pix, network.json, banking)
 
     val lockSettings = LockSettings(context)
+    val theme = ThemeSettings(context)
     val biometric = BiometricGate(context)
     val appLock = AppLock(
         timeoutMs = 30_000,

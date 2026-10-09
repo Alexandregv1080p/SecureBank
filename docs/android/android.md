@@ -171,3 +171,7 @@ Achados da primeira compilação real:
 * No Windows, o Gradle também sofre do erro de *loopback* por causa da pasta TEMP curta (o mesmo do Maven do backend). Contorno: `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Temp` e `TMP`/`TEMP=C:\Temp`. O JBR do Android Studio atual é Java 25, que o Kotlin 2.1 não reconhece: use o JDK 21.
 
 Limites honestos: o R8 só foi **compilado**; se as regras de `kotlinx.serialization` e Retrofit estão certas só se prova rodando o release num aparelho. O app inteiro nunca foi aberto numa tela. Testes de UI (Compose) e instrumentados ficam para a A6.
+
+## Visual (espelha o web)
+
+Tema índigo escuro por padrão, com alternativa clara (chave em Mais → "Tema escuro", salva em `ThemeSettings`). Tokens em `ui/theme/Theme.kt` (`Sb.colors`); cartões de vidro (`Panel`/`HeroPanel`); fundo em degradê no tema, então as telas usam contêineres transparentes. O início virou dashboard: gráfico de área de 6 meses, cartões com sparkline e variação, anéis de patrimônio e rosca de saídas por categoria (`ui/components/Charts.kt`, contas em `core/util/Dashboard.kt`, com testes).

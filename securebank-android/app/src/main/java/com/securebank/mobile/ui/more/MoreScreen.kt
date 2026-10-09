@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,7 +22,7 @@ import com.securebank.mobile.BuildConfig
 import com.securebank.mobile.ui.components.Panel
 
 @Composable
-fun MoreScreen(onTransfer: () -> Unit, onPiggies: () -> Unit, onInvestments: () -> Unit, onFx: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
+fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer: () -> Unit, onPiggies: () -> Unit, onInvestments: () -> Unit, onFx: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -40,6 +41,19 @@ fun MoreScreen(onTransfer: () -> Unit, onPiggies: () -> Unit, onInvestments: () 
                 MoreRow("Avisos", "Movimentações e acessos recentes na sua conta.", onNotifications)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 MoreRow("Segurança", "Verificação em duas etapas, senha, dispositivos e bloqueio do app.", onSecurity)
+            }
+        }
+        Panel {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Tema escuro", style = MaterialTheme.typography.titleSmall)
+                    Text("Desligue para usar o tema claro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = darkTheme, onCheckedChange = onToggleTheme)
             }
         }
         TextButton(onClick = onLogout) { Text("Sair da conta", color = MaterialTheme.colorScheme.error) }

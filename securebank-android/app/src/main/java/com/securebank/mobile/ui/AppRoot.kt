@@ -33,7 +33,7 @@ fun AppRoot(container: AppContainer) {
         if (state is SessionState.SignedOut) container.appLock.reset() // sem sessão não há o que bloquear
     }
 
-    Surface(color = MaterialTheme.colorScheme.background) {
+    Surface(color = androidx.compose.ui.graphics.Color.Transparent, contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground) { // o fundo (degradê) vem do tema
         when (state) {
             SessionState.Restoring -> CenteredColumn { CircularProgressIndicator() }
             is SessionState.SignedOut -> SignedOutNav(container, sessionExpired = state.expired)

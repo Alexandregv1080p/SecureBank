@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.securebank.mobile.ui.AppRoot
 import com.securebank.mobile.ui.theme.SecureBankTheme
 
@@ -20,7 +22,8 @@ class MainActivity : FragmentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            SecureBankTheme {
+            val dark by container.theme.dark.collectAsStateWithLifecycle()
+            SecureBankTheme(darkTheme = dark) {
                 AppRoot(container)
             }
         }

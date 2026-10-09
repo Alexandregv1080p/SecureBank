@@ -54,7 +54,7 @@ class InvestmentDetailViewModel(
         }
     }
 
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), amountError = null, error = null) }
 
     /** Valida o valor do resgate parcial; a tela pede a biometria e só então chama [redeem]. */
     fun validatePartial(): Boolean {

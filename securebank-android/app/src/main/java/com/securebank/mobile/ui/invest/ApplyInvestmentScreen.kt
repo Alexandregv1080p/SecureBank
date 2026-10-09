@@ -82,7 +82,7 @@ fun ApplyInvestmentScreen(container: AppContainer, viewModel: ApplyInvestmentVie
                     is Load.Ready -> {
                         if (accounts.value.size > 1) AccountPicker("Aplicar a partir da conta", accounts.value, s.accountId, viewModel::onAccount, null)
                         SbTextField(
-                            "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, keyboardType = KeyboardType.Decimal,
+                            "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal,
                             imeAction = ImeAction.Done, enabled = !s.loading,
                         )
                     }

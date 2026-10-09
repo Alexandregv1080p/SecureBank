@@ -10,7 +10,7 @@ object PiggyValidation {
         if (accountId.isNullOrEmpty()) put(PiggyField.Account, "Escolha a conta")
         if (name.isBlank()) put(PiggyField.Name, "Dê um nome ao porquinho")
         else if (name.trim().length > NAME_MAX) put(PiggyField.Name, "No máximo $NAME_MAX caracteres")
-        if (goal.isNotBlank() && Money.parse(goal) == null) put(PiggyField.Goal, OperationValidation.AMOUNT_MESSAGE)
+        if (goal.isNotBlank()) Validation.amountIssue(goal)?.let { put(PiggyField.Goal, it) }
     }
 
     /** Meta digitada em "1.234,56" para "1234.56"; vazio = sem meta (null). Só chamar depois de [validate]. */

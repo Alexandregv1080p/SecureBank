@@ -67,7 +67,7 @@ fun PixReceiveScreen(viewModel: PixReceiveViewModel, onKeys: () -> Unit) {
                     Text("${PixValidation.typeLabel(keys.value[0].type)}: ${keys.value[0].key}", style = MaterialTheme.typography.titleSmall)
                 }
                 SbTextField(
-                    "Valor (opcional)", s.amount, viewModel::onAmount, error = s.amountError,
+                    "Valor (opcional)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                     keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, hint = "Em branco: quem paga digita o valor",
                 )
                 s.code?.let { code ->

@@ -63,7 +63,7 @@ fun InvestmentDetailScreen(container: AppContainer, viewModel: InvestmentDetailV
                 if (i.active) {
                     if (i.canRedeem) {
                         SbTextField(
-                            "Valor a resgatar (R$)", s.amount, viewModel::onAmount, error = s.amountError,
+                            "Valor a resgatar (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                             keyboardType = KeyboardType.Decimal, hint = "Líquido, já descontado o IR. Deixe em branco para resgatar tudo.",
                             enabled = !s.loading,
                         )

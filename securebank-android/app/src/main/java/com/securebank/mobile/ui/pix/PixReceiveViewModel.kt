@@ -51,13 +51,13 @@ class PixReceiveViewModel(private val pix: PixRepository, private val banking: B
     fun onKey(id: String) = _state.update { rebuild(it.copy(selectedKeyId = id)) }
 
     fun onAmount(raw: String) = _state.update {
-        rebuild(it.copy(amount = raw.filter { c -> c.isDigit() || c == ',' || c == '.' }))
+        rebuild(it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(raw)))
     }
 
     private fun rebuild(s: PixReceiveState): PixReceiveState {
         val key = (s.keys as? Load.Ready)?.value?.firstOrNull { it.id == s.selectedKeyId }
         val amount = if (s.amount.isBlank()) null else Money.parse(s.amount)
-        val amountError = if (s.amount.isBlank() || amount != null) null else OperationValidation.AMOUNT_MESSAGE
+        val amountError = if (s.amount.isBlank() || amount != null) null else com.securebank.mobile.core.util.Validation.amountIssue(s.amount)
         val code = if (key == null || amountError != null) null else BrCode.encode(key.key, s.name.ifBlank { "Recebedor" }, amount = amount)
         return s.copy(amountError = amountError, code = code)
     }

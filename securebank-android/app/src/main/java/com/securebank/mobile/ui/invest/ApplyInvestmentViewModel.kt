@@ -62,13 +62,14 @@ class ApplyInvestmentViewModel(
     }
 
     fun onAccount(id: String) = _state.update { it.copy(accountId = id, error = null) }
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), amountError = null, error = null) }
 
     /** Valida; a tela pede a biometria e só então chama [confirm]. Devolve true se está tudo certo para confirmar. */
     fun validate(): Boolean {
         val s = _state.value
         val product = (s.product as? Load.Ready)?.value ?: return false
-        val error = InvestmentValidation.amountError(s.amount, product)
+        val available = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.accountId }?.balance?.amount
+        val error = InvestmentValidation.amountError(s.amount, product, available)
         _state.update { it.copy(amountError = error, error = if (s.accountId == null) "Escolha a conta de onde sai o dinheiro." else null) }
         return error == null && s.accountId != null
     }

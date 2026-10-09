@@ -1,4 +1,5 @@
 import { parseAmount } from './money'
+import { amountIssue } from './validation'
 import type { ChargeStatus, PixKeyType, ScheduleStatus } from '../services/pix'
 
 export const keyTypeLabel = (type: PixKeyType | string) =>
@@ -59,7 +60,7 @@ export const displayDay = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `$
 /** Quanto se pode devolver: positivo e no máximo o que ainda resta (o servidor confere de novo). */
 export function refundAmountError(input: string, refundable: string): string | null {
   const parsed = parseAmount(input)
-  if (parsed === null) return 'Informe um valor maior que zero, com até 2 casas decimais'
+  if (parsed === null) return amountIssue(input)
   return Math.round(Number(parsed) * 100) > Math.round(Number(refundable) * 100) ? 'O valor passa do que ainda pode ser devolvido' : null
 }
 

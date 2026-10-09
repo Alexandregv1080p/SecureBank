@@ -77,6 +77,10 @@ object Validation {
         return null
     }
 
+    /** "Limite por operação R$ 5.000,00 · restante hoje R$ 9.149,60" (sem limite carregado, nada). */
+    fun limitHint(limit: LimitUsage?): String? =
+        limit?.let { "Limite por operação ${Money.format(it.perOperation.amount)} · restante hoje ${Money.format(it.remainingToday.amount)}" }
+
     // ---- cadastro ----
 
     fun cpfValid(input: String): Boolean {

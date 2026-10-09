@@ -8,6 +8,7 @@ import { createIdempotency } from '../../lib/idempotency'
 import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { goalError, moveError, nameError, NAME_MAX, progress, remainingToGoal } from '../../lib/piggy'
+import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { useAccounts } from '../accounts/hooks'
@@ -140,7 +141,7 @@ function MoveForm({ piggyId, kind, available, availableLabel, onDone }: { piggyI
         error={fieldError ?? undefined}
         hint={available !== undefined ? `${availableLabel}: ${formatBRL(available)}` : undefined}
       >
-        <Input id={`move-${kind}`} inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(e.target.value); setFieldError(null) }} />
+        <Input id={`move-${kind}`} inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(sanitizeAmount(e.target.value)); setFieldError(null) }} />
       </Field>
       <div><Button type="submit" loading={submitting}>{kind === 'save' ? 'Guardar' : 'Resgatar'}</Button></div>
     </form>
@@ -182,7 +183,7 @@ function EditForm({ piggyId, name, goal, onDone }: { piggyId: string; name: stri
         <Input id="edit-name" value={newName} maxLength={NAME_MAX} aria-invalid={!!errors.name} onChange={(e) => setNewName(e.target.value)} />
       </Field>
       <Field label="Meta (R$)" htmlFor="edit-goal" error={errors.goal} hint="Em branco remove a meta">
-        <Input id="edit-goal" inputMode="decimal" className="num" placeholder="0,00" value={newGoal} aria-invalid={!!errors.goal} onChange={(e) => setNewGoal(e.target.value)} />
+        <Input id="edit-goal" inputMode="decimal" className="num" placeholder="0,00" value={newGoal} aria-invalid={!!errors.goal} onChange={(e) => setNewGoal(sanitizeAmount(e.target.value))} />
       </Field>
       <div><Button type="submit" variant="secondary" loading={save.isPending}>Salvar alterações</Button></div>
     </form>

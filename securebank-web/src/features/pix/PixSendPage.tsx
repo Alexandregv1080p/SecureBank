@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { ApiError } from '../../lib/api'
 import { InvalidBrCodeError, chargeTxid, decode, looksLikeCode } from '../../lib/brcode'
 import { createIdempotency } from '../../lib/idempotency'
 import { accountLabel, accountTypeLabel, formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
+import { bankingApi } from '../../services/banking'
+import { amountIssue, balanceIssue, limitIssue, sanitizeAmount } from '../../lib/validation'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { displayDay, keyInputError, keyTypeLabel, scheduleBounds, scheduleDateError } from '../../lib/pix'
 import { pixApi, type PixChargeView, type PixEntry, type PixLookup, type PixSchedule } from '../../services/pix'
@@ -44,6 +47,8 @@ export function PixSendPage() {
 
   const list = accounts.data ?? []
   const effectiveAccount = accountId || (list.length === 1 ? list[0].id : '')
+  const limits = useQuery({ queryKey: ['limits', effectiveAccount], queryFn: () => bankingApi.limits(effectiveAccount), enabled: !!effectiveAccount })
+  const pixLimit = limits.data?.find((l) => l.type === 'PIX')
   const recents = [...new Map((history.data?.items ?? []).filter((e) => e.direction === 'SENT').map((e) => [e.key, e])).values()].slice(0, 5)
 
   async function resolve(raw: string) {
@@ -85,7 +90,18 @@ export function PixSendPage() {
   function goReview() {
     const next: Record<string, string> = {}
     if (!effectiveAccount) next.account = 'Escolha a conta de origem'
-    if (parseAmount(amount) === null) next.amount = 'Informe um valor maior que zero, com até 2 casas decimais'
+    const amountProblem = amountIssue(amount)
+    if (amountProblem) {
+      next.amount = amountProblem
+    } else {
+      const value = parseAmount(amount)!
+      const source = list.find((a) => a.id === effectiveAccount)
+      // agendado: o dinheiro só sai na data, então saldo e o que resta hoje não valem agora; o limite por operação vale sempre
+      const issue = scheduleOn && target?.kind === 'key'
+        ? limitIssue(value, pixLimit && { perOperation: pixLimit.perOperation, remainingToday: pixLimit.perOperation })
+        : (source ? balanceIssue(value, source.balance.amount) : null) ?? limitIssue(value, pixLimit)
+      if (issue) next.amount = issue
+    }
     if (message.length > 140) next.message = 'No máximo 140 caracteres'
     if (scheduleOn && target?.kind === 'key') {
       const dateProblem = scheduleDateError(date, today)
@@ -230,8 +246,8 @@ export function PixSendPage() {
             <Recipient target={target} />
             <Button variant="ghost" className="self-start" onClick={() => { setTarget(null); setAmount(''); setErrors({}) }}>Trocar chave</Button>
             {list.length > 1 && <AccountSelect id="source" label="Enviar da conta" accounts={list} value={effectiveAccount} onChange={setAccountId} error={errors.account} />}
-            <Field label="Valor (R$)" htmlFor="amount" error={errors.amount} hint={(target.kind === 'charge' || target.fixedAmount) ? 'Valor definido pelo código' : undefined}>
-              <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} disabled={target.kind === 'charge' || !!target.fixedAmount} aria-invalid={!!errors.amount} onChange={(e) => setAmount(e.target.value)} />
+            <Field label="Valor (R$)" htmlFor="amount" error={errors.amount} hint={(target.kind === 'charge' || target.fixedAmount) ? 'Valor definido pelo código' : pixLimit ? `Limite por operação ${formatBRL(pixLimit.perOperation.amount)} · restante hoje ${formatBRL(pixLimit.remainingToday.amount)}` : undefined}>
+              <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} disabled={target.kind === 'charge' || !!target.fixedAmount} aria-invalid={!!errors.amount} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} />
             </Field>
             {target.kind === 'key' && (
               <>

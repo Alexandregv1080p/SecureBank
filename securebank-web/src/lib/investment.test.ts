@@ -13,8 +13,8 @@ describe('aplicar', () => {
     expect(applyError('0,50', '1.00')).toMatch(/mínimo/)
     expect(applyError('3.000,01', '100.00', '3000.00')).toMatch(/saldo/)
     expect(applyError('0', '1.00')).toMatch(/maior que zero/)
-    expect(applyError('abc', '1.00')).toMatch(/maior que zero/)
-    expect(applyError('', '1.00')).toMatch(/maior que zero/)
+    expect(applyError('abc', '1.00')).toMatch(/Use só números/)
+    expect(applyError('', '1.00')).toMatch(/Informe o valor/)
   })
 })
 

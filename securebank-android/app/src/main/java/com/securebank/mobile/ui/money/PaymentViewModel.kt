@@ -32,6 +32,8 @@ data class PaymentState(
     val loading: Boolean = false,
     val error: String? = null,
     val ok: String? = null,
+    /** Limite de pagamento da conta escolhida (mostrado e conferido antes de pagar). */
+    val limit: com.securebank.mobile.core.network.LimitUsage? = null,
 )
 
 class PaymentViewModel(private val banking: BankingRepository) : ViewModel() {
@@ -52,6 +54,7 @@ class PaymentViewModel(private val banking: BankingRepository) : ViewModel() {
                 val only = (load as? Load.Ready)?.value?.singleOrNull()?.id
                 s.copy(accounts = load, accountId = s.accountId ?: only)
             }
+            _state.value.accountId?.let { if (_state.value.limit == null) loadLimit(it) }
         }
         viewModelScope.launch {
             val recent = attempt { banking.payments(0).items }
@@ -61,15 +64,26 @@ class PaymentViewModel(private val banking: BankingRepository) : ViewModel() {
 
     private fun edit(block: (PaymentState) -> PaymentState) = _state.update { block(it).copy(error = null, ok = null) }
 
-    fun onAccount(id: String) = edit { it.copy(accountId = id, errors = it.errors - PaymentField.Account) }
+    fun onAccount(id: String) {
+        edit { it.copy(accountId = id, limit = null, errors = it.errors - PaymentField.Account - PaymentField.Amount) }
+        loadLimit(id)
+    }
+
+    private fun loadLimit(accountId: String) {
+        viewModelScope.launch {
+            val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "PAYMENT" }
+            _state.update { if (it.accountId == accountId) it.copy(limit = limit) else it }
+        }
+    }
     fun onBarcode(v: String) = edit { it.copy(barcode = v.filter(Char::isDigit).take(48), errors = it.errors - PaymentField.Barcode) }
-    fun onAmount(v: String) = edit { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, errors = it.errors - PaymentField.Amount) }
+    fun onAmount(v: String) = edit { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), errors = it.errors - PaymentField.Amount) }
     fun onDescription(v: String) = edit { it.copy(description = v.take(140), errors = it.errors - PaymentField.Description) }
 
     /** Valida; devolve true se pode seguir para a confirmação de identidade. */
     fun validate(): Boolean {
         val s = _state.value
-        val errors = OperationValidation.payment(s.accountId, s.barcode, s.amount, s.description)
+        val source = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.accountId }
+        val errors = OperationValidation.payment(s.accountId, s.barcode, s.amount, s.description, source, s.limit)
         _state.update { it.copy(errors = errors) }
         return errors.isEmpty()
     }

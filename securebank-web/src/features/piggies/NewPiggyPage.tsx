@@ -5,6 +5,7 @@ import { piggyApi } from '../../services/piggies'
 import { messageFor } from '../../lib/errors'
 import { goalError, nameError, NAME_MAX } from '../../lib/piggy'
 import { parseAmount } from '../../lib/money'
+import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Button, EmptyState, Field, Input, PageHeader, Skeleton } from '../../components/ui'
 import { useAccounts } from '../accounts/hooks'
 import { AccountSelect } from '../pix/parts'
@@ -52,7 +53,7 @@ export function NewPiggyPage() {
           <Input id="name" value={name} maxLength={NAME_MAX} autoComplete="off" aria-invalid={!!errors.name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label="Meta (opcional)" htmlFor="goal" error={errors.goal} hint="Deixe em branco para guardar sem meta">
-          <Input id="goal" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={goal} aria-invalid={!!errors.goal} onChange={(e) => setGoal(e.target.value)} />
+          <Input id="goal" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={goal} aria-invalid={!!errors.goal} onChange={(e) => setGoal(sanitizeAmount(e.target.value))} />
         </Field>
         {list.length > 1 && <AccountSelect id="account" label="Guardar a partir da conta" accounts={list} value={effectiveAccount} onChange={setAccountId} error={errors.account} />}
         <div className="flex gap-3">

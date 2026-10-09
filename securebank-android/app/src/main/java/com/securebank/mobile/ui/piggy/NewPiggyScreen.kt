@@ -49,7 +49,7 @@ private fun Form(s: NewPiggyState, accounts: List<Account>, vm: NewPiggyViewMode
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SbTextField("Nome", s.name, vm::onName, error = s.errors[PiggyField.Name], hint = "Ex.: Viagem, Reserva de emergência", enabled = !s.loading)
         SbTextField(
-            "Meta (opcional)", s.goal, vm::onGoal, error = s.errors[PiggyField.Goal], keyboardType = KeyboardType.Decimal,
+            "Meta (opcional)", s.goal, vm::onGoal, error = s.errors[PiggyField.Goal], mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Done, onDone = vm::create, hint = "Deixe em branco para guardar sem meta", enabled = !s.loading,
         )
         if (accounts.size > 1) AccountPicker("Guardar a partir da conta", accounts, s.accountId, vm::onAccount, s.errors[PiggyField.Account])

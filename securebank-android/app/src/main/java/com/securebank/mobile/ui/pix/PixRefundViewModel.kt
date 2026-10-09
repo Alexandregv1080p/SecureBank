@@ -49,7 +49,7 @@ class PixRefundViewModel(private val pix: PixRepository, private val id: String)
         }
     }
 
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), amountError = null, error = null) }
 
     /** Só chamar DEPOIS da confirmação de identidade. */
     fun confirm() {

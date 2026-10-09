@@ -8,6 +8,7 @@ import { formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { chargeStatusLabel, chargeValidities } from '../../lib/pix'
+import { amountIssue, sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { useAccounts } from '../accounts/hooks'
@@ -45,7 +46,8 @@ export function PixChargesPage() {
   function submit() {
     const next: Record<string, string> = {}
     if (!effectiveAccount) next.account = 'Escolha a conta que vai receber'
-    if (parseAmount(amount) === null) next.amount = 'Informe um valor maior que zero, com até 2 casas decimais'
+    const amountProblem = amountIssue(amount)
+    if (amountProblem) next.amount = amountProblem
     if (description.length > 140) next.description = 'No máximo 140 caracteres'
     setErrors(next)
     if (Object.keys(next).length === 0) create.mutate()
@@ -64,7 +66,7 @@ export function PixChargesPage() {
           {create.isError && <Alert tone="error">{messageFor(create.error)}</Alert>}
           {list.length > 1 && <AccountSelect id="account" label="Receber na conta" accounts={list} value={effectiveAccount} onChange={setAccountId} error={errors.account} />}
           <Field label="Valor (R$)" htmlFor="amount" error={errors.amount}>
-            <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!errors.amount} onChange={(e) => setAmount(e.target.value)} />
+            <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!errors.amount} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} />
           </Field>
           <Field label="Descrição (opcional)" htmlFor="description" error={errors.description}>
             <Input id="description" maxLength={140} value={description} onChange={(e) => setDescription(e.target.value)} />

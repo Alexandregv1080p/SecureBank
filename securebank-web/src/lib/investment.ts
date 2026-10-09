@@ -1,9 +1,10 @@
 import { formatBRL, parseAmount } from './money'
+import { amountIssue } from './validation'
 
 /** Valor da aplicação: positivo, com até 2 casas, e pelo menos o mínimo do produto (o servidor confere de novo). */
 export function applyError(input: string, minAmount: string, available?: string): string | null {
   const parsed = parseAmount(input)
-  if (parsed === null) return 'Informe um valor maior que zero, com até 2 casas decimais'
+  if (parsed === null) return amountIssue(input)
   const cents = Math.round(Number(parsed) * 100)
   if (cents < Math.round(Number(minAmount) * 100)) return `O mínimo deste produto é ${formatBRL(minAmount)}`
   if (available !== undefined && cents > Math.round(Number(available) * 100)) return 'O valor passa do saldo da conta'
@@ -13,7 +14,7 @@ export function applyError(input: string, minAmount: string, available?: string)
 /** Resgate: em branco resgata tudo; com valor, resgata esse LÍQUIDO (positivo, até 2 casas). */
 export function redeemError(input: string): string | null {
   if (!input.trim()) return null
-  return parseAmount(input) === null ? 'Informe um valor maior que zero, com até 2 casas decimais' : null
+  return parseAmount(input) === null ? amountIssue(input) : null
 }
 
 export const termLabel = (termDays: number | null) => (termDays === null ? 'Liquidez diária' : `Prazo de ${termDays} dias`)

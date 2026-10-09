@@ -8,6 +8,7 @@ import { createIdempotency } from '../../lib/idempotency'
 import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { applyError, rateLabel, taxExplanation, termLabel } from '../../lib/investment'
+import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Button, EmptyState, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 import { useAccounts } from '../accounts/hooks'
 import { AccountSelect } from '../pix/parts'
@@ -78,7 +79,7 @@ export function ApplyInvestmentPage() {
             <form className="mt-8 flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); goReview() }} noValidate>
               {list.length > 1 && <AccountSelect id="account" label="Aplicar a partir da conta" accounts={list} value={effectiveAccount} onChange={setAccountId} error={accountError ?? undefined} />}
               <Field label="Valor (R$)" htmlFor="amount" error={fieldError ?? undefined} hint={account ? `Saldo da conta: ${formatBRL(account.balance.amount)}` : undefined}>
-                <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(e.target.value); setFieldError(null) }} />
+                <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(sanitizeAmount(e.target.value)); setFieldError(null) }} />
               </Field>
               <div><Button type="submit">Revisar</Button></div>
             </form>

@@ -16,9 +16,12 @@ class InvestmentValidationTest {
         assertNull(InvestmentValidation.amountError("2500", cdb90))
         assertNotNull(InvestmentValidation.amountError("99,99", cdb90))
         assertTrue(InvestmentValidation.amountError("50", cdb90)!!.contains("100,00"))
-        assertEquals(OperationValidation.AMOUNT_MESSAGE, InvestmentValidation.amountError("abc", cdb90))
-        assertEquals(OperationValidation.AMOUNT_MESSAGE, InvestmentValidation.amountError("0", cdb90))
-        assertEquals(OperationValidation.AMOUNT_MESSAGE, InvestmentValidation.amountError("", cdb90))
+        assertEquals("Use só números e vírgula para os centavos, ex.: 1250,50", InvestmentValidation.amountError("abc", cdb90))
+        assertEquals("O valor deve ser maior que zero", InvestmentValidation.amountError("0", cdb90))
+        assertEquals("Informe o valor", InvestmentValidation.amountError("", cdb90))
+        // saldo da conta
+        assertNull(InvestmentValidation.amountError("400", cdb90, "400.00"))
+        assertEquals("O valor passa do saldo da conta", InvestmentValidation.amountError("500", cdb90, "400.00"))
     }
 
     @Test

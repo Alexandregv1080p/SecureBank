@@ -50,7 +50,7 @@ class NewPiggyViewModel(private val banking: BankingRepository, private val pigg
 
     fun onAccount(id: String) = _state.update { it.copy(accountId = id, errors = it.errors - PiggyField.Account, error = null) }
     fun onName(v: String) = _state.update { it.copy(name = v.take(PiggyValidation.NAME_MAX + 5), errors = it.errors - PiggyField.Name, error = null) }
-    fun onGoal(v: String) = _state.update { it.copy(goal = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, errors = it.errors - PiggyField.Goal, error = null) }
+    fun onGoal(v: String) = _state.update { it.copy(goal = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), errors = it.errors - PiggyField.Goal, error = null) }
 
     fun create() {
         val s = _state.value

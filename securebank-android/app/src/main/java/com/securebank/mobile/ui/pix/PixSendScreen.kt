@@ -141,8 +141,8 @@ private fun Details(s: PixSendState, accounts: List<Account>, vm: PixSendViewMod
         TextButton(onClick = vm::backToKey) { Text("Trocar chave") }
         if (accounts.size > 1) AccountPicker("Enviar da conta", accounts, s.sourceId, vm::onSource, s.errors[PixField.Source])
         SbTextField(
-            "Valor (R$)", s.amount, vm::onAmount, error = s.errors[PixField.Amount], keyboardType = KeyboardType.Decimal,
-            hint = if (s.fixedAmount) "Valor definido pelo código" else null, enabled = !s.fixedAmount,
+            "Valor (R$)", s.amount, vm::onAmount, error = s.errors[PixField.Amount], keyboardType = KeyboardType.Decimal, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
+            hint = if (s.fixedAmount) "Valor definido pelo código" else com.securebank.mobile.core.util.Validation.limitHint(s.limit), enabled = !s.fixedAmount,
         )
         if (s.charge == null) {
             SbTextField("Mensagem (opcional)", s.message, vm::onMessage, error = s.errors[PixField.Message], imeAction = ImeAction.Done, onDone = vm::review)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link } from 'react-router'
@@ -10,6 +10,7 @@ import { formatBRL, parseAmount } from '../../lib/money'
 import { accountTypeLabel, formatDateTime } from '../../lib/format'
 import { ApiError } from '../../lib/api'
 import { messageFor } from '../../lib/errors'
+import { amountIssue, balanceIssue, limitIssue, sanitizeAmount, withMask } from '../../lib/validation'
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { useAccounts, useRefreshMoney } from '../accounts/hooks'
 
@@ -18,7 +19,10 @@ const digits = (v: string) => v.replace(/\D/g, '')
 const schema = z.object({
   accountId: z.string().min(1, 'Escolha a conta'),
   barcode: z.string().refine((v) => [44, 47, 48].includes(digits(v).length), 'O código tem 44, 47 ou 48 dígitos'),
-  amount: z.string().refine((v) => parseAmount(v) !== null, 'Informe um valor maior que zero, com até 2 casas decimais'),
+  amount: z.string().superRefine((v, ctx) => {
+    const m = amountIssue(v)
+    if (m) ctx.addIssue({ code: 'custom', message: m })
+  }),
   description: z.string().max(140, 'No máximo 140 caracteres').optional(),
 })
 type Values = z.infer<typeof schema>
@@ -32,10 +36,16 @@ export function PaymentsPage() {
   const [ok, setOk] = useState<string | null>(null)
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { accountId: '', barcode: '', amount: '', description: '' } })
   const errors = form.formState.errors
+  const accountId = useWatch({ control: form.control, name: 'accountId' })
+  const limits = useQuery({ queryKey: ['limits', accountId], queryFn: () => bankingApi.limits(accountId), enabled: !!accountId })
+  const paymentLimit = limits.data?.find((l) => l.type === 'PAYMENT')
 
   async function onSubmit(v: Values) {
     setError(null)
     setOk(null)
+    const source = accounts.data?.find((a) => a.id === v.accountId)
+    const amountProblem = (source ? balanceIssue(parseAmount(v.amount)!, source.balance.amount) : null) ?? limitIssue(parseAmount(v.amount)!, paymentLimit)
+    if (amountProblem) return form.setError('amount', { message: amountProblem })
     const body = { accountId: v.accountId, amount: parseAmount(v.amount)!, barcode: digits(v.barcode), description: v.description?.trim() || undefined }
     try {
       await bankingApi.pay(body, idem.keyFor(body))
@@ -74,8 +84,13 @@ export function PaymentsPage() {
             <Field label="Código de barras ou linha digitável" htmlFor="barcode" error={errors.barcode?.message}>
               <Input id="barcode" inputMode="numeric" autoComplete="off" className="num" aria-invalid={!!errors.barcode} {...form.register('barcode')} />
             </Field>
-            <Field label="Valor (R$)" htmlFor="pay-amount" error={errors.amount?.message}>
-              <Input id="pay-amount" inputMode="decimal" placeholder="0,00" autoComplete="off" className="num" aria-invalid={!!errors.amount} {...form.register('amount')} />
+            <Field
+              label="Valor (R$)"
+              htmlFor="pay-amount"
+              error={errors.amount?.message}
+              hint={paymentLimit ? `Limite por operação ${formatBRL(paymentLimit.perOperation.amount)} · restante hoje ${formatBRL(paymentLimit.remainingToday.amount)}` : undefined}
+            >
+              <Input id="pay-amount" inputMode="decimal" placeholder="0,00" autoComplete="off" className="num" aria-invalid={!!errors.amount} {...withMask(form.register('amount'), sanitizeAmount)} />
             </Field>
             <Field label="Descrição (opcional)" htmlFor="pay-description" error={errors.description?.message}>
               <Input id="pay-description" maxLength={140} {...form.register('description')} />

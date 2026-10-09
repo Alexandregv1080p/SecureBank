@@ -5,6 +5,7 @@ import { bankingApi } from '../../services/banking'
 import { encode } from '../../lib/brcode'
 import { parseAmount } from '../../lib/money'
 import { keyTypeLabel } from '../../lib/pix'
+import { amountIssue, sanitizeAmount } from '../../lib/validation'
 import { Button, EmptyState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { usePixKeys } from './hooks'
 import { CopyButton, QrImage } from './parts'
@@ -30,7 +31,7 @@ export function PixReceivePage() {
 
   const key = keys.data.find((k) => k.id === keyId) ?? keys.data[0]
   const parsed = amount.trim() ? parseAmount(amount) : null
-  const amountError = amount.trim() && parsed === null ? 'Informe um valor maior que zero, com até 2 casas decimais' : undefined
+  const amountError = amount.trim() && parsed === null ? (amountIssue(amount) ?? undefined) : undefined
   const code = amountError ? null : encode(key.key, me.data?.name ?? '', { amount: parsed })
 
   return (
@@ -49,7 +50,7 @@ export function PixReceivePage() {
           )}
           {keys.data.length === 1 && <p className="text-sm"><span className="text-muted">{keyTypeLabel(key.type)}:</span> <span className="break-all font-medium">{key.key}</span></p>}
           <Field label="Valor (opcional)" htmlFor="amount" error={amountError} hint="Em branco: quem paga digita o valor">
-            <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!amountError} onChange={(e) => setAmount(e.target.value)} />
+            <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!amountError} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} />
           </Field>
           {code && (
             <>

@@ -50,7 +50,7 @@ describe('validações', () => {
     expect(refundAmountError('0,01', '60.00')).toBeNull()
     expect(refundAmountError('60,01', '60.00')).toMatch(/passa/)
     expect(refundAmountError('0', '60.00')).toMatch(/maior que zero/)
-    expect(refundAmountError('abc', '60.00')).toMatch(/maior que zero/)
+    expect(refundAmountError('abc', '60.00')).toMatch(/Use só números/)
   })
 
   it('a chave digitada precisa ter conteúdo', () => {

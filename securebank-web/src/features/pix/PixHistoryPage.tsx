@@ -7,6 +7,7 @@ import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { refundAmountError } from '../../lib/pix'
 import { pixApi, type PixEntry } from '../../services/pix'
+import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Skeleton } from '../../components/ui'
 import { usePixHistory, useRefreshPix } from './hooks'
 
@@ -113,7 +114,7 @@ function Refund({ entry, onClose }: { entry: PixEntry; onClose: () => void }) {
   return (
     <div className="mt-3 flex flex-col gap-3 pl-[3.25rem]">
       <Field label="Valor a devolver (R$)" htmlFor={`refund-${entry.id}`} error={fieldError ?? undefined} hint={`Ainda pode devolver ${formatBRL(remaining)} em até 90 dias do recebimento.`}>
-        <Input id={`refund-${entry.id}`} inputMode="decimal" className="num max-w-48" value={amount} aria-invalid={!!fieldError} onChange={(ev) => setAmount(ev.target.value)} />
+        <Input id={`refund-${entry.id}`} inputMode="decimal" className="num max-w-48" value={amount} aria-invalid={!!fieldError} onChange={(ev) => setAmount(sanitizeAmount(ev.target.value))} />
       </Field>
       {error && <Alert tone="error">{error}</Alert>}
       <div className="flex gap-2">

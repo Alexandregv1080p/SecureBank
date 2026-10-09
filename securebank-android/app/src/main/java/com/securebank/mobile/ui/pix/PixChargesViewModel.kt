@@ -73,7 +73,7 @@ class PixChargesViewModel(private val pix: PixRepository, private val banking: B
     }
 
     fun onSource(id: String) = _state.update { it.copy(sourceId = id) }
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), amountError = null, error = null) }
     fun onDescription(v: String) = _state.update { it.copy(description = v.take(PixValidation.MESSAGE_MAX + 5), descriptionError = null) }
     fun onValidity(v: ChargeValidity) = _state.update { it.copy(validity = v) }
 
@@ -81,7 +81,7 @@ class PixChargesViewModel(private val pix: PixRepository, private val banking: B
         val s = _state.value
         if (s.creating) return
         val amount = Money.parse(s.amount)
-        val amountError = if (amount == null) OperationValidation.AMOUNT_MESSAGE else null
+        val amountError = com.securebank.mobile.core.util.Validation.amountIssue(s.amount)
         val descriptionError = if (s.description.trim().length > PixValidation.MESSAGE_MAX) "No máximo ${PixValidation.MESSAGE_MAX} caracteres" else null
         if (amountError != null || descriptionError != null || s.sourceId == null) {
             _state.update { it.copy(amountError = amountError, descriptionError = descriptionError, error = if (s.sourceId == null) "Escolha a conta que vai receber." else null) }

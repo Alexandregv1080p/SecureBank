@@ -72,7 +72,7 @@ fun PixChargesScreen(viewModel: PixChargesViewModel) {
                 is Load.Failed -> ErrorState(accounts.message, onRetry = viewModel::load)
                 is Load.Ready -> {
                     if (accounts.value.size > 1) AccountPicker("Receber na conta", accounts.value, s.sourceId, viewModel::onSource, null)
-                    SbTextField("Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, keyboardType = KeyboardType.Decimal)
+                    SbTextField("Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal)
                     SbTextField("Descrição (opcional)", s.description, viewModel::onDescription, error = s.descriptionError, imeAction = ImeAction.Done, onDone = viewModel::create)
                     Text("Validade", style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -73,7 +73,7 @@ fun PixRefundScreen(container: AppContainer, viewModel: PixRefundViewModel, onBa
                         }
                     }
                     SbTextField(
-                        "Valor a devolver (R$)", s.amount, viewModel::onAmount, error = s.amountError,
+                        "Valor a devolver (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                         keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, enabled = !s.loading,
                     )
                     s.error?.let { Banner(it) }

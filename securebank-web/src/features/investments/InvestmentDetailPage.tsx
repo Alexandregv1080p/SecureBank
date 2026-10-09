@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { lockedMessage, rateLabel, redeemError, termLabel } from '../../lib/investment'
+import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 import { useRefreshInvestments } from './hooks'
 
@@ -105,7 +106,7 @@ export function InvestmentDetailPage() {
                 {error && <Alert tone="error">{error}</Alert>}
                 {done && <Alert tone="success">{done}</Alert>}
                 <Field label="Valor a resgatar (R$)" htmlFor="redeem" error={fieldError ?? undefined} hint="Líquido, já descontado o IR. Deixe em branco para resgatar tudo; o que sobrar continua rendendo.">
-                  <Input id="redeem" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(e.target.value); setFieldError(null) }} />
+                  <Input id="redeem" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!fieldError} onChange={(e) => { setAmount(sanitizeAmount(e.target.value)); setFieldError(null) }} />
                 </Field>
                 <div><Button type="submit" loading={submitting}>{amount.trim() ? 'Resgatar este valor' : 'Resgatar tudo'}</Button></div>
               </form>

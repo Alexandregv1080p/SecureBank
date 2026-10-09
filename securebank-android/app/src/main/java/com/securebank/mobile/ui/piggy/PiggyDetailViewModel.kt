@@ -75,18 +75,23 @@ class PiggyDetailViewModel(
     private fun goalText(p: Piggy) = p.goal?.amount?.replace('.', ',').orEmpty()
 
     fun onAmount(raw: String) = _state.update {
-        it.copy(amount = raw.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null, done = null)
+        it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(raw), amountError = null, error = null, done = null)
     }
 
     fun onEditName(v: String) = _state.update { it.copy(editName = v.take(PiggyValidation.NAME_MAX + 5), editError = null, done = null) }
-    fun onEditGoal(v: String) = _state.update { it.copy(editGoal = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, editError = null, done = null) }
+    fun onEditGoal(v: String) = _state.update { it.copy(editGoal = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), editError = null, done = null) }
 
     fun submit(action: PiggyAction) {
         val s = _state.value
         if (s.loading) return
         val value = Money.parse(s.amount)
         if (value == null) {
-            _state.update { it.copy(amountError = OperationValidation.AMOUNT_MESSAGE) }
+            _state.update { it.copy(amountError = com.securebank.mobile.core.util.Validation.amountIssue(s.amount) ?: OperationValidation.AMOUNT_MESSAGE) }
+            return
+        }
+        val onPiggy = (s.piggy as? Load.Ready)?.value?.balance?.amount
+        if (action == PiggyAction.REDEEM && onPiggy != null && value.toBigDecimal() > onPiggy.toBigDecimal()) {
+            _state.update { it.copy(amountError = "O valor passa do que há no porquinho (${Money.format(onPiggy)})") }
             return
         }
         run {
@@ -108,7 +113,7 @@ class PiggyDetailViewModel(
             return
         }
         if (s.editGoal.isNotBlank() && Money.parse(s.editGoal) == null) {
-            _state.update { it.copy(editError = OperationValidation.AMOUNT_MESSAGE) }
+            _state.update { it.copy(editError = com.securebank.mobile.core.util.Validation.amountIssue(s.editGoal)) }
             return
         }
         run {

@@ -14,7 +14,14 @@ object OperationValidation {
 
     fun digits(value: String): String = value.filter { it.isDigit() }
 
-    fun amount(input: String): String? = if (Money.parse(input) == null) AMOUNT_MESSAGE else null
+    fun amount(input: String): String? = Validation.amountIssue(input)
+
+    /** Valor válido e, havendo conta e limite carregados, dentro do saldo e do limite (o servidor confere de novo). */
+    fun amountFor(amount: String, source: Account?, limit: LimitUsage?): String? {
+        Validation.amountIssue(amount)?.let { return it }
+        val value = Money.parse(amount) ?: return null
+        return source?.let { Validation.balanceIssue(value, it.balance.amount) } ?: Validation.limitIssue(value, limit)
+    }
 
     fun transfer(
         sourceId: String?,
@@ -43,10 +50,17 @@ object OperationValidation {
         if (description.length > 140) put(TransferField.Description, "No máximo 140 caracteres")
     }
 
-    fun payment(accountId: String?, barcode: String, amount: String, description: String): Map<PaymentField, String> = buildMap {
+    fun payment(
+        accountId: String?,
+        barcode: String,
+        amount: String,
+        description: String,
+        source: Account? = null,
+        limit: LimitUsage? = null,
+    ): Map<PaymentField, String> = buildMap {
         if (accountId.isNullOrEmpty()) put(PaymentField.Account, "Escolha a conta")
         if (digits(barcode).length !in listOf(44, 47, 48)) put(PaymentField.Barcode, "O código tem 44, 47 ou 48 dígitos")
-        amount(amount)?.let { put(PaymentField.Amount, it) }
+        amountFor(amount, source, limit)?.let { put(PaymentField.Amount, it) }
         if (description.length > 140) put(PaymentField.Description, "No máximo 140 caracteres")
     }
 }

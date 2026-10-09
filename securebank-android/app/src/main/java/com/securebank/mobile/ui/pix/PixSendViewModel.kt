@@ -57,6 +57,8 @@ data class PixSendState(
     val dateInput: String = "",
     val dateError: String? = null,
     val scheduled: PixScheduleDto? = null,
+    /** Limite do Pix da conta de origem (mostrado e conferido antes de revisar). */
+    val limit: com.securebank.mobile.core.network.LimitUsage? = null,
 )
 
 /** Enviar Pix: chave (ou copia-e-cola) → consulta mascarada → valor → revisão → (biometria na tela) → comprovante. */
@@ -78,6 +80,7 @@ class PixSendViewModel(
                 val load = accounts.toLoad()
                 s.copy(accounts = load, sourceId = s.sourceId ?: (load as? Load.Ready)?.value?.singleOrNull()?.id)
             }
+            _state.value.sourceId?.let { loadLimit(it) }
         }
         viewModelScope.launch {
             val history = attempt { pix.history(0, 20) }
@@ -89,8 +92,18 @@ class PixSendViewModel(
     }
 
     fun onKeyInput(v: String) = _state.update { it.copy(keyInput = v, keyError = null, error = null) }
-    fun onSource(id: String) = _state.update { it.copy(sourceId = id, errors = it.errors - PixField.Source) }
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, errors = it.errors - PixField.Amount, error = null) }
+    fun onSource(id: String) {
+        _state.update { it.copy(sourceId = id, limit = null, errors = it.errors - PixField.Source - PixField.Amount) }
+        loadLimit(id)
+    }
+
+    private fun loadLimit(accountId: String) {
+        viewModelScope.launch {
+            val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "PIX" }
+            _state.update { if (it.sourceId == accountId) it.copy(limit = limit) else it }
+        }
+    }
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), errors = it.errors - PixField.Amount, error = null) }
     fun onMessage(v: String) = _state.update { it.copy(message = v.take(PixValidation.MESSAGE_MAX + 5), errors = it.errors - PixField.Message) }
 
     /** Texto lido do QR code pela câmera. Conteúdo NÃO confiável: segue o mesmo caminho de um código colado (CRC, formato, consulta). */
@@ -166,7 +179,11 @@ class PixSendViewModel(
 
     fun review() {
         val s = _state.value
-        val errors = PixValidation.send(s.sourceId, s.amount, s.message)
+        val source = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.sourceId }
+        // agendado: o dinheiro só sai na data, então saldo e o que resta hoje não valem agora; o limite por operação vale sempre
+        val scheduled = s.scheduleOn && s.charge == null
+        val limit = if (scheduled) s.limit?.copy(remainingToday = s.limit.perOperation) else s.limit
+        val errors = PixValidation.send(s.sourceId, s.amount, s.message, if (scheduled) null else source, limit)
         val dateError = if (s.scheduleOn && s.charge == null) PixValidation.scheduleDateError(PixValidation.parseDate(s.dateInput), today()) else null
         _state.update {
             if (errors.isEmpty() && dateError == null) it.copy(step = PixSendStep.Review, errors = emptyMap(), dateError = null)

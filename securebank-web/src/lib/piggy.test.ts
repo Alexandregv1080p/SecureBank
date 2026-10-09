@@ -29,7 +29,7 @@ describe('guardar e resgatar', () => {
     expect(moveError('50,00', '50.00')).toBeNull()
     expect(moveError('50,01', '50.00')).toMatch(/passa/)
     expect(moveError('0', '50.00')).toMatch(/maior que zero/)
-    expect(moveError('abc')).toMatch(/maior que zero/)
+    expect(moveError('abc')).toMatch(/Use só números/)
     expect(moveError('0,01', '0.00')).toMatch(/passa/)
   })
 })

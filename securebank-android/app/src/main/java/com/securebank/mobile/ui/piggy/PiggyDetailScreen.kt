@@ -59,7 +59,7 @@ fun PiggyDetailScreen(viewModel: PiggyDetailViewModel, onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Guardar ou resgatar", style = MaterialTheme.typography.titleMedium)
                         SbTextField(
-                            "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError,
+                            "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                             keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, enabled = !s.loading,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -80,7 +80,7 @@ fun PiggyDetailScreen(viewModel: PiggyDetailViewModel, onBack: () -> Unit) {
                         s.editError?.let { Banner(it) }
                         SbTextField("Nome", s.editName, viewModel::onEditName, enabled = !s.loading)
                         SbTextField(
-                            "Meta (R$)", s.editGoal, viewModel::onEditGoal, keyboardType = KeyboardType.Decimal,
+                            "Meta (R$)", s.editGoal, viewModel::onEditGoal, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal,
                             hint = "Em branco = sem meta", enabled = !s.loading,
                         )
                         PrimaryButton("Salvar alterações", onClick = viewModel::saveEdits, loading = s.loading)

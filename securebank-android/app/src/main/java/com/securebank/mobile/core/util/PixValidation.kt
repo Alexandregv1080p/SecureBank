@@ -11,9 +11,15 @@ object PixValidation {
 
     fun keyError(input: String): String? = if (input.isBlank()) "Informe a chave Pix ou cole o código" else null
 
-    fun send(sourceId: String?, amount: String, message: String): Map<PixField, String> = buildMap {
+    fun send(
+        sourceId: String?,
+        amount: String,
+        message: String,
+        source: com.securebank.mobile.core.network.Account? = null,
+        limit: com.securebank.mobile.core.network.LimitUsage? = null,
+    ): Map<PixField, String> = buildMap {
         if (sourceId.isNullOrEmpty()) put(PixField.Source, "Escolha a conta")
-        OperationValidation.amount(amount)?.let { put(PixField.Amount, it) }
+        OperationValidation.amountFor(amount, source, limit)?.let { put(PixField.Amount, it) }
         if (message.length > MESSAGE_MAX) put(PixField.Message, "No máximo $MESSAGE_MAX caracteres")
     }
 
@@ -37,7 +43,8 @@ object PixValidation {
 
     /** Quanto se pode devolver: positivo e no máximo o que ainda resta (o servidor confere de novo). */
     fun refundAmountError(input: String, refundable: String): String? {
-        val parsed = Money.parse(input) ?: return OperationValidation.AMOUNT_MESSAGE
+        Validation.amountIssue(input)?.let { return it }
+        val parsed = Money.parse(input) ?: return null
         val max = refundable.toBigDecimalOrNull() ?: return null
         return if (parsed.toBigDecimal() > max) "O valor passa do que ainda pode ser devolvido (${Money.format(refundable)})" else null
     }

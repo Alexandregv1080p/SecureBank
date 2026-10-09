@@ -1,6 +1,9 @@
 package com.securebank.mobile.core.util
 
+import com.securebank.mobile.core.network.Account
 import com.securebank.mobile.core.network.ApiError
+import com.securebank.mobile.core.network.LimitUsage
+import com.securebank.mobile.core.network.Money as ApiMoney
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -92,7 +95,31 @@ class OperationTest {
 
     @Test
     fun amountMessageIsSharedByAllForms() {
-        assertEquals(OperationValidation.AMOUNT_MESSAGE, OperationValidation.amount("0"))
+        assertEquals("O valor deve ser maior que zero", OperationValidation.amount("0"))
+        assertEquals("Informe o valor", OperationValidation.amount(""))
         assertEquals(null, OperationValidation.amount("1.234,56"))
+    }
+
+    private val source = Account("a1", "0001", "100048-9", "CHECKING", "ACTIVE", ApiMoney("300.00", "BRL"), "2026-10-01T10:00:00Z")
+    private fun limit(per: String, remaining: String) =
+        LimitUsage("PAYMENT", ApiMoney(per, "BRL"), ApiMoney("5000.00", "BRL"), ApiMoney("0.00", "BRL"), ApiMoney(remaining, "BRL"))
+
+    @Test
+    fun paymentsAndPixCheckBalanceAndLimitBeforeAskingForTheBiometric() {
+        val ok44 = "1".repeat(44)
+        assertTrue(OperationValidation.payment("a1", ok44, "300", "", source, limit("1000.00", "1000.00")).isEmpty())
+        assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "300,01", "", source, null).keys) // saldo
+        assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "200", "", source, limit("100.00", "1000.00")).keys) // por operação
+        assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "200", "", source, limit("1000.00", "150.00")).keys) // restante hoje
+        assertTrue(PixValidation.send("a1", "300", "", source, limit("1000.00", "1000.00")).isEmpty())
+        assertEquals(setOf(PixField.Amount), PixValidation.send("a1", "300,01", "", source, null).keys)
+        // sem conta nem limite carregados, o servidor decide
+        assertTrue(PixValidation.send("a1", "99999", "").isEmpty())
+    }
+
+    @Test
+    fun theLimitHintNeedsALoadedLimit() {
+        assertEquals(null, Validation.limitHint(null))
+        assertTrue(Validation.limitHint(limit("1000.00", "250.00"))!!.contains("250,00"))
     }
 }

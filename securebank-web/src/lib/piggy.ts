@@ -1,4 +1,5 @@
 import { parseAmount } from './money'
+import { amountIssue } from './validation'
 
 export const NAME_MAX = 40
 export const MAX_ACTIVE = 20
@@ -14,13 +15,13 @@ export function nameError(input: string): string | null {
 /** Meta é opcional; se vier, tem que ser um valor positivo com até 2 casas. */
 export function goalError(input: string): string | null {
   if (!input.trim()) return null
-  return parseAmount(input) === null ? 'Informe um valor maior que zero, com até 2 casas decimais' : null
+  return parseAmount(input) === null ? amountIssue(input) : null
 }
 
 /** Quanto guardar/resgatar: positivo e, quando há limite (saldo da conta ou do porquinho), não maior que ele. */
 export function moveError(input: string, available?: string): string | null {
   const parsed = parseAmount(input)
-  if (parsed === null) return 'Informe um valor maior que zero, com até 2 casas decimais'
+  if (parsed === null) return amountIssue(input)
   if (available !== undefined && Math.round(Number(parsed) * 100) > Math.round(Number(available) * 100)) return 'O valor passa do saldo disponível'
   return null
 }

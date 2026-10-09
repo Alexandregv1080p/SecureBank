@@ -241,6 +241,31 @@ class CoreBankingApiIT {
     }
 
     @Test
+    void openingAnAccountWithAnIdempotencyKeyNeverCreatesTwoAndTheKeyIsOptional() throws Exception {
+        String alice = customer();
+        String key = "open-" + UUID.randomUUID();
+        String first = read(mvc.perform(as(alice, post("/api/v1/accounts")).header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"SAVINGS\"}"))
+                .andExpect(status().isCreated()).andReturn(), "$.id");
+        // o toque duplo (ou a nova tentativa de rede) devolve a MESMA conta
+        MvcResult again = mvc.perform(as(alice, post("/api/v1/accounts")).header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"SAVINGS\"}"))
+                .andExpect(status().isCreated()).andExpect(header().string("Idempotency-Replayed", "true")).andReturn();
+        assertThat(read(again, "$.id")).isEqualTo(first);
+        mvc.perform(as(alice, get("/api/v1/accounts"))).andExpect(jsonPath("$", hasSize(1)));
+
+        // a mesma chave com outro pedido é recusada
+        mvc.perform(as(alice, post("/api/v1/accounts")).header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"CHECKING\"}"))
+                .andExpect(status().isUnprocessableEntity());
+
+        // sem a chave continua funcionando, como antes
+        mvc.perform(as(alice, post("/api/v1/accounts")).contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"CHECKING\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(as(alice, get("/api/v1/accounts"))).andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
     void destinationLookupShowsOnlyMaskedDataSoThePayerCanConfirmWhoReceives() throws Exception {
         String alice = customer();
         String bob = customer();

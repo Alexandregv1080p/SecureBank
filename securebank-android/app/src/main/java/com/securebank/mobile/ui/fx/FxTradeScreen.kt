@@ -1,5 +1,7 @@
 package com.securebank.mobile.ui.fx
 
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,7 +63,9 @@ fun FxTradeScreen(container: AppContainer, viewModel: FxTradeViewModel, currency
         when (val rate = s.rate) {
             Load.Loading -> Skeleton(160.dp)
             is Load.Failed -> ErrorState(rate.message, onRetry = viewModel::load)
-            is Load.Ready -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            is Load.Ready -> if (s.step == FxStep.Review) {
+                Review(s, viewModel, currency, rate.value, onConfirm = { confirm { viewModel.confirm() } })
+            } else Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 val r = rate.value
                 Panel {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -91,9 +95,67 @@ fun FxTradeScreen(container: AppContainer, viewModel: FxTradeViewModel, currency
                     )
                 }
                 s.error?.let { Banner(it) }
-                PrimaryButton(if (buying) "Comprar" else "Vender", onClick = { if (viewModel.validate()) confirm { viewModel.confirm() } }, loading = s.loading)
+                PrimaryButton("Revisar", onClick = viewModel::review, loading = s.loading)
                 TextButton(onClick = onBack, enabled = !s.loading) { Text("Cancelar") }
             }
         }
+    }
+}
+
+/** Revisão: cotação conferida de novo, total, saldo e carteira depois; a cotação vale [QUOTE_SECONDS] s e depois é conferida outra vez. */
+@Composable
+private fun Review(s: FxTradeState, vm: FxTradeViewModel, currency: String, rate: com.securebank.mobile.core.network.FxRate, onConfirm: () -> Unit) {
+    val buying = vm.buying
+    val value = Money.parse(s.amount)
+    val brl = vm.estimate(s)
+    val account = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.accountId }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Confirme a operação", style = MaterialTheme.typography.titleMedium)
+        s.notice?.let { Banner(it, isError = false) }
+        Panel {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                if (value != null) FxReviewRow(if (buying) "Você compra" else "Você vende") { MoneyText(FxValidation.format(currency, value), style = MaterialTheme.typography.titleLarge) }
+                FxReviewRow("Cotação") {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("R$ ${FxValidation.rateLabel(s.reviewRate.orEmpty())} por $currency", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "comercial R$ ${FxValidation.rateLabel(rate.mid)} · spread de ${rate.spreadPercent.replace('.', ',')}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (brl != null) FxReviewRow(if (buying) "Você paga" else "Você recebe") { MoneyText(Money.format(brl), style = MaterialTheme.typography.titleLarge) }
+                if (account != null) {
+                    FxReviewRow(if (buying) "Sai da conta" else "Entra na conta") { Text(account.accountNumber, style = MaterialTheme.typography.bodyMedium) }
+                    if (brl != null) {
+                        val before = java.math.BigDecimal(account.balance.amount)
+                        val after = if (buying) before.subtract(java.math.BigDecimal(brl)) else before.add(java.math.BigDecimal(brl))
+                        FxReviewRow("Saldo depois") { MoneyText(Money.format(after.toPlainString()), style = MaterialTheme.typography.bodyMedium) }
+                    }
+                }
+                if (value != null) {
+                    val wallet = java.math.BigDecimal(s.walletBalance)
+                    val after = if (buying) wallet.add(java.math.BigDecimal(value)) else wallet.subtract(java.math.BigDecimal(value))
+                    FxReviewRow("Carteira depois") { MoneyText(FxValidation.format(currency, after.toPlainString()), style = MaterialTheme.typography.bodyMedium) }
+                }
+            }
+        }
+        Text(
+            "Cotação válida por mais ${s.secondsLeft} s; depois conferimos de novo. Se ela mudar antes de você confirmar, a operação é recusada.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        s.error?.let { Banner(it) }
+        PrimaryButton(if (buying) "Confirmar compra" else "Confirmar venda", onClick = onConfirm, loading = s.loading)
+        OutlinedButton(onClick = vm::backToForm, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Editar") }
+    }
+}
+
+@Composable
+private fun FxReviewRow(label: String, value: @Composable () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        value()
     }
 }

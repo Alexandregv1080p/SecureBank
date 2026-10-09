@@ -7,7 +7,8 @@ export const bankingApi = {
   me: () => api<Customer>('/customers/me'),
   accounts: () => api<Account[]>('/accounts'),
   account: (id: string) => api<Account>(`/accounts/${id}`),
-  openAccount: (type: 'CHECKING' | 'SAVINGS') => api<Account>('/accounts', { method: 'POST', body: { type } }),
+  openAccount: (type: 'CHECKING' | 'SAVINGS', key?: string) =>
+    api<Account>('/accounts', { method: 'POST', body: { type }, headers: key ? idem(key) : undefined }),
   limits: (id: string) => api<LimitUsage[]>(`/accounts/${id}/limits`),
   statement: (id: string, page: number, from?: string, to?: string) => {
     const q = new URLSearchParams({ page: String(page), size: '10' })

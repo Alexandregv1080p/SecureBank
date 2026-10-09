@@ -18,13 +18,16 @@ data class AccountsState(
     val accounts: Load<List<Account>> = Load.Loading,
     val newType: String = "CHECKING",
     val opening: Boolean = false,
-    val openedNumber: String? = null,
+    /** A conta recém-aberta (a tela mostra o resumo com agência, número e limites iniciais). */
+    val opened: Account? = null,
+    val openedLimits: Load<List<com.securebank.mobile.core.network.LimitUsage>> = Load.Loading,
     val openError: String? = null,
 )
 
 class AccountsViewModel(private val banking: BankingRepository) : ViewModel() {
     private val _state = MutableStateFlow(AccountsState())
     val state: StateFlow<AccountsState> = _state.asStateFlow()
+    private val intent = com.securebank.mobile.core.util.IdempotentIntent()
 
     init {
         load()
@@ -39,17 +42,21 @@ class AccountsViewModel(private val banking: BankingRepository) : ViewModel() {
         }
     }
 
-    fun onType(type: String) = _state.update { it.copy(newType = type, openedNumber = null, openError = null) }
+    fun onType(type: String) = _state.update { it.copy(newType = type, openError = null) }
+
+    fun openAnother() = _state.update { it.copy(opened = null, openError = null) }
 
     fun open() {
         val s = _state.value
         if (s.opening) return
-        _state.update { it.copy(opening = true, openError = null, openedNumber = null) }
+        _state.update { it.copy(opening = true, openError = null) }
         viewModelScope.launch {
-            val result = attempt { banking.openAccount(s.newType) }
+            val result = attempt { intent.run(s.newType) { key -> banking.openAccount(s.newType, key) } }
             result.onSuccess { account ->
-                _state.update { it.copy(opening = false, openedNumber = account.accountNumber) }
+                _state.update { it.copy(opening = false, opened = account, openedLimits = Load.Loading) }
                 load()
+                val limits = attempt { banking.limits(account.id) }
+                _state.update { it.copy(openedLimits = limits.toLoad()) }
             }.onFailure { e ->
                 _state.update { it.copy(opening = false, openError = messageFor(e)) }
             }

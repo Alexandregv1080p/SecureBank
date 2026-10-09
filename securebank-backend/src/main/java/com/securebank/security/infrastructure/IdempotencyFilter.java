@@ -44,6 +44,11 @@ class IdempotencyFilter extends OncePerRequestFilter {
             "/api/v1/pix/transfers/*/refund", "/api/v1/pix/charges/*/pay",
             "/api/v1/pix/schedules", "/api/v1/investments", "/api/v1/investments/*/redeem",
             "/api/v1/fx/buy", "/api/v1/fx/sell");
+    /**
+     * Abrir conta: a chave é OPCIONAL (clientes antigos seguem sem ela), mas quem a manda não cria duas contas num toque
+     * duplo ou numa nova tentativa de rede.
+     */
+    private static final List<String> OPTIONAL_PATHS = List.of("/api/v1/accounts");
 
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final IdempotencyStore store;
@@ -60,12 +65,17 @@ class IdempotencyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!"POST".equals(request.getMethod()) || PATHS.stream().noneMatch(p -> matcher.match(p, request.getRequestURI()))
+        boolean optional = OPTIONAL_PATHS.stream().anyMatch(p -> matcher.match(p, request.getRequestURI()));
+        if (!"POST".equals(request.getMethod()) || (!optional && PATHS.stream().noneMatch(p -> matcher.match(p, request.getRequestURI())))
                 || auth == null || !auth.isAuthenticated()) {
             chain.doFilter(request, response);
             return;
         }
         String key = request.getHeader(HEADER);
+        if (optional && key == null) {
+            chain.doFilter(request, response);
+            return;
+        }
         try {
             new IdempotencyKey(key);
         } catch (InvalidValueException e) {

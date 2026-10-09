@@ -35,7 +35,7 @@ interface BankingApi {
 
     @GET("accounts") suspend fun accounts(): List<Account>
     @GET("accounts/{id}") suspend fun account(@Path("id") id: String): Account
-    @POST("accounts") suspend fun openAccount(@Body body: OpenAccountRequest): Account
+    @POST("accounts") suspend fun openAccount(@Body body: OpenAccountRequest, @Header("Idempotency-Key") key: String? = null): Account
     @GET("accounts/{id}/limits") suspend fun limits(@Path("id") id: String): List<LimitUsage>
 
     @GET("accounts/{id}/statement")

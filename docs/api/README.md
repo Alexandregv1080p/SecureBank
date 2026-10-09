@@ -33,7 +33,7 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | Método e rota                           | O que faz                                                        |
 | --------------------------------------- | ---------------------------------------------------------------- |
 | `GET /customers/me`, `PATCH /customers/me` | Perfil (CPF mascarado) e atualização parcial de e-mail/telefone |
-| `POST /accounts`                        | Abre conta (`CHECKING`/`SAVINGS`) e cria os limites padrão         |
+| `POST /accounts`                        | Abre conta (`CHECKING`/`SAVINGS`) e cria os limites padrão `Idempotency-Key` é **opcional** aqui: com ela, um toque duplo ou nova tentativa devolve a mesma conta (`Idempotency-Replayed: true`) |
 | `GET /accounts`, `GET /accounts/{id}`   | Contas do cliente                                                 |
 | `GET /accounts/{id}/balance`            | Saldo                                                             |
 | `GET /accounts/{id}/statement`          | Extrato paginado (`from`, `to`, `category`, `direction`, `page`, `size ≤ 100`), mais recente primeiro. Categorias (derivadas do tipo): `CASH` (depósito/saque), `TRANSFERS`, `PAYMENTS` (pagamento/estorno), `PIX` (inclui devoluções), `SAVINGS` (porquinhos), `INVESTMENTS`, `FX` (câmbio); `direction`: `CREDIT`/`DEBIT` |

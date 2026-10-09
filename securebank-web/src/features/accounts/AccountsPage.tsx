@@ -1,18 +1,13 @@
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { bankingApi } from '../../services/banking'
 import { formatBRL } from '../../lib/money'
 import { accountLabel, accountTypeLabel } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
-import { Alert, Badge, Button, EmptyState, ErrorState, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
-import { useAccounts, useRefreshMoney } from './hooks'
+import { Badge, EmptyState, ErrorState, PageHeader, Skeleton } from '../../components/ui'
+import { useAccounts } from './hooks'
+import { OpenAccount } from './OpenAccount'
 
 export function AccountsPage() {
   const accounts = useAccounts()
-  const refresh = useRefreshMoney()
-  const [type, setType] = useState<'CHECKING' | 'SAVINGS'>('CHECKING')
-  const open = useMutation({ mutationFn: () => bankingApi.openAccount(type), onSuccess: refresh })
 
   return (
     <>
@@ -41,22 +36,7 @@ export function AccountsPage() {
       )}
 
       <div className="mt-8 max-w-md">
-        <Panel title="Abrir nova conta">
-          <div className="flex flex-col gap-4">
-            {open.isError && <Alert tone="error">{messageFor(open.error)}</Alert>}
-            {open.isSuccess && <Alert tone="success">Conta {open.data.accountNumber} aberta.</Alert>}
-            <label htmlFor="type" className="text-sm font-medium">
-              Tipo de conta
-            </label>
-            <Select id="type" value={type} onChange={(e) => setType(e.target.value as 'CHECKING' | 'SAVINGS')}>
-              <option value="CHECKING">Conta corrente</option>
-              <option value="SAVINGS">Poupança</option>
-            </Select>
-            <Button loading={open.isPending} onClick={() => open.mutate()}>
-              Abrir conta
-            </Button>
-          </div>
-        </Panel>
+        <OpenAccount />
       </div>
     </>
   )

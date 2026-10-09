@@ -69,8 +69,9 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
         }
     }
 
-    suspend fun openAccount(type: String): Account =
-        apiCall(json) { api.openAccount(OpenAccountRequest(type)) }.also { _changes.tryEmit(Unit) }
+    /** [key] opcional: com ela, um toque duplo ou uma nova tentativa de rede devolve a MESMA conta em vez de abrir duas. */
+    suspend fun openAccount(type: String, key: String? = null): Account =
+        apiCall(json) { api.openAccount(OpenAccountRequest(type), key) }.also { _changes.tryEmit(Unit) }
 
     /** [key]: Idempotency-Key da intenção (ver IdempotentIntent). */
     suspend fun deposit(accountId: String, amount: String, key: String): Transaction =

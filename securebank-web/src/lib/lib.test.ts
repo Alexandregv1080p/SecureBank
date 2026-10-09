@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createIdempotency } from './idempotency'
-import { formatBRL, parseAmount, subtractAmounts } from './money'
+import { formatBRL, parseAmount, subtractAmounts, addAmounts } from './money'
 import { toE164BR } from './phone'
 
 describe('parseAmount', () => {
@@ -52,5 +52,12 @@ describe('subtractAmounts', () => {
     expect(subtractAmounts('1000.00', '250.50')).toBe('749.50')
     expect(subtractAmounts('0.30', '0.10')).toBe('0.20')
     expect(subtractAmounts('10.00', '10.00')).toBe('0.00')
+  })
+})
+
+describe('addAmounts', () => {
+  it('soma em centavos, sem erro de ponto flutuante', () => {
+    expect(addAmounts('0.10', '0.20')).toBe('0.30')
+    expect(addAmounts('1000.00', '250.50')).toBe('1250.50')
   })
 })

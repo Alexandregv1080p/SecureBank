@@ -185,3 +185,7 @@ As regras de campo ficam em `core/util/Validation.kt` (espelho de `securebank-we
 ## Transferir e depositar: confirmação e comprovante
 
 Transferir pergunta ao servidor quem recebe (`GET /transfers/destination`) antes de abrir a revisão: a revisão mostra nome e CPF mascarados, banco, agência e conta, e o saldo depois da operação; conta inexistente ou indisponível vira erro no campo. O comprovante (`ui/components/Receipt.kt`) traz de/para, data e identificador, com "Compartilhar comprovante" (texto simples para qualquer app). Depositar e sacar mostram o mesmo comprovante, com o saldo depois vindo do servidor. No web, o comprovante é imprimível/PDF.
+
+## Abrir conta e Câmbio
+
+Abrir conta explica os dois tipos (hoje funcionam do mesmo jeito, com os mesmos limites iniciais; para render, Investimentos), envia `Idempotency-Key` (um toque duplo devolve a mesma conta) e mostra o resumo com agência, número (copiar) e os limites iniciais vindos do servidor. Câmbio ganhou revisão: a cotação é conferida de novo ao revisar e a cada 30 s (avisando se mudou), com total, saldo depois e carteira depois; a cotação enviada ao servidor é a da revisão, e o servidor continua recusando se ela mudar (`FX_RATE_CHANGED`). O mesmo vale no web.

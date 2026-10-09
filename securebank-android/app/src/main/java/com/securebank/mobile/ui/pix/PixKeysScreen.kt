@@ -33,7 +33,7 @@ import com.securebank.mobile.ui.components.Panel
 import com.securebank.mobile.ui.components.Skeleton
 
 @Composable
-fun PixKeysScreen(viewModel: PixKeysViewModel, onBack: () -> Unit) {
+fun PixKeysScreen(viewModel: PixKeysViewModel) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     var removing by remember { mutableStateOf<PixKey?>(null) }
 
@@ -41,7 +41,6 @@ fun PixKeysScreen(viewModel: PixKeysViewModel, onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Pix") }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Minhas chaves", style = MaterialTheme.typography.headlineSmall)
             Text(

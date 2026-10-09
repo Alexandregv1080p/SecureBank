@@ -1,6 +1,7 @@
 package com.securebank.mobile.ui.auth
 
 import androidx.lifecycle.ViewModel
+import com.securebank.mobile.core.util.Validation
 import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.util.Phone
@@ -34,9 +35,9 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
         val cleared = it.errors - field
         when (field) {
             RegisterField.Name -> it.copy(name = value, errors = cleared, error = null)
-            RegisterField.Document -> it.copy(document = value.filter { c -> c.isDigit() }.take(11), errors = cleared, error = null)
+            RegisterField.Document -> it.copy(document = Validation.maskCpf(value), errors = cleared, error = null)
             RegisterField.Email -> it.copy(email = value, errors = cleared, error = null)
-            RegisterField.Phone -> it.copy(phone = value, errors = cleared, error = null)
+            RegisterField.Phone -> it.copy(phone = Validation.maskPhone(value), errors = cleared, error = null)
             RegisterField.Password -> it.copy(password = value, errors = cleared, error = null)
             RegisterField.Confirm -> it.copy(confirm = value, errors = cleared, error = null)
         }
@@ -53,7 +54,7 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                auth.register(s.name, s.document, s.email, Phone.toE164BR(s.phone)!!, s.password)
+                auth.register(s.name.trim(), s.document.filter(Char::isDigit), s.email.trim(), Phone.toE164BR(s.phone)!!, s.password)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

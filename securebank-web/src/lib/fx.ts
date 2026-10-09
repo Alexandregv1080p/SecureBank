@@ -1,4 +1,5 @@
 import { formatBRL, parseAmount } from './money'
+import { amountIssue } from './validation'
 
 export const currencyName = (code: string) => ({ USD: 'Dólar americano', EUR: 'Euro' })[code] ?? code
 export const currencySymbol = (code: string) => ({ USD: 'US$', EUR: '€' })[code] ?? code
@@ -53,7 +54,7 @@ export function sellProceeds(amount: string, sellRate: string): string | null {
 /** Quantia positiva com até 2 casas; na venda, também não pode passar do que há na carteira. */
 export function amountError(input: string, available?: string): string | null {
   const parsed = parseAmount(input)
-  if (parsed === null) return 'Informe um valor maior que zero, com até 2 casas decimais'
+  if (parsed === null) return amountIssue(input)
   if (available !== undefined && cents(parsed) > cents(available)) return `Você tem só ${available.replace('.', ',')} na carteira`
   return null
 }

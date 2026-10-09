@@ -68,13 +68,13 @@ class OperationTest {
     // ---- validação
     @Test
     fun transferRules() {
-        assertTrue(OperationValidation.transfer("a1", "0001", "123456-7", "10,50", "").isEmpty())
-        assertEquals(setOf(TransferField.Source), OperationValidation.transfer(null, "0001", "123456-7", "10", "").keys)
-        assertEquals(setOf(TransferField.Branch), OperationValidation.transfer("a1", "001", "123456-7", "10", "").keys)
+        assertTrue(OperationValidation.transfer("a1", "0001", "123456-0", "10,50", "").isEmpty())
+        assertEquals(setOf(TransferField.Source), OperationValidation.transfer(null, "0001", "123456-0", "10", "").keys)
+        assertEquals(setOf(TransferField.Branch), OperationValidation.transfer("a1", "001", "123456-0", "10", "").keys)
         assertEquals(setOf(TransferField.Number), OperationValidation.transfer("a1", "0001", "1234567", "10", "").keys)
         assertEquals(setOf(TransferField.Number), OperationValidation.transfer("a1", "0001", "12345-7", "10", "").keys)
-        assertEquals(setOf(TransferField.Amount), OperationValidation.transfer("a1", "0001", "123456-7", "0", "").keys)
-        assertEquals(setOf(TransferField.Description), OperationValidation.transfer("a1", "0001", "123456-7", "10", "x".repeat(141)).keys)
+        assertEquals(setOf(TransferField.Amount), OperationValidation.transfer("a1", "0001", "123456-0", "0", "").keys)
+        assertEquals(setOf(TransferField.Description), OperationValidation.transfer("a1", "0001", "123456-0", "10", "x".repeat(141)).keys)
     }
 
     @Test

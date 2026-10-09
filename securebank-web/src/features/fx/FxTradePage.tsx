@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { CaretLeft } from '@phosphor-icons/react'
+import { bankingApi } from '../../services/banking'
 import { fxApi, type FxOperation } from '../../services/fx'
 import { ApiError } from '../../lib/api'
 import { createIdempotency } from '../../lib/idempotency'
 import { formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
 import { formatBRL, parseAmount } from '../../lib/money'
+import { balanceIssue, limitIssue, sanitizeAmount } from '../../lib/validation'
 import { amountError, buyCost, currencyName, formatForeign, rateLabel, sellProceeds } from '../../lib/fx'
 import { Alert, Button, EmptyState, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 import { useAccounts } from '../accounts/hooks'
@@ -36,13 +38,20 @@ export function FxTradePage() {
 
   const list = accounts.data ?? []
   const effectiveAccount = accountId || (list.length === 1 ? list[0].id : '')
+  const limits = useQuery({ queryKey: ['limits', effectiveAccount], queryFn: () => bankingApi.limits(effectiveAccount), enabled: !!effectiveAccount })
   const rate = rates.data?.find((r) => r.currency === code)
   const wallet = wallets.data?.find((w) => w.currency === code)?.balance.amount ?? '0.00'
   const applied = rate ? (buying ? rate.buyRate : rate.sellRate) : null
   const estimate = applied ? (buying ? buyCost(amount, applied) : sellProceeds(amount, applied)) : null
 
   async function confirm() {
-    const problem = amountError(amount, buying ? undefined : wallet)
+    const brlCost = buying && estimate ? estimate : null // o que sai da conta em reais
+    const problem =
+      amountError(amount, buying ? undefined : wallet) ??
+      (brlCost
+        ? balanceIssue(brlCost, list.find((a) => a.id === effectiveAccount)?.balance.amount ?? '0') ??
+          limitIssue(brlCost, limits.data?.find((l) => l.type === 'FX'))
+        : null)
     const accountProblem = effectiveAccount ? undefined : 'Escolha a conta'
     setErrors({ amount: problem ?? undefined, account: accountProblem })
     if (problem || accountProblem || !applied) return
@@ -107,7 +116,7 @@ export function FxTradePage() {
               error={errors.amount}
               hint={buying ? undefined : `Na carteira: ${formatForeign(code, wallet)}`}
             >
-              <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!errors.amount} onChange={(e) => { setAmount(e.target.value); setErrors({}) }} />
+              <Input id="amount" inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={amount} aria-invalid={!!errors.amount} onChange={(e) => { setAmount(sanitizeAmount(e.target.value)); setErrors({}) }} />
             </Field>
             {!buying && <div><Button type="button" variant="ghost" onClick={() => setAmount(wallet.replace('.', ','))}>Vender tudo</Button></div>}
             {estimate && <p className="text-lg font-medium">{buying ? 'Você paga' : 'Você recebe'} <span className="num">{formatBRL(estimate)}</span></p>}

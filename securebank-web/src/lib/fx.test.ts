@@ -44,7 +44,7 @@ describe('valores e textos', () => {
     expect(amountError('40', '40.00')).toBeNull()
     expect(amountError('40,01', '40.00')).toMatch(/Você tem só/)
     expect(amountError('0')).toMatch(/maior que zero/)
-    expect(amountError('1,234')).toMatch(/maior que zero/)
+    expect(amountError('1,234')).toMatch(/2 casas/)
   })
 
   it('mostra moeda, símbolo e cotação em português', () => {

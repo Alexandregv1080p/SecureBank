@@ -1,5 +1,8 @@
 package com.securebank.mobile.core.util
 
+import com.securebank.mobile.core.network.Account
+import com.securebank.mobile.core.network.LimitUsage
+
 enum class TransferField { Source, Branch, Number, Amount, Description }
 enum class PaymentField { Account, Barcode, Amount, Description }
 
@@ -19,11 +22,24 @@ object OperationValidation {
         number: String,
         amount: String,
         description: String,
+        source: Account? = null,
+        limit: LimitUsage? = null,
     ): Map<TransferField, String> = buildMap {
         if (sourceId.isNullOrEmpty()) put(TransferField.Source, "Escolha a conta de origem")
         if (!this@OperationValidation.branch.matches(branch)) put(TransferField.Branch, "A agência tem 4 dígitos")
-        if (!accountNumber.matches(number)) put(TransferField.Number, "Use o formato 123456-7")
-        amount(amount)?.let { put(TransferField.Amount, it) }
+        when {
+            !accountNumber.matches(number) -> put(TransferField.Number, "Use o formato 123456-0")
+            !Validation.accountNumberValid(number) -> put(TransferField.Number, "Número de conta inválido: confira o dígito depois do hífen")
+            source != null && Validation.sameAccount(source.branch, source.accountNumber, branch, number) ->
+                put(TransferField.Number, "Escolha uma conta diferente da de origem")
+        }
+        val amountProblem = Validation.amountIssue(amount)
+        if (amountProblem != null) {
+            put(TransferField.Amount, amountProblem)
+        } else {
+            val value = Money.parse(amount)!!
+            (source?.let { Validation.balanceIssue(value, it.balance.amount) } ?: Validation.limitIssue(value, limit))?.let { put(TransferField.Amount, it) }
+        }
         if (description.length > 140) put(TransferField.Description, "No máximo 140 caracteres")
     }
 

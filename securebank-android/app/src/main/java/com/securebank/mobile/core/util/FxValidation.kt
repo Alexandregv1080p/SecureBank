@@ -42,7 +42,8 @@ object FxValidation {
 
     /** Quantia positiva com até 2 casas. Na venda, também não pode passar do que há na carteira. */
     fun amountError(input: String, available: String? = null): String? {
-        val parsed = Money.parse(input) ?: return OperationValidation.AMOUNT_MESSAGE
+        Validation.amountIssue(input)?.let { return it }
+        val parsed = Money.parse(input) ?: return null
         val max = available?.toBigDecimalOrNull() ?: return null
         return if (parsed.toBigDecimal() > max) "Você tem só ${format("", available).trim()} na carteira" else null
     }

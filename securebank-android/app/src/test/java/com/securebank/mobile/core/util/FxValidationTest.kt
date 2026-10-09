@@ -26,7 +26,7 @@ class FxValidationTest {
         assertNotNull(FxValidation.amountError("1,234"))
         assertNull(FxValidation.amountError("40", "40.00"))
         assertNotNull(FxValidation.amountError("40,01", "40.00"))
-        assertEquals(OperationValidation.AMOUNT_MESSAGE, FxValidation.amountError("", "40.00"))
+        assertEquals("Informe o valor", FxValidation.amountError("", "40.00"))
     }
 
     @Test

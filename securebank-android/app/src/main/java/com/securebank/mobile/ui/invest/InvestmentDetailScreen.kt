@@ -35,7 +35,7 @@ import com.securebank.mobile.ui.components.Skeleton
 import com.securebank.mobile.ui.rememberIdentityConfirmation
 
 @Composable
-fun InvestmentDetailScreen(container: AppContainer, viewModel: InvestmentDetailViewModel, onBack: () -> Unit) {
+fun InvestmentDetailScreen(container: AppContainer, viewModel: InvestmentDetailViewModel) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val confirm = rememberIdentityConfirmation(container, "Confirme o resgate")
 
@@ -43,7 +43,6 @@ fun InvestmentDetailScreen(container: AppContainer, viewModel: InvestmentDetailV
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Investimentos") }
         when (val inv = s.investment) {
             Load.Loading -> Skeleton(192.dp)
             is Load.Failed -> ErrorState(inv.message, onRetry = viewModel::load)

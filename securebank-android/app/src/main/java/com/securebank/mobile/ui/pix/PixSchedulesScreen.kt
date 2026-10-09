@@ -29,11 +29,10 @@ import com.securebank.mobile.ui.components.Panel
 import com.securebank.mobile.ui.components.Skeleton
 
 @Composable
-fun PixSchedulesScreen(viewModel: PixSchedulesViewModel, onBack: () -> Unit) {
+fun PixSchedulesScreen(viewModel: PixSchedulesViewModel) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { TextButton(onClick = onBack) { Text("‹ Pix") } }
         item { Text("Pix agendados", style = MaterialTheme.typography.headlineSmall) }
         s.error?.let { item { Banner(it) } }
         when (val items = s.items) {

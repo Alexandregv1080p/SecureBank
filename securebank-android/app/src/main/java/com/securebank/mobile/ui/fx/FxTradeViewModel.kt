@@ -32,6 +32,8 @@ data class FxTradeState(
     val loading: Boolean = false,
     val error: String? = null,
     val done: FxOperation? = null,
+    /** Limite de câmbio da conta escolhida (a compra sai dela em reais). */
+    val limit: com.securebank.mobile.core.network.LimitUsage? = null,
 )
 
 /** Comprar ou vender uma moeda. Manda ao servidor a cotação que a pessoa VIU: se mudou, ele recusa e a tela mostra a nova. */
@@ -64,11 +66,23 @@ class FxTradeViewModel(
                     accountId = s.accountId ?: accounts.getOrNull()?.singleOrNull()?.id,
                 )
             }
+            _state.value.accountId?.let { loadLimit(it) }
         }
     }
 
-    fun onAccount(id: String) = _state.update { it.copy(accountId = id, error = null) }
-    fun onAmount(v: String) = _state.update { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, amountError = null, error = null) }
+    private fun loadLimit(accountId: String) {
+        viewModelScope.launch {
+            val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "FX" }
+            _state.update { if (it.accountId == accountId) it.copy(limit = limit) else it }
+        }
+    }
+
+    fun onAccount(id: String) {
+        _state.update { it.copy(accountId = id, limit = null, error = null) }
+        loadLimit(id)
+    }
+
+    fun onAmount(v: String) = _state.update { it.copy(amount = com.securebank.mobile.core.util.Validation.sanitizeAmount(v), amountError = null, error = null) }
     fun sellAll() = _state.update { it.copy(amount = it.walletBalance.replace('.', ','), amountError = null) }
 
     /** Cotação aplicada a esta operação (a que a pessoa está vendo). */
@@ -83,7 +97,16 @@ class FxTradeViewModel(
     /** Valida; a tela pede a biometria e só então chama [confirm]. */
     fun validate(): Boolean {
         val s = _state.value
-        val error = FxValidation.amountError(s.amount, if (buying) null else s.walletBalance)
+        var error = FxValidation.amountError(s.amount, if (buying) null else s.walletBalance)
+        if (error == null && buying) {
+            // a compra sai da conta em reais: confere saldo e limite de câmbio antes da biometria
+            val cost = estimate(s)
+            val account = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.accountId }
+            if (cost != null) {
+                error = account?.let { com.securebank.mobile.core.util.Validation.balanceIssue(cost, it.balance.amount) }
+                    ?: com.securebank.mobile.core.util.Validation.limitIssue(cost, s.limit)
+            }
+        }
         _state.update { it.copy(amountError = error, error = if (s.accountId == null) "Escolha a conta." else null) }
         return error == null && s.accountId != null
     }

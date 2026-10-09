@@ -58,7 +58,7 @@ import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, onDeposit: () -> Unit, onWithdraw: () -> Unit) {
+fun AccountDetailScreen(viewModel: AccountDetailViewModel, onDeposit: () -> Unit, onWithdraw: () -> Unit) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val statement = state.statement
     val context = LocalContext.current
@@ -79,7 +79,6 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onBack: () -> Unit, o
             contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item { TextButton(onClick = onBack) { Text("‹ Contas") } }
 
             when (val account = state.account) {
                 Load.Loading -> item { Skeleton(96.dp) }

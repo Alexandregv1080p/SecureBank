@@ -41,7 +41,7 @@ import com.securebank.mobile.ui.components.SbTextField
 import com.securebank.mobile.ui.components.Skeleton
 
 @Composable
-fun PixChargesScreen(viewModel: PixChargesViewModel, onBack: () -> Unit) {
+fun PixChargesScreen(viewModel: PixChargesViewModel) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
 
@@ -49,7 +49,6 @@ fun PixChargesScreen(viewModel: PixChargesViewModel, onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Pix") }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Cobrar", style = MaterialTheme.typography.headlineSmall)
             Text("Crie uma cobrança de valor fixo. O QR vale uma vez só e até a validade escolhida.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

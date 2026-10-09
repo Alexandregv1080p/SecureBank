@@ -54,7 +54,7 @@ export function AccountDetailPage() {
               </button>
             ))}
           </div>
-          <MoneyForm key={tab} accountId={id} kind={tab} />
+          <MoneyForm key={tab} accountId={id} kind={tab} balance={a?.balance.amount} limit={limits.data?.find((l) => l.type === 'WITHDRAW')} />
         </Panel>
 
         <Panel title="Limites de hoje">

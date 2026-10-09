@@ -25,7 +25,7 @@ import com.securebank.mobile.ui.components.Skeleton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PixHistoryScreen(viewModel: PixHistoryViewModel, onRefund: (String) -> Unit, onBack: () -> Unit) {
+fun PixHistoryScreen(viewModel: PixHistoryViewModel, onRefund: (String) -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
 
     PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.fillMaxSize()) {
@@ -34,7 +34,6 @@ fun PixHistoryScreen(viewModel: PixHistoryViewModel, onRefund: (String) -> Unit,
             contentPadding = PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item { TextButton(onClick = onBack) { Text("‹ Pix") } }
             item { Text("Histórico do Pix", style = MaterialTheme.typography.headlineSmall) }
             when {
                 s.loading -> item { Skeleton(192.dp) }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CheckCircle } from '@phosphor-icons/react'
@@ -10,14 +11,21 @@ import { formatBRL, parseAmount } from '../../lib/money'
 import { accountLabel, accountTypeLabel } from '../../lib/format'
 import { ApiError } from '../../lib/api'
 import { messageFor } from '../../lib/errors'
+import { accountNumberValid, amountIssue, balanceIssue, limitIssue, maskAccountNumber, sameAccount, sanitizeAmount, withMask } from '../../lib/validation'
 import { Alert, Button, EmptyState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { useAccounts, useRefreshMoney } from '../accounts/hooks'
 
 const schema = z.object({
   sourceAccountId: z.string().min(1, 'Escolha a conta de origem'),
   destinationBranch: z.string().regex(/^\d{4}$/, 'A agência tem 4 dígitos'),
-  destinationAccountNumber: z.string().regex(/^\d{6,12}-\d$/, 'Use o formato 123456-7'),
-  amount: z.string().refine((v) => parseAmount(v) !== null, 'Informe um valor maior que zero, com até 2 casas decimais'),
+  destinationAccountNumber: z
+    .string()
+    .regex(/^\d{6,12}-\d$/, 'Use o formato 123456-0')
+    .refine(accountNumberValid, 'Número de conta inválido: confira o dígito depois do hífen'),
+  amount: z.string().superRefine((v, ctx) => {
+    const m = amountIssue(v)
+    if (m) ctx.addIssue({ code: 'custom', message: m })
+  }),
   description: z.string().max(140, 'No máximo 140 caracteres').optional(),
 })
 type Values = z.infer<typeof schema>
@@ -35,6 +43,26 @@ export function TransferPage() {
     defaultValues: { sourceAccountId: '', destinationBranch: '0001', destinationAccountNumber: '', amount: '', description: '' },
   })
   const errors = form.formState.errors
+  const sourceId = useWatch({ control: form.control, name: 'sourceAccountId' })
+  const limits = useQuery({ queryKey: ['limits', sourceId], queryFn: () => bankingApi.limits(sourceId), enabled: !!sourceId })
+  const transferLimit = limits.data?.find((l) => l.type === 'TRANSFER')
+
+  /** Confere o que depende da conta de origem (mesma conta, saldo, limites) antes de abrir a revisão. */
+  function startReview(v: Values) {
+    const source = accounts.data?.find((a) => a.id === v.sourceAccountId)
+    const amount = parseAmount(v.amount)!
+    let ok = true
+    if (source && sameAccount(source, v.destinationBranch, v.destinationAccountNumber)) {
+      form.setError('destinationAccountNumber', { message: 'Escolha uma conta diferente da de origem' })
+      ok = false
+    }
+    const issue = (source ? balanceIssue(amount, source.balance.amount) : null) ?? limitIssue(amount, transferLimit)
+    if (issue) {
+      form.setError('amount', { message: issue })
+      ok = false
+    }
+    if (ok) setReview(v)
+  }
 
   async function confirm() {
     if (!review) return
@@ -108,7 +136,7 @@ export function TransferPage() {
             </div>
           </Panel>
         ) : (
-          <form onSubmit={form.handleSubmit((v) => setReview(v))} noValidate className="flex flex-col gap-5">
+          <form onSubmit={form.handleSubmit(startReview)} noValidate className="flex flex-col gap-5">
             <Field label="Conta de origem" htmlFor="source" error={errors.sourceAccountId?.message}>
               <Select id="source" aria-invalid={!!errors.sourceAccountId} {...form.register('sourceAccountId')}>
                 <option value="">Selecione</option>
@@ -124,11 +152,16 @@ export function TransferPage() {
                 <Input id="branch" inputMode="numeric" maxLength={4} className="num" aria-invalid={!!errors.destinationBranch} {...form.register('destinationBranch')} />
               </Field>
               <Field label="Conta de destino" htmlFor="number" error={errors.destinationAccountNumber?.message}>
-                <Input id="number" placeholder="123456-7" className="num" aria-invalid={!!errors.destinationAccountNumber} {...form.register('destinationAccountNumber')} />
+                <Input id="number" placeholder="123456-0" maxLength={14} className="num" aria-invalid={!!errors.destinationAccountNumber} {...withMask(form.register('destinationAccountNumber'), maskAccountNumber)} />
               </Field>
             </div>
-            <Field label="Valor (R$)" htmlFor="amount" error={errors.amount?.message}>
-              <Input id="amount" inputMode="decimal" placeholder="0,00" autoComplete="off" className="num" aria-invalid={!!errors.amount} {...form.register('amount')} />
+            <Field
+              label="Valor (R$)"
+              htmlFor="amount"
+              error={errors.amount?.message}
+              hint={transferLimit ? `Limite por operação ${formatBRL(transferLimit.perOperation.amount)} · restante hoje ${formatBRL(transferLimit.remainingToday.amount)}` : undefined}
+            >
+              <Input id="amount" inputMode="decimal" placeholder="0,00" autoComplete="off" className="num" aria-invalid={!!errors.amount} {...withMask(form.register('amount'), sanitizeAmount)} />
             </Field>
             <Field label="Descrição (opcional)" htmlFor="description" error={errors.description?.message}>
               <Input id="description" maxLength={140} {...form.register('description')} />

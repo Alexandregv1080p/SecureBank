@@ -3,6 +3,8 @@ package com.securebank.mobile.ui.money
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.Account
+import com.securebank.mobile.core.network.LimitUsage
+import com.securebank.mobile.core.util.Validation
 import com.securebank.mobile.core.network.TransferRequest
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.util.IdempotentIntent
@@ -30,6 +32,8 @@ data class TransferState(
     val number: String = "",
     val amount: String = "",
     val description: String = "",
+    /** Limite de transferência da conta de origem (mostrado e conferido antes de enviar). */
+    val limit: LimitUsage? = null,
     val errors: Map<TransferField, String> = emptyMap(),
     val loading: Boolean = false,
     val error: String? = null,
@@ -57,20 +61,32 @@ class TransferViewModel(private val banking: BankingRepository) : ViewModel() {
                 val only = (load as? Load.Ready)?.value?.singleOrNull()?.id
                 s.copy(accounts = load, sourceId = s.sourceId ?: only)
             }
+            _state.value.sourceId?.let { if (_state.value.limit == null) loadLimit(it) }
+        }
+    }
+
+    private fun loadLimit(accountId: String) {
+        viewModelScope.launch {
+            val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "TRANSFER" }
+            _state.update { if (it.sourceId == accountId) it.copy(limit = limit) else it }
         }
     }
 
     private fun edit(block: (TransferState) -> TransferState) = _state.update { block(it).copy(error = null) }
 
-    fun onSource(id: String) = edit { it.copy(sourceId = id, errors = it.errors - TransferField.Source) }
+    fun onSource(id: String) {
+        edit { it.copy(sourceId = id, limit = null, errors = it.errors - TransferField.Source - TransferField.Amount - TransferField.Number) }
+        loadLimit(id)
+    }
     fun onBranch(v: String) = edit { it.copy(branch = v.filter(Char::isDigit).take(4), errors = it.errors - TransferField.Branch) }
-    fun onNumber(v: String) = edit { it.copy(number = v.filter { c -> c.isDigit() || c == '-' }.take(14), errors = it.errors - TransferField.Number) }
-    fun onAmount(v: String) = edit { it.copy(amount = v.filter { c -> c.isDigit() || c == ',' || c == '.' }, errors = it.errors - TransferField.Amount) }
+    fun onNumber(v: String) = edit { it.copy(number = Validation.maskAccountNumber(v), errors = it.errors - TransferField.Number) }
+    fun onAmount(v: String) = edit { it.copy(amount = Validation.sanitizeAmount(v), errors = it.errors - TransferField.Amount) }
     fun onDescription(v: String) = edit { it.copy(description = v.take(140), errors = it.errors - TransferField.Description) }
 
     fun review() {
         val s = _state.value
-        val errors = OperationValidation.transfer(s.sourceId, s.branch, s.number, s.amount, s.description)
+        val source = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.sourceId }
+        val errors = OperationValidation.transfer(s.sourceId, s.branch, s.number, s.amount, s.description, source, s.limit)
         _state.update { if (errors.isEmpty()) it.copy(step = TransferStep.Review, errors = emptyMap()) else it.copy(errors = errors) }
     }
 

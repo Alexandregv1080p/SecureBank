@@ -1,6 +1,9 @@
 package com.securebank.mobile.ui.money
 
 import androidx.lifecycle.ViewModel
+import com.securebank.mobile.core.network.LimitUsage
+import com.securebank.mobile.core.util.Validation
+import com.securebank.mobile.ui.attempt
 import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.util.IdempotentIntent
@@ -22,6 +25,9 @@ data class MoneyState(
     val loading: Boolean = false,
     val error: String? = null,
     val done: String? = null,
+    /** Saldo e limite de saque (para conferir antes da biometria e mostrar na tela). */
+    val balance: String? = null,
+    val limit: LimitUsage? = null,
 )
 
 /** Depósito ou saque de uma conta. */
@@ -34,11 +40,18 @@ class MoneyViewModel(
     val state: StateFlow<MoneyState> = _state.asStateFlow()
     private val intent = IdempotentIntent()
 
+    init {
+        viewModelScope.launch {
+            val account = attempt { banking.account(accountId) }.getOrNull()
+            val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "WITHDRAW" }
+            _state.update { it.copy(balance = account?.balance?.amount, limit = limit) }
+        }
+    }
+
     private data class Payload(val accountId: String, val kind: MoneyKind, val value: String)
 
     fun onAmount(raw: String) {
-        // só dígitos, vírgula e ponto: o que é digitável em valor em reais
-        val value = raw.filter { it.isDigit() || it == ',' || it == '.' }
+        val value = Validation.sanitizeAmount(raw)
         _state.update { it.copy(amount = value, amountError = null, error = null, done = null) }
     }
 
@@ -46,8 +59,10 @@ class MoneyViewModel(
         val s = _state.value
         if (s.loading) return
         val value = Money.parse(s.amount)
-        if (value == null) {
-            _state.update { it.copy(amountError = OperationValidation.AMOUNT_MESSAGE) }
+        val issue = Validation.amountIssue(s.amount)
+            ?: if (kind == MoneyKind.WITHDRAW) value?.let { v -> s.balance?.let { Validation.balanceIssue(v, it) } ?: Validation.limitIssue(v, s.limit) } else null
+        if (value == null || issue != null) {
+            _state.update { it.copy(amountError = issue ?: OperationValidation.AMOUNT_MESSAGE) }
             return
         }
         _state.update { it.copy(loading = true, error = null, done = null) }

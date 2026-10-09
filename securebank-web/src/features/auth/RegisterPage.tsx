@@ -6,18 +6,29 @@ import { Link, Navigate, useNavigate } from 'react-router'
 import { login, register } from '../../services/auth'
 import { messageFor } from '../../lib/errors'
 import { toE164BR } from '../../lib/phone'
+import { cpfValid, fullNameIssue, maskCpf, maskPhone, passwordIssue, withMask } from '../../lib/validation'
 import { useAuth } from '../../stores/auth'
 import { Alert, Button, Field, Input } from '../../components/ui'
 import { AuthLayout } from './AuthLayout'
 
 const schema = z
   .object({
-    name: z.string().trim().min(2, 'Informe o nome completo').max(120),
-    document: z.string().refine((v) => v.replace(/\D/g, '').length === 11, 'O CPF tem 11 dígitos'),
+    name: z.string().superRefine((v, ctx) => {
+      const m = fullNameIssue(v)
+      if (m) ctx.addIssue({ code: 'custom', message: m })
+    }),
+    document: z.string().superRefine((v, ctx) => {
+      if (v.replace(/\D/g, '').length !== 11) ctx.addIssue({ code: 'custom', message: 'O CPF tem 11 dígitos' })
+      else if (!cpfValid(v)) ctx.addIssue({ code: 'custom', message: 'CPF inválido: confira os dígitos' })
+    }),
     email: z.string().min(1, 'Informe o e-mail').email('Informe um e-mail válido'),
     phone: z.string().refine((v) => toE164BR(v) !== null, 'Informe DDD e número, ex.: 11 99999-8888'),
-    password: z.string().min(12, 'Use ao menos 12 caracteres').max(128),
+    password: z.string(),
     confirm: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    const m = passwordIssue(v.password, v.email)
+    if (m) ctx.addIssue({ code: 'custom', path: ['password'], message: m })
   })
   .refine((v) => v.password === v.confirm, { path: ['confirm'], message: 'As senhas não conferem' })
 
@@ -38,7 +49,7 @@ export function RegisterPage() {
   async function onSubmit(v: Values) {
     setError(null)
     try {
-      await register({ name: v.name.trim(), document: v.document, email: v.email, phone: toE164BR(v.phone)!, password: v.password })
+      await register({ name: v.name.trim(), document: v.document.replace(/\D/g, ''), email: v.email, phone: toE164BR(v.phone)!, password: v.password })
       await login(v.email, v.password)
       navigate('/', { replace: true })
     } catch (e) {
@@ -51,20 +62,20 @@ export function RegisterPage() {
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Nome completo" htmlFor="name" error={errors.name?.message}>
-          <Input id="name" autoComplete="name" aria-invalid={!!errors.name} {...form.register('name')} />
+          <Input id="name" autoComplete="name" aria-invalid={!!errors.name} {...form.register('name')} maxLength={120} />
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="CPF" htmlFor="document" error={errors.document?.message}>
-            <Input id="document" inputMode="numeric" placeholder="000.000.000-00" aria-invalid={!!errors.document} {...form.register('document')} />
+            <Input id="document" inputMode="numeric" placeholder="000.000.000-00" aria-invalid={!!errors.document} {...withMask(form.register('document'), maskCpf)} />
           </Field>
           <Field label="Celular" htmlFor="phone" error={errors.phone?.message}>
-            <Input id="phone" type="tel" autoComplete="tel" placeholder="11 99999-8888" aria-invalid={!!errors.phone} {...form.register('phone')} />
+            <Input id="phone" type="tel" autoComplete="tel" placeholder="(11) 99999-8888" aria-invalid={!!errors.phone} {...withMask(form.register('phone'), maskPhone)} />
           </Field>
         </div>
         <Field label="E-mail" htmlFor="email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register('email')} />
         </Field>
-        <Field label="Senha" htmlFor="password" error={errors.password?.message} hint="Mínimo de 12 caracteres. Uma frase longa vale mais que símbolos.">
+        <Field label="Senha" htmlFor="password" error={errors.password?.message} hint="12 a 128 caracteres, sem ser previsível e sem conter o seu e-mail. Uma frase longa vale mais que símbolos.">
           <Input id="password" type="password" autoComplete="new-password" aria-invalid={!!errors.password} {...form.register('password')} />
         </Field>
         <Field label="Confirmar senha" htmlFor="confirm" error={errors.confirm?.message}>

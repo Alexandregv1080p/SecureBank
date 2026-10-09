@@ -1,5 +1,15 @@
 package com.securebank.mobile.ui
 
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
@@ -101,6 +111,15 @@ fun MainShell(container: AppContainer) {
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            // telas fora das abas (sem a barra inferior) sempre têm uma saída visível
+            if (route != null && route !in tabs.map { it.route }) {
+                val back = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+                Row(Modifier.fillMaxWidth().statusBarsPadding().height(52.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { back?.onBackPressed() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar") }
+                }
+            }
+        },
         bottomBar = {
             if (route in tabs.map { it.route }) {
                 NavigationBar(containerColor = Sb.colors.panel.copy(alpha = if (Sb.colors.dark) 0.82f else 0.94f)) {
@@ -129,7 +148,7 @@ fun MainShell(container: AppContainer) {
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = "home", modifier = Modifier.padding(padding)) {
+        NavHost(nav, startDestination = "home", modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
             composable("home") {
                 val vm: HomeViewModel = viewModel(factory = viewModelFactory { initializer { HomeViewModel(container.banking, container.piggies, container.investments, container.fx) } })
                 HomeScreen(
@@ -152,7 +171,6 @@ fun MainShell(container: AppContainer) {
                 val vm: AccountDetailViewModel = viewModel(factory = viewModelFactory { initializer { AccountDetailViewModel(container.banking, id) } })
                 AccountDetailScreen(
                     vm,
-                    onBack = { nav.popBackStack() },
                     onDeposit = { nav.navigate("accounts/$id/money/deposit") },
                     onWithdraw = { nav.navigate("accounts/$id/money/withdraw") },
                 )
@@ -168,7 +186,7 @@ fun MainShell(container: AppContainer) {
             }
             composable("transfer") {
                 val vm: TransferViewModel = viewModel(factory = viewModelFactory { initializer { TransferViewModel(container.banking) } })
-                TransferScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") })
+                TransferScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") }, onBack = { nav.popBackStack() })
             }
             composable("more") {
                 MoreScreen(
@@ -205,15 +223,15 @@ fun MainShell(container: AppContainer) {
             }
             composable("pix/receive") {
                 val vm: PixReceiveViewModel = viewModel(factory = viewModelFactory { initializer { PixReceiveViewModel(container.pix, container.banking) } })
-                PixReceiveScreen(vm, onKeys = { nav.navigate("pix/keys") }, onBack = { nav.popBackStack() })
+                PixReceiveScreen(vm, onKeys = { nav.navigate("pix/keys") })
             }
             composable("pix/keys") {
                 val vm: PixKeysViewModel = viewModel(factory = viewModelFactory { initializer { PixKeysViewModel(container.pix, container.banking) } })
-                PixKeysScreen(vm, onBack = { nav.popBackStack() })
+                PixKeysScreen(vm)
             }
             composable("pix/history") {
                 val vm: PixHistoryViewModel = viewModel(factory = viewModelFactory { initializer { PixHistoryViewModel(container.pix, container.banking) } })
-                PixHistoryScreen(vm, onRefund = { nav.navigate("pix/refund/$it") }, onBack = { nav.popBackStack() })
+                PixHistoryScreen(vm, onRefund = { nav.navigate("pix/refund/$it") })
             }
             composable("pix/refund/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
@@ -222,15 +240,15 @@ fun MainShell(container: AppContainer) {
             }
             composable("pix/charges") {
                 val vm: PixChargesViewModel = viewModel(factory = viewModelFactory { initializer { PixChargesViewModel(container.pix, container.banking) } })
-                PixChargesScreen(vm, onBack = { nav.popBackStack() })
+                PixChargesScreen(vm)
             }
             composable("pix/schedules") {
                 val vm: PixSchedulesViewModel = viewModel(factory = viewModelFactory { initializer { PixSchedulesViewModel(container.pix, container.banking) } })
-                PixSchedulesScreen(vm, onBack = { nav.popBackStack() })
+                PixSchedulesScreen(vm)
             }
             composable("fx") {
                 val vm: FxViewModel = viewModel(factory = viewModelFactory { initializer { FxViewModel(container.fx, container.banking) } })
-                FxScreen(vm, onBuy = { nav.navigate("fx/buy/$it") }, onSell = { nav.navigate("fx/sell/$it") }, onBack = { nav.popBackStack() })
+                FxScreen(vm, onBuy = { nav.navigate("fx/buy/$it") }, onSell = { nav.navigate("fx/sell/$it") })
             }
             composable(
                 "fx/{side}/{currency}",
@@ -243,7 +261,7 @@ fun MainShell(container: AppContainer) {
             }
             composable("investments") {
                 val vm: InvestmentsViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentsViewModel(container.investments, container.banking) } })
-                InvestmentsScreen(vm, onApply = { nav.navigate("investments/apply/$it") }, onOpen = { nav.navigate("investments/$it") }, onBack = { nav.popBackStack() })
+                InvestmentsScreen(vm, onApply = { nav.navigate("investments/apply/$it") }, onOpen = { nav.navigate("investments/$it") })
             }
             composable("investments/apply/{code}", arguments = listOf(navArgument("code") { type = NavType.StringType })) { entry ->
                 val code = entry.arguments?.getString("code").orEmpty()
@@ -257,11 +275,11 @@ fun MainShell(container: AppContainer) {
             composable("investments/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
                 val vm: InvestmentDetailViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentDetailViewModel(container.investments, container.banking, id) } })
-                InvestmentDetailScreen(container, vm, onBack = { nav.popBackStack() })
+                InvestmentDetailScreen(container, vm)
             }
             composable("piggies") {
                 val vm: PiggiesViewModel = viewModel(factory = viewModelFactory { initializer { PiggiesViewModel(container.piggies, container.banking) } })
-                PiggiesScreen(vm, onOpen = { nav.navigate("piggies/$it") }, onNew = { nav.navigate("piggies/new") }, onBack = { nav.popBackStack() })
+                PiggiesScreen(vm, onOpen = { nav.navigate("piggies/$it") }, onNew = { nav.navigate("piggies/new") })
             }
             composable("piggies/new") {
                 val vm: NewPiggyViewModel = viewModel(factory = viewModelFactory { initializer { NewPiggyViewModel(container.banking, container.piggies) } })
@@ -278,10 +296,10 @@ fun MainShell(container: AppContainer) {
             }
             composable("notifications") {
                 val vm: NotificationsViewModel = viewModel(factory = viewModelFactory { initializer { NotificationsViewModel(container.banking) } })
-                NotificationsScreen(vm, onBack = { nav.popBackStack() })
+                NotificationsScreen(vm)
             }
             composable("security") {
-                SecurityScreen(container, onBack = { nav.popBackStack() })
+                SecurityScreen(container)
             }
             composable("pay") {
                 val vm: PaymentViewModel = viewModel(factory = viewModelFactory { initializer { PaymentViewModel(container.banking) } })

@@ -26,7 +26,7 @@ import com.securebank.mobile.ui.components.Skeleton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PiggiesScreen(viewModel: PiggiesViewModel, onOpen: (String) -> Unit, onNew: () -> Unit, onBack: () -> Unit) {
+fun PiggiesScreen(viewModel: PiggiesViewModel, onOpen: (String) -> Unit, onNew: () -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
 
     PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.fillMaxSize()) {
@@ -35,7 +35,6 @@ fun PiggiesScreen(viewModel: PiggiesViewModel, onOpen: (String) -> Unit, onNew: 
             contentPadding = PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item { TextButton(onClick = onBack) { Text("‹ Voltar") } }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Porquinhos", style = MaterialTheme.typography.headlineSmall)

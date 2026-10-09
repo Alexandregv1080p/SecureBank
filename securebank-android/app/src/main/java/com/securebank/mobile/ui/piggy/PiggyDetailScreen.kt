@@ -46,7 +46,6 @@ fun PiggyDetailScreen(viewModel: PiggyDetailViewModel, onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Porquinhos") }
 
         when (val piggy = s.piggy) {
             Load.Loading -> Skeleton(160.dp)

@@ -37,12 +37,11 @@ import com.securebank.mobile.ui.components.Skeleton
 /** Câmbio: uma carteira por moeda, a cotação do dia (compra e venda), e as últimas operações. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FxScreen(viewModel: FxViewModel, onBuy: (String) -> Unit, onSell: (String) -> Unit, onBack: () -> Unit) {
+fun FxScreen(viewModel: FxViewModel, onBuy: (String) -> Unit, onSell: (String) -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
 
     PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item { TextButton(onClick = onBack) { Text("‹ Mais") } }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Câmbio", style = MaterialTheme.typography.headlineSmall)

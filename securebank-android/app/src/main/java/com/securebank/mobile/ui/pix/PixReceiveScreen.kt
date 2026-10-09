@@ -31,7 +31,7 @@ import com.securebank.mobile.ui.components.SbTextField
 import com.securebank.mobile.ui.components.Skeleton
 
 @Composable
-fun PixReceiveScreen(viewModel: PixReceiveViewModel, onKeys: () -> Unit, onBack: () -> Unit) {
+fun PixReceiveScreen(viewModel: PixReceiveViewModel, onKeys: () -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
 
@@ -39,7 +39,6 @@ fun PixReceiveScreen(viewModel: PixReceiveViewModel, onKeys: () -> Unit, onBack:
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Pix") }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Receber Pix", style = MaterialTheme.typography.headlineSmall)
             Text("Mostre o QR code ou envie o código. O valor é opcional.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

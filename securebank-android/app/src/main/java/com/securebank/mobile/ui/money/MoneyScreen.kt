@@ -16,6 +16,14 @@ import com.securebank.mobile.ui.components.PrimaryButton
 import com.securebank.mobile.ui.components.SbTextField
 import com.securebank.mobile.ui.rememberIdentityConfirmation
 
+private fun withdrawHint(s: MoneyState): String? {
+    val parts = listOfNotNull(
+        s.balance?.let { "Saldo ${com.securebank.mobile.core.util.Money.format(it)}" },
+        s.limit?.let { "por operação até ${com.securebank.mobile.core.util.Money.format(it.perOperation.amount)}, restam ${com.securebank.mobile.core.util.Money.format(it.remainingToday.amount)} hoje" },
+    )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
 /** Depósito (entra dinheiro: sem biometria) ou saque (sai dinheiro: pede a identidade). */
 @Composable
 fun MoneyScreen(container: AppContainer, viewModel: MoneyViewModel, onBack: () -> Unit) {
@@ -36,6 +44,7 @@ fun MoneyScreen(container: AppContainer, viewModel: MoneyViewModel, onBack: () -
                 value = s.amount,
                 onValueChange = viewModel::onAmount,
                 error = s.amountError,
+                hint = if (withdraw) withdrawHint(s) else null,
                 keyboardType = KeyboardType.Decimal,
                 imeAction = ImeAction.Done,
                 onDone = { submit() },

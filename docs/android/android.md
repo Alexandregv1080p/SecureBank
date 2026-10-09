@@ -175,3 +175,9 @@ Limites honestos: o R8 só foi **compilado**; se as regras de `kotlinx.serializa
 ## Visual (espelha o web)
 
 Tema índigo escuro por padrão, com alternativa clara (chave em Mais → "Tema escuro", salva em `ThemeSettings`). Tokens em `ui/theme/Theme.kt` (`Sb.colors`); cartões de vidro (`Panel`/`HeroPanel`); fundo em degradê no tema, então as telas usam contêineres transparentes. O início virou dashboard: gráfico de área de 6 meses, cartões com sparkline e variação, anéis de patrimônio e rosca de saídas por categoria (`ui/components/Charts.kt`, contas em `core/util/Dashboard.kt`, com testes).
+
+## Navegação e validação de campos
+
+Toda tela fora das abas ganha uma barra de topo com a seta de voltar (`MainShell`); ela chama o mesmo caminho do gesto de voltar, então os `BackHandler` (descartar transferência, voltar da revisão) valem para os dois. Os "‹ Pix", "‹ Mais" soltos saíram.
+
+As regras de campo ficam em `core/util/Validation.kt` (espelho de `securebank-web/src/lib/validation.ts`, com os mesmos casos de teste nos dois): dígito verificador da conta (módulo 11 do servidor), conta de destino diferente da de origem, valor contra saldo e limites (por operação e restante hoje), valor com mensagem específica, máscaras de CPF, telefone, valor e conta (o hífen entra sozinho), CPF com dígitos verificadores, nome com sobrenome e a política de senha do servidor (tamanho, senhas previsíveis, e-mail na senha). Usadas em Transferir, Depositar/Sacar, Câmbio (compra confere o custo em reais e o limite de câmbio), Cadastro e troca de senha. O servidor continua sendo quem vale. Pix, Pagar, Investimentos e Porquinhos ainda usam a validação antiga de valor.

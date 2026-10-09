@@ -1,5 +1,6 @@
 package com.securebank.mobile.ui.money
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,11 +9,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -21,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.securebank.mobile.AppContainer
 import com.securebank.mobile.core.network.Account
+import com.securebank.mobile.core.network.LimitUsage
 import com.securebank.mobile.core.util.Format
 import com.securebank.mobile.core.util.Money
 import com.securebank.mobile.core.util.TransferField
@@ -39,12 +47,27 @@ import com.securebank.mobile.ui.rememberIdentityConfirmation
 import com.securebank.mobile.ui.theme.creditColor
 
 @Composable
-fun TransferScreen(container: AppContainer, viewModel: TransferViewModel, onOpenAccounts: () -> Unit) {
+fun TransferScreen(container: AppContainer, viewModel: TransferViewModel, onOpenAccounts: () -> Unit, onBack: () -> Unit) {
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val confirm = rememberIdentityConfirmation(container, "Confirme a transferência")
+    var askLeave by remember { mutableStateOf(false) }
+    val dirty = s.step != TransferStep.Sent && (s.number.isNotEmpty() || s.amount.isNotEmpty() || s.description.isNotEmpty())
+    // voltar na revisão volta ao formulário; com algo digitado, pergunta antes de descartar
+    BackHandler(enabled = s.step == TransferStep.Review || dirty) {
+        if (s.step == TransferStep.Review) viewModel.backToForm() else askLeave = true
+    }
+    if (askLeave) {
+        AlertDialog(
+            onDismissRequest = { askLeave = false },
+            title = { Text("Descartar a transferência?") },
+            text = { Text("O que você digitou será perdido.") },
+            confirmButton = { TextButton(onClick = { askLeave = false; onBack() }) { Text("Descartar") } },
+            dismissButton = { TextButton(onClick = { askLeave = false }) { Text("Continuar") } },
+        )
+    }
 
     when {
-        s.step == TransferStep.Sent -> SentReceipt(s.sent.orEmpty(), onNew = viewModel::newTransfer)
+        s.step == TransferStep.Sent -> SentReceipt(s.sent.orEmpty(), onNew = viewModel::newTransfer, onDone = onBack)
         else -> AuthScaffold("Transferir", "Envie dinheiro para outra conta do SecureBank pela agência e número da conta.") {
             when (val accounts = s.accounts) {
                 Load.Loading -> Skeleton(192.dp)
@@ -67,13 +90,16 @@ private fun Form(s: TransferState, accounts: List<Account>, vm: TransferViewMode
         AccountPicker("Conta de origem", accounts, s.sourceId, vm::onSource, s.errors[TransferField.Source])
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SbTextField("Agência", s.branch, vm::onBranch, modifier = Modifier.weight(1f), error = s.errors[TransferField.Branch], keyboardType = KeyboardType.Number)
-            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Formato 123456-7")
+            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Ex.: 123456-0 (o hífen entra sozinho)")
         }
-        SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal)
+        SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal, hint = limitHint(s.limit))
         SbTextField("Descrição (opcional)", s.description, vm::onDescription, error = s.errors[TransferField.Description], imeAction = ImeAction.Done, onDone = vm::review)
         PrimaryButton("Revisar", onClick = vm::review)
     }
 }
+
+private fun limitHint(limit: LimitUsage?): String? =
+    limit?.let { "Limite por operação ${Money.format(it.perOperation.amount)} · restante hoje ${Money.format(it.remainingToday.amount)}" }
 
 @Composable
 private fun Review(s: TransferState, accounts: List<Account>, onConfirm: () -> Unit, onEdit: () -> Unit) {
@@ -103,12 +129,13 @@ private fun ReviewRow(label: String, value: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SentReceipt(summary: String, onNew: () -> Unit) {
+private fun SentReceipt(summary: String, onNew: () -> Unit, onDone: () -> Unit) {
     AuthScaffold("Transferência enviada", null) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = creditColor(), modifier = Modifier.padding(top = 16.dp).size(48.dp))
             Text(summary, style = MaterialTheme.typography.titleMedium)
-            PrimaryButton("Nova transferência", onClick = onNew)
+            PrimaryButton("Concluir", onClick = onDone)
+            OutlinedButton(onClick = onNew, modifier = Modifier.fillMaxWidth()) { Text("Nova transferência") }
         }
     }
 }

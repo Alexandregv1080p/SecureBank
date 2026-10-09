@@ -53,7 +53,7 @@ import com.securebank.mobile.ui.components.Skeleton
 import com.securebank.mobile.ui.rememberIdentityConfirmation
 
 @Composable
-fun SecurityScreen(container: AppContainer, onBack: () -> Unit) {
+fun SecurityScreen(container: AppContainer) {
     val mfa: MfaViewModel = viewModel(factory = viewModelFactory { initializer { MfaViewModel(container.security) } })
     val password: PasswordViewModel = viewModel(factory = viewModelFactory { initializer { PasswordViewModel(container.security) } })
     val sessions: SessionsViewModel = viewModel(factory = viewModelFactory { initializer { SessionsViewModel(container.security) } })
@@ -62,7 +62,6 @@ fun SecurityScreen(container: AppContainer, onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("‹ Mais") }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Segurança", style = MaterialTheme.typography.headlineSmall)
             Text("Controle como você acessa a sua conta.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

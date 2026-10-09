@@ -5,6 +5,7 @@ import com.securebank.mobile.core.network.AmountRequest
 import com.securebank.mobile.core.network.AppNotification
 import com.securebank.mobile.core.network.BankingApi
 import com.securebank.mobile.core.network.Customer
+import com.securebank.mobile.core.network.Destination
 import com.securebank.mobile.core.network.LimitUsage
 import com.securebank.mobile.core.network.OpenAccountRequest
 import com.securebank.mobile.core.network.Page
@@ -77,6 +78,8 @@ class BankingRepository(private val api: BankingApi, private val json: Json) {
 
     suspend fun withdraw(accountId: String, amount: String, key: String): Transaction =
         apiCall(json) { api.withdraw(accountId, AmountRequest(amount), key) }.also { _changes.tryEmit(Unit) }
+
+    suspend fun destination(branch: String, number: String): Destination = apiCall(json) { api.destination(branch, number) }
 
     suspend fun transfer(request: TransferRequest, key: String): Transfer =
         apiCall(json) { api.transfer(request, key) }.also { _changes.tryEmit(Unit) }

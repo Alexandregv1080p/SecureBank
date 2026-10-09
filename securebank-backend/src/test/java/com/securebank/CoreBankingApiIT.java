@@ -241,6 +241,42 @@ class CoreBankingApiIT {
     }
 
     @Test
+    void destinationLookupShowsOnlyMaskedDataSoThePayerCanConfirmWhoReceives() throws Exception {
+        String alice = customer();
+        String bob = customer();
+        MvcResult own = openAccountResult(alice);
+        MvcResult bobAccount = openAccountResult(bob);
+        String branch = read(bobAccount, "$.branch");
+        String number = read(bobAccount, "$.accountNumber");
+
+        MvcResult found = mvc.perform(as(alice, get("/api/v1/transfers/destination").param("branch", branch).param("number", number)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountNumber").value(number))
+                .andExpect(jsonPath("$.accountType").value("CHECKING"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.bank").value("SecureBank"))
+                .andExpect(jsonPath("$.ownAccount").value(false))
+                // só o primeiro nome inteiro e a inicial dos demais; CPF mascarado: nada dá para coletar
+                .andExpect(jsonPath("$.name").value("Cliente T***"))
+                .andReturn();
+        assertThat(read(found, "$.document")).matches("\\*\\*\\*\\.\\d{3}\\.\\*\\*\\*-\\*\\*");
+
+        // a própria conta é reconhecida como tal (a tela avisa que não dá para transferir para si mesmo)
+        mvc.perform(as(alice, get("/api/v1/transfers/destination")
+                        .param("branch", read(own, "$.branch")).param("number", read(own, "$.accountNumber"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownAccount").value(true));
+
+        // conta que não existe: 404; formato inválido: erro do cliente; sem login: 401
+        mvc.perform(as(alice, get("/api/v1/transfers/destination").param("branch", branch).param("number", "999999-0")))
+                .andExpect(status().isNotFound());
+        mvc.perform(as(alice, get("/api/v1/transfers/destination").param("branch", branch).param("number", "abc")))
+                .andExpect(status().is4xxClientError());
+        mvc.perform(get("/api/v1/transfers/destination").param("branch", branch).param("number", number))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void reusedIdempotencyKeyNeverDebitsTwice() throws Exception {
         String alice = customer();
         String from = openAccount(alice);

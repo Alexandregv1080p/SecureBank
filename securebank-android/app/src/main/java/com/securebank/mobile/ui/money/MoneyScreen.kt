@@ -1,5 +1,8 @@
 package com.securebank.mobile.ui.money
 
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -32,13 +35,32 @@ fun MoneyScreen(container: AppContainer, viewModel: MoneyViewModel, onBack: () -
     val confirm = rememberIdentityConfirmation(container, "Confirme o saque")
     val submit = { if (withdraw) confirm { viewModel.submit() } else viewModel.submit() }
 
+    val receipt = s.receipt
+    if (receipt != null) {
+        val title = if (withdraw) "Saque realizado" else "Depósito realizado"
+        val lines = listOfNotNull(
+            s.accountLabel?.let { com.securebank.mobile.ui.components.ReceiptLine("Conta", it) },
+            com.securebank.mobile.ui.components.ReceiptLine("Saldo depois", com.securebank.mobile.core.util.Money.format(receipt.balanceAfter.amount)),
+            com.securebank.mobile.ui.components.ReceiptLine("Data", com.securebank.mobile.core.util.Format.dateTime(receipt.createdAt)),
+            com.securebank.mobile.ui.components.ReceiptLine("Identificador", receipt.id),
+        )
+        AuthScaffold(title = if (withdraw) "Sacar" else "Depositar", subtitle = null) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                com.securebank.mobile.ui.components.ReceiptPanel(title, receipt.amount.amount, lines)
+                PrimaryButton("Concluir", onClick = onBack)
+                com.securebank.mobile.ui.components.ShareReceiptButton(com.securebank.mobile.ui.components.receiptText(title, receipt.amount.amount, lines))
+                OutlinedButton(onClick = viewModel::newOperation, modifier = Modifier.fillMaxWidth()) { Text(if (withdraw) "Novo saque" else "Novo depósito") }
+            }
+        }
+        return
+    }
+
     AuthScaffold(
         title = if (withdraw) "Sacar" else "Depositar",
         subtitle = if (withdraw) "Retire dinheiro da conta, dentro do seu limite de saque." else "Adicione dinheiro à conta (depósito simulado).",
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             s.error?.let { Banner(it) }
-            s.done?.let { Banner(it, isError = false) }
             SbTextField(
                 label = "Valor (R$)",
                 value = s.amount,

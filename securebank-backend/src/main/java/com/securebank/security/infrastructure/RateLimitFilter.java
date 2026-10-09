@@ -57,6 +57,8 @@ class RateLimitFilter extends OncePerRequestFilter {
                 // ler uma cobrança por txid também revela dados (mascarados): mesma proteção da consulta de chave
                 new Rule("pix-charge-view", HttpMethod.GET, "/api/v1/pix/charges/*", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("pix-schedule", HttpMethod.POST, "/api/v1/pix/schedules", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                // consultar a conta de destino revela o nome (mascarado) do dono: mesma proteção da consulta de chave Pix
+                new Rule("transfer-lookup", HttpMethod.GET, "/api/v1/transfers/destination", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("pix-lookup", HttpMethod.GET, "/api/v1/pix/keys/lookup", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("invest", HttpMethod.POST, "/api/v1/investments", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("invest-redeem", HttpMethod.POST, "/api/v1/investments/*/redeem", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),

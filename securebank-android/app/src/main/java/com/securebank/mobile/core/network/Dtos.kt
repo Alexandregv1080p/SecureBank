@@ -37,6 +37,19 @@ data class Transaction(
     val createdAt: String,
 )
 
+/** Para quem vai uma transferência, como o servidor mostra antes de confirmar (nome e CPF mascarados). */
+@Serializable
+data class Destination(
+    val branch: String,
+    val accountNumber: String,
+    val accountType: String,
+    val status: String,
+    val name: String,
+    val document: String,
+    val bank: String,
+    val ownAccount: Boolean,
+)
+
 @Serializable
 data class Page<T>(val items: List<T>, val page: Int, val size: Int, val totalElements: Long)
 

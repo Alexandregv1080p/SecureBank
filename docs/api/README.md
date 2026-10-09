@@ -56,6 +56,7 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /accounts/{id}/withdrawals`       | Saque (respeita limite de saque)                                  |
 | `POST /transfers`                       | Transferência para outra conta (`Idempotency-Key` obrigatório)    |
 | `GET /transfers`, `GET /transfers/{id}` | Transferências enviadas                                           |
+| `GET /transfers/destination?branch=&number=` | Quem recebe: nome (`Ana S***`) e CPF mascarados, banco, tipo e situação da conta, e `ownAccount`. Limitada por taxa (como a consulta de chave Pix): 404 se a conta não existe, 4xx se o formato é inválido |
 | `POST /payments`                        | Pagamento de boleto (`Idempotency-Key` obrigatório)               |
 | `GET /payments`, `GET /payments/{id}`   | Pagamentos                                                        |
 | `POST /piggies`, `GET /piggies`, `GET /piggies/{id}` | Porquinho: reserva com nome e meta opcional, guardada numa conta (até 20 ativos) |

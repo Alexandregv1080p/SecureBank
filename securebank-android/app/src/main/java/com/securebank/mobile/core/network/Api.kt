@@ -70,6 +70,7 @@ interface BankingApi {
 
     @POST("transfers")
     suspend fun transfer(@Body body: TransferRequest, @Header("Idempotency-Key") key: String): Transfer
+    @GET("transfers/destination") suspend fun destination(@Query("branch") branch: String, @Query("number") number: String): Destination
     @GET("transfers") suspend fun transfers(@Query("page") page: Int = 0, @Query("size") size: Int = 10): Page<Transfer>
 
     @POST("payments")

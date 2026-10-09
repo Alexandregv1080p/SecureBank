@@ -54,6 +54,18 @@ export interface LimitUsage {
   remainingToday: Money
 }
 
+/** Para quem vai uma transferência, como o servidor mostra antes de confirmar (nome e CPF mascarados). */
+export interface Destination {
+  branch: string
+  accountNumber: string
+  accountType: 'CHECKING' | 'SAVINGS'
+  status: string
+  name: string
+  document: string
+  bank: string
+  ownAccount: boolean
+}
+
 export interface Transfer {
   id: string
   sourceAccountId: string

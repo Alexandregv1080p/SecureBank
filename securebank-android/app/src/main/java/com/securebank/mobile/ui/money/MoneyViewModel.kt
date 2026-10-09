@@ -24,7 +24,9 @@ data class MoneyState(
     val amountError: String? = null,
     val loading: Boolean = false,
     val error: String? = null,
-    val done: String? = null,
+    /** Comprovante da última operação (a tela mostra no lugar do formulário). */
+    val receipt: com.securebank.mobile.core.network.Transaction? = null,
+    val accountLabel: String? = null,
     /** Saldo e limite de saque (para conferir antes da biometria e mostrar na tela). */
     val balance: String? = null,
     val limit: LimitUsage? = null,
@@ -44,7 +46,8 @@ class MoneyViewModel(
         viewModelScope.launch {
             val account = attempt { banking.account(accountId) }.getOrNull()
             val limit = attempt { banking.limits(accountId) }.getOrNull()?.firstOrNull { it.type == "WITHDRAW" }
-            _state.update { it.copy(balance = account?.balance?.amount, limit = limit) }
+            val label = account?.let { "${com.securebank.mobile.core.util.Format.accountTypeLabel(it.type)}, ${com.securebank.mobile.core.util.Format.accountLabel(it.branch, it.accountNumber)}" }
+            _state.update { it.copy(balance = account?.balance?.amount, limit = limit, accountLabel = label) }
         }
     }
 
@@ -52,8 +55,10 @@ class MoneyViewModel(
 
     fun onAmount(raw: String) {
         val value = Validation.sanitizeAmount(raw)
-        _state.update { it.copy(amount = value, amountError = null, error = null, done = null) }
+        _state.update { it.copy(amount = value, amountError = null, error = null) }
     }
+
+    fun newOperation() = _state.update { it.copy(receipt = null) }
 
     fun submit() {
         val s = _state.value
@@ -65,14 +70,13 @@ class MoneyViewModel(
             _state.update { it.copy(amountError = issue ?: OperationValidation.AMOUNT_MESSAGE) }
             return
         }
-        _state.update { it.copy(loading = true, error = null, done = null) }
+        _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                intent.run(Payload(accountId, kind, value)) { key ->
+                val tx = intent.run(Payload(accountId, kind, value)) { key ->
                     if (kind == MoneyKind.DEPOSIT) banking.deposit(accountId, value, key) else banking.withdraw(accountId, value, key)
                 }
-                val message = if (kind == MoneyKind.DEPOSIT) "Depósito de ${Money.format(value)} realizado." else "Saque de ${Money.format(value)} realizado."
-                _state.update { it.copy(amount = "", done = message) }
+                _state.update { it.copy(amount = "", receipt = tx) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -16,3 +16,9 @@ export function parseAmount(input: string): string | null {
   if (!/^\d{1,13}(\.\d{1,2})?$/.test(normalized)) return null
   return Number(normalized) > 0 ? normalized : null
 }
+
+/** a - b em centavos inteiros (nunca float), devolvido como "1234.56". */
+export function subtractAmounts(a: string, b: string): string {
+  const cents = Math.round(Number(a) * 100) - Math.round(Number(b) * 100)
+  return (cents / 100).toFixed(2)
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createIdempotency } from './idempotency'
-import { formatBRL, parseAmount } from './money'
+import { formatBRL, parseAmount, subtractAmounts } from './money'
 import { toE164BR } from './phone'
 
 describe('parseAmount', () => {
@@ -44,5 +44,13 @@ describe('createIdempotency', () => {
     const current = idem.keyFor({ amount: '20.00' })
     idem.settle()
     expect(idem.keyFor({ amount: '20.00' })).not.toBe(current) // resultado definitivo: intenção nova
+  })
+})
+
+describe('subtractAmounts', () => {
+  it('subtrai em centavos, sem erro de ponto flutuante', () => {
+    expect(subtractAmounts('1000.00', '250.50')).toBe('749.50')
+    expect(subtractAmounts('0.30', '0.10')).toBe('0.20')
+    expect(subtractAmounts('10.00', '10.00')).toBe('0.00')
   })
 })

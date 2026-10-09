@@ -41,6 +41,10 @@ import com.securebank.mobile.ui.components.ErrorState
 import com.securebank.mobile.ui.components.MoneyText
 import com.securebank.mobile.ui.components.Panel
 import com.securebank.mobile.ui.components.PrimaryButton
+import com.securebank.mobile.ui.components.ReceiptLine
+import com.securebank.mobile.ui.components.ReceiptPanel
+import com.securebank.mobile.ui.components.ShareReceiptButton
+import com.securebank.mobile.ui.components.receiptText
 import com.securebank.mobile.ui.components.SbTextField
 import com.securebank.mobile.ui.components.Skeleton
 import com.securebank.mobile.ui.rememberIdentityConfirmation
@@ -67,7 +71,7 @@ fun TransferScreen(container: AppContainer, viewModel: TransferViewModel, onOpen
     }
 
     when {
-        s.step == TransferStep.Sent -> SentReceipt(s.sent.orEmpty(), onNew = viewModel::newTransfer, onDone = onBack)
+        s.step == TransferStep.Sent && s.receipt != null -> SentReceipt(s.receipt, onNew = viewModel::newTransfer, onDone = onBack)
         else -> AuthScaffold("Transferir", "Envie dinheiro para outra conta do SecureBank pela agência e número da conta.") {
             when (val accounts = s.accounts) {
                 Load.Loading -> Skeleton(192.dp)
@@ -87,6 +91,7 @@ fun TransferScreen(container: AppContainer, viewModel: TransferViewModel, onOpen
 @Composable
 private fun Form(s: TransferState, accounts: List<Account>, vm: TransferViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        s.error?.let { Banner(it) }
         AccountPicker("Conta de origem", accounts, s.sourceId, vm::onSource, s.errors[TransferField.Source])
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SbTextField("Agência", s.branch, vm::onBranch, modifier = Modifier.weight(1f), error = s.errors[TransferField.Branch], keyboardType = KeyboardType.Number)
@@ -94,7 +99,7 @@ private fun Form(s: TransferState, accounts: List<Account>, vm: TransferViewMode
         }
         SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal, hint = Validation.limitHint(s.limit), mask = Validation::sanitizeAmount)
         SbTextField("Descrição (opcional)", s.description, vm::onDescription, error = s.errors[TransferField.Description], imeAction = ImeAction.Done, onDone = vm::review)
-        PrimaryButton("Revisar", onClick = vm::review)
+        PrimaryButton("Revisar", onClick = vm::review, loading = s.loading)
     }
 }
 
@@ -107,10 +112,23 @@ private fun Review(s: TransferState, accounts: List<Account>, onConfirm: () -> U
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 ReviewRow("Valor") { MoneyText(Money.format(Money.parse(s.amount).orEmpty()), style = MaterialTheme.typography.titleLarge) }
                 ReviewRow("De") { Text(source?.let { "${Format.accountTypeLabel(it.type)}, ${Format.accountLabel(it.branch, it.accountNumber)}" }.orEmpty(), style = MaterialTheme.typography.bodyMedium) }
-                ReviewRow("Para") { Text("Ag. ${s.branch}, conta ${s.number}", style = MaterialTheme.typography.bodyMedium) }
+                ReviewRow("Para") {
+                    Column(horizontalAlignment = Alignment.End) {
+                        s.destination?.let { d ->
+                            Text(d.name, style = MaterialTheme.typography.titleSmall)
+                            Text("CPF ${d.document}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${d.bank}, ag. ${d.branch}, conta ${d.accountNumber}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } ?: Text("Ag. ${s.branch}, conta ${s.number}", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
                 if (s.description.isNotBlank()) ReviewRow("Descrição") { Text(s.description, style = MaterialTheme.typography.bodyMedium) }
+                val value = Money.parse(s.amount)
+                if (source != null && value != null) {
+                    ReviewRow("Saldo depois") { MoneyText(Money.format(java.math.BigDecimal(source.balance.amount).subtract(java.math.BigDecimal(value)).toPlainString()), style = MaterialTheme.typography.bodyMedium) }
+                }
             }
         }
+        Text("Confira o nome: depois de enviada, a transferência não pode ser desfeita por aqui.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         s.error?.let { Banner(it) }
         PrimaryButton("Confirmar transferência", onClick = onConfirm, loading = s.loading)
         OutlinedButton(onClick = onEdit, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Editar") }
@@ -126,12 +144,23 @@ private fun ReviewRow(label: String, value: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SentReceipt(summary: String, onNew: () -> Unit, onDone: () -> Unit) {
-    AuthScaffold("Transferência enviada", null) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = creditColor(), modifier = Modifier.padding(top = 16.dp).size(48.dp))
-            Text(summary, style = MaterialTheme.typography.titleMedium)
+private fun SentReceipt(receipt: TransferReceipt, onNew: () -> Unit, onDone: () -> Unit) {
+    val t = receipt.transfer
+    val d = receipt.destination
+    val lines = listOfNotNull(
+        ReceiptLine("De", receipt.from),
+        ReceiptLine("Para", d.name),
+        ReceiptLine("CPF", d.document),
+        ReceiptLine("Banco", "${d.bank}, ag. ${d.branch}, conta ${d.accountNumber}"),
+        t.description?.let { ReceiptLine("Descrição", it) },
+        ReceiptLine("Data", Format.dateTime(t.createdAt)),
+        ReceiptLine("Identificador", t.id),
+    )
+    AuthScaffold("Transferir", null) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            ReceiptPanel("Transferência enviada", t.amount.amount, lines)
             PrimaryButton("Concluir", onClick = onDone)
+            ShareReceiptButton(receiptText("Transferência enviada", t.amount.amount, lines))
             OutlinedButton(onClick = onNew, modifier = Modifier.fillMaxWidth()) { Text("Nova transferência") }
         }
     }

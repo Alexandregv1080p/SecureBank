@@ -49,6 +49,15 @@ class TransferController {
         }
     }
 
+    record DestinationResponse(String branch, String accountNumber, String accountType, String status, String name,
+            String document, String bank, boolean ownAccount) {
+
+        static DestinationResponse of(TransferApplicationService.Destination d) {
+            return new DestinationResponse(d.branch(), d.accountNumber(), d.accountType(), d.status(), d.maskedName(),
+                    d.maskedDocument(), "SecureBank", d.ownAccount());
+        }
+    }
+
     record TransferPage(List<TransferResponse> items, int page, int size, long totalElements) {}
 
     private final TransferApplicationService transfers;
@@ -73,6 +82,12 @@ class TransferController {
         var result = transfers.list(current.customerId(), page, size);
         return new TransferPage(result.items().stream().map(TransferResponse::of).toList(), result.page(),
                 result.size(), result.totalElements());
+    }
+
+    @GetMapping("/destination")
+    DestinationResponse destination(@RequestParam("branch") @Size(max = 4) String branch,
+            @RequestParam("number") @Size(max = 14) String number) {
+        return DestinationResponse.of(transfers.destination(current.customerId(), branch, number));
     }
 
     @GetMapping("/{id}")

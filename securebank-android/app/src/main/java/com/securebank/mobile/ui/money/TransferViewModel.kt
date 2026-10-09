@@ -3,7 +3,11 @@ package com.securebank.mobile.ui.money
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.securebank.mobile.core.network.Account
+import com.securebank.mobile.core.network.ApiError
+import com.securebank.mobile.core.network.Destination
 import com.securebank.mobile.core.network.LimitUsage
+import com.securebank.mobile.core.network.Transfer
+import com.securebank.mobile.core.util.Format
 import com.securebank.mobile.core.util.Validation
 import com.securebank.mobile.core.network.TransferRequest
 import com.securebank.mobile.core.network.messageFor
@@ -24,6 +28,9 @@ import kotlinx.coroutines.launch
 
 enum class TransferStep { Form, Review, Sent }
 
+/** O que o comprovante mostra: a transferência que o servidor devolveu, quem recebeu e de qual conta saiu. */
+data class TransferReceipt(val transfer: Transfer, val destination: Destination, val from: String)
+
 data class TransferState(
     val accounts: Load<List<Account>> = Load.Loading,
     val step: TransferStep = TransferStep.Form,
@@ -37,8 +44,10 @@ data class TransferState(
     val errors: Map<TransferField, String> = emptyMap(),
     val loading: Boolean = false,
     val error: String? = null,
-    /** Valor e destino da última transferência enviada (para a tela de sucesso). */
-    val sent: String? = null,
+    /** Quem recebe, já confirmado pelo servidor (nome e CPF mascarados): aparece na revisão. */
+    val destination: Destination? = null,
+    /** Comprovante da última transferência enviada (para a tela de sucesso). */
+    val receipt: TransferReceipt? = null,
 )
 
 /** Formulário → revisão → confirmação (com biometria na tela) → comprovante. */
@@ -83,14 +92,40 @@ class TransferViewModel(private val banking: BankingRepository) : ViewModel() {
     fun onAmount(v: String) = edit { it.copy(amount = Validation.sanitizeAmount(v), errors = it.errors - TransferField.Amount) }
     fun onDescription(v: String) = edit { it.copy(description = v.take(140), errors = it.errors - TransferField.Description) }
 
+    /** Valida o formulário e pergunta ao servidor quem é o destinatário; só então abre a revisão. */
     fun review() {
         val s = _state.value
+        if (s.loading) return
         val source = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.sourceId }
         val errors = OperationValidation.transfer(s.sourceId, s.branch, s.number, s.amount, s.description, source, s.limit)
-        _state.update { if (errors.isEmpty()) it.copy(step = TransferStep.Review, errors = emptyMap()) else it.copy(errors = errors) }
+        if (errors.isNotEmpty()) {
+            _state.update { it.copy(errors = errors) }
+            return
+        }
+        _state.update { it.copy(loading = true, errors = emptyMap(), error = null) }
+        viewModelScope.launch {
+            try {
+                val found = banking.destination(s.branch, s.number)
+                val destination = found.copy(name = com.securebank.mobile.core.util.Dashboard.titleCase(found.name)) // o cadastro guarda como foi digitado
+                if (destination.status != "ACTIVE") {
+                    _state.update { it.copy(errors = mapOf(TransferField.Number to "Esta conta não está disponível para receber.")) }
+                } else {
+                    _state.update { it.copy(step = TransferStep.Review, destination = destination) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiError) {
+                if (e.status == 404) _state.update { it.copy(errors = mapOf(TransferField.Number to "Conta não encontrada. Confira a agência e o número.")) }
+                else _state.update { it.copy(error = messageFor(e)) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = messageFor(e)) }
+            } finally {
+                _state.update { it.copy(loading = false) }
+            }
+        }
     }
 
-    fun backToForm() = _state.update { it.copy(step = TransferStep.Form, error = null) }
+    fun backToForm() = _state.update { it.copy(step = TransferStep.Form, destination = null, error = null) }
 
     /** Só chamar DEPOIS da confirmação de identidade. */
     fun confirm() {
@@ -106,11 +141,13 @@ class TransferViewModel(private val banking: BankingRepository) : ViewModel() {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                intent.run(request) { key -> banking.transfer(request, key) }
+                val transfer = intent.run(request) { key -> banking.transfer(request, key) }
+                val from = (s.accounts as? Load.Ready)?.value?.firstOrNull { it.id == s.sourceId }
+                    ?.let { "${Format.accountTypeLabel(it.type)}, ${Format.accountLabel(it.branch, it.accountNumber)}" }.orEmpty()
                 _state.update {
                     it.copy(
                         step = TransferStep.Sent,
-                        sent = "${Money.format(request.amount)} para Ag. ${request.destinationBranch}, conta ${request.destinationAccountNumber}",
+                        receipt = it.destination?.let { d -> TransferReceipt(transfer, d, from) },
                         amount = "", number = "", description = "",
                     )
                 }
@@ -124,5 +161,5 @@ class TransferViewModel(private val banking: BankingRepository) : ViewModel() {
         }
     }
 
-    fun newTransfer() = _state.update { it.copy(step = TransferStep.Form, sent = null, error = null) }
+    fun newTransfer() = _state.update { it.copy(step = TransferStep.Form, receipt = null, destination = null, error = null) }
 }

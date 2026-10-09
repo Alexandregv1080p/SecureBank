@@ -9,6 +9,7 @@ import com.securebank.audit.application.AuditEntry;
 import com.securebank.audit.application.AuditService;
 import com.securebank.audit.domain.AuditEvent;
 import com.securebank.customer.application.CustomerApplicationService;
+import com.securebank.customer.domain.Customer;
 import com.securebank.limit.application.LimitUsage;
 import com.securebank.limit.domain.LimitType;
 import com.securebank.outbox.application.OutboxService;
@@ -20,6 +21,7 @@ import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.DomainException;
 import com.securebank.shared.domain.IdempotencyKey;
+import com.securebank.shared.domain.Masks;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.TransferId;
 import com.securebank.transaction.application.TransactionRepository;
@@ -36,6 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class TransferApplicationService {
+
+    /** Para quem vai o dinheiro, como aparece antes de confirmar: nome e CPF mascarados (o suficiente para reconhecer). */
+    public record Destination(String branch, String accountNumber, String accountType, String status, String maskedName,
+            String maskedDocument, boolean ownAccount) {}
 
     private final TransferService domain = new TransferService();
 
@@ -127,6 +133,17 @@ public class TransferApplicationService {
                 "destinationAccountId", destination.id().toString(), "amount", money.amount().toPlainString(),
                 "currency", money.currency().getCurrencyCode()));
         return transfer;
+    }
+
+    /** Consulta a conta de destino por agência e número. A rota é limitada por taxa: ninguém varre contas. */
+    @Transactional(readOnly = true)
+    public Destination destination(CustomerId requester, String branch, String accountNumber) {
+        Account account = accounts.findByBranchAndNumber(new Branch(branch), new AccountNumber(accountNumber))
+                .orElseThrow(() -> ApplicationException.notFound("Destination account"));
+        Customer owner = customers.get(account.customerId());
+        return new Destination(account.branch().value(), account.accountNumber().value(), account.type().name(),
+                account.status().name(), Masks.name(owner.name()), owner.document().masked(),
+                account.customerId().equals(requester));
     }
 
     @Transactional(readOnly = true)

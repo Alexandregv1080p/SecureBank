@@ -22,29 +22,39 @@ describe('validation (espelha o Kotlin e o servidor)', () => {
     expect(sameAccount(src, '0001', '100049-7')).toBe(false)
   })
 
-  it('digitar valor mantém só reais e centavos', () => {
+  it('digitar valor mantém o que foi digitado e só limpa o que é lixo', () => {
     expect(sanitizeAmount('')).toBe('')
     expect(sanitizeAmount('abc')).toBe('')
     expect(sanitizeAmount('1250,5')).toBe('1250,5')
     expect(sanitizeAmount('12,345')).toBe('12,34')
-    expect(sanitizeAmount('1.234,56')).toBe('1234,56')
-    expect(sanitizeAmount('1.5')).toBe('1,5')
+    expect(sanitizeAmount('1.234,56')).toBe('1.234,56') // milhar com ponto, como no Brasil
+    expect(sanitizeAmount('1.500')).toBe('1.500') // mil e quinhentos: NÃO vira 1,50
+    expect(sanitizeAmount('1.5')).toBe('1.5')
+    expect(sanitizeAmount('1,234.56')).toBe('1234,56') // padrão americano colado
+    expect(sanitizeAmount('1,234,567')).toBe('1234567')
+    expect(sanitizeAmount('R$ 1.234,56')).toBe('1.234,56')
     expect(sanitizeAmount('007')).toBe('7')
     expect(sanitizeAmount(',5')).toBe('0,5')
+    expect(sanitizeAmount('.5')).toBe('0.5')
     expect(sanitizeAmount('0')).toBe('0')
-    expect(sanitizeAmount('1,,2')).toBe('1,2')
-    expect(sanitizeAmount('12345678901234567')).toHaveLength(13)
+    expect(sanitizeAmount('1,,2')).toBe('1,2') // vírgula a mais é erro de digitação: ignora
+    expect(sanitizeAmount('12345678901234567').replace(/\D/g, '')).toHaveLength(13)
+    // idempotente: a máscara roda de novo no ViewModel/formulário sem mudar nada
+    for (const v of ['1.500', '1.234,56', '1234,5', '0,5', '1.5', '1234']) expect(sanitizeAmount(sanitizeAmount(v))).toBe(sanitizeAmount(v))
   })
 
   it('valor inválido diz por quê', () => {
     expect(amountIssue('1.234,56')).toBeNull()
+    expect(amountIssue('1.500')).toBeNull() // mil e quinhentos
     expect(amountIssue('10')).toBeNull()
     expect(amountIssue('')).toBe('Informe o valor')
     expect(amountIssue('  ')).toBe('Informe o valor')
     expect(amountIssue('0,00')).toBe('O valor deve ser maior que zero')
+    expect(amountIssue('0')).toBe('O valor deve ser maior que zero')
     expect(amountIssue('1,234')).toBe('Use no máximo 2 casas decimais')
-    expect(amountIssue('1.500')).toBe('Use no máximo 2 casas decimais')
+    expect(amountIssue('1.5000')).toBe('Use no máximo 2 casas decimais')
     expect(amountIssue('12345678901234')).toBe('Esse valor é alto demais')
+    expect(amountIssue('0.500')).not.toBeNull() // zero à esquerda não é milhar
     expect(amountIssue('1,2,3')).not.toBeNull()
     expect(amountIssue('abc')).not.toBeNull()
   })
@@ -95,6 +105,7 @@ describe('validation (espelha o Kotlin e o servidor)', () => {
     expect(fullNameIssue("Ana D'Ávila-Souza")).toBeNull()
     expect(fullNameIssue('Maria')).toBe('Informe nome e sobrenome')
     expect(fullNameIssue('  ')).toBe('Informe nome e sobrenome')
+    expect(fullNameIssue('Ana D’Ávila')).toBeNull() // apóstrofo tipográfico do teclado do celular
     expect(fullNameIssue('Maria 123')).toBe('Use só letras no nome')
   })
 

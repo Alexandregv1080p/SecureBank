@@ -29,30 +29,42 @@ class ValidationTest {
     }
 
     @Test
-    fun typingAnAmountKeepsOnlyReaisAndCents() {
+    fun typingAnAmountKeepsWhatWasTypedAndOnlyCleansGarbage() {
         assertEquals("", Validation.sanitizeAmount(""))
         assertEquals("", Validation.sanitizeAmount("abc"))
         assertEquals("1250,5", Validation.sanitizeAmount("1250,5"))
         assertEquals("12,34", Validation.sanitizeAmount("12,345"))
-        assertEquals("1234,56", Validation.sanitizeAmount("1.234,56")) // colado com milhar
-        assertEquals("1,5", Validation.sanitizeAmount("1.5")) // ponto decimal vira vírgula
+        assertEquals("1.234,56", Validation.sanitizeAmount("1.234,56")) // milhar com ponto, como no Brasil
+        assertEquals("1.500", Validation.sanitizeAmount("1.500")) // mil e quinhentos: NÃO vira 1,50
+        assertEquals("1.5", Validation.sanitizeAmount("1.5"))
+        assertEquals("1234,56", Validation.sanitizeAmount("1,234.56")) // padrão americano colado
+        assertEquals("1234567", Validation.sanitizeAmount("1,234,567"))
+        assertEquals("1.234,56", Validation.sanitizeAmount("R$ 1.234,56"))
         assertEquals("7", Validation.sanitizeAmount("007"))
         assertEquals("0,5", Validation.sanitizeAmount(",5"))
+        assertEquals("0.5", Validation.sanitizeAmount(".5"))
         assertEquals("0", Validation.sanitizeAmount("0"))
-        assertEquals("1,2", Validation.sanitizeAmount("1,,2")) // só uma vírgula
-        assertEquals(13, Validation.sanitizeAmount("12345678901234567").length)
+        assertEquals("1,2", Validation.sanitizeAmount("1,,2")) // vírgula a mais é erro de digitação: ignora
+        assertEquals(13, Validation.sanitizeAmount("12345678901234567").count { it.isDigit() })
+        // idempotente: a máscara roda de novo no ViewModel/campo sem mudar nada
+        listOf("1.500", "1.234,56", "1234,5", "0,5", "1.5", "1234").forEach {
+            assertEquals(Validation.sanitizeAmount(it), Validation.sanitizeAmount(Validation.sanitizeAmount(it)))
+        }
     }
 
     @Test
     fun anInvalidAmountSaysWhy() {
         assertNull(Validation.amountIssue("1.234,56"))
+        assertNull(Validation.amountIssue("1.500")) // mil e quinhentos
         assertNull(Validation.amountIssue("10"))
         assertEquals("Informe o valor", Validation.amountIssue(""))
         assertEquals("Informe o valor", Validation.amountIssue("  "))
         assertEquals("O valor deve ser maior que zero", Validation.amountIssue("0,00"))
+        assertEquals("O valor deve ser maior que zero", Validation.amountIssue("0"))
         assertEquals("Use no máximo 2 casas decimais", Validation.amountIssue("1,234"))
-        assertEquals("Use no máximo 2 casas decimais", Validation.amountIssue("1.500"))
+        assertEquals("Use no máximo 2 casas decimais", Validation.amountIssue("1.5000"))
         assertEquals("Esse valor é alto demais", Validation.amountIssue("12345678901234"))
+        assertNotNull(Validation.amountIssue("0.500")) // zero à esquerda não é milhar
         assertNotNull(Validation.amountIssue("1,2,3"))
         assertNotNull(Validation.amountIssue("abc"))
     }
@@ -107,6 +119,7 @@ class ValidationTest {
         assertNull(Validation.fullNameIssue("Ana D'Ávila-Souza"))
         assertEquals("Informe nome e sobrenome", Validation.fullNameIssue("Maria"))
         assertEquals("Informe nome e sobrenome", Validation.fullNameIssue("  "))
+        assertNull(Validation.fullNameIssue("Ana D’Ávila")) // apóstrofo tipográfico do teclado do celular
         assertEquals("Use só letras no nome", Validation.fullNameIssue("Maria 123"))
     }
 

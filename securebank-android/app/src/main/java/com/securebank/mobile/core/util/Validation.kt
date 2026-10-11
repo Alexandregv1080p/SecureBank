@@ -37,28 +37,64 @@ object Validation {
 
     // ---- valores ----
 
-    /** Deixa digitar só um valor em reais: dígitos e uma vírgula, até 2 casas e 13 dígitos inteiros ("." vira vírgula, a menos que seja milhar). */
+    /**
+     * Deixa digitar só um valor em reais: dígitos, ponto de milhar e uma vírgula com até 2 casas, até 13 dígitos inteiros.
+     * O texto fica como foi digitado ("1.500" continua "1.500"; quem decide o valor é [Money.parse]). Só reescreve o que é
+     * claramente de outro padrão: "1,234.56" (EUA) vira "1234,56" e "1,234,567" vira "1234567".
+     */
     fun sanitizeAmount(raw: String): String {
-        var text = raw.filter { it.isDigit() || it == ',' || it == '.' }
-        text = if (text.contains(',')) text.replace(".", "") else text.replaceFirst('.', ',').replace(".", "")
-        val comma = text.indexOf(',')
-        val integer = (if (comma >= 0) text.substring(0, comma) else text).trimStart('0').take(13).ifEmpty { if (comma >= 0 || text.isNotEmpty()) "0" else "" }
-        if (comma < 0) return integer
-        return integer + "," + text.substring(comma + 1).filter { it.isDigit() }.take(2)
+        var t = raw.filter { it.isDigit() || it == ',' || it == '.' }
+        val lastComma = t.lastIndexOf(',')
+        val lastDot = t.lastIndexOf('.')
+        if (lastComma >= 0 && lastDot > lastComma) {
+            t = t.substring(0, lastDot).replace(",", "") + "," + t.substring(lastDot + 1)
+        } else if (t.count { it == ',' } > 1) {
+            val groups = t.split(',')
+            if (groups.drop(1).all { it.length == 3 }) t = groups.joinToString("")
+        }
+        val comma = t.indexOf(',')
+        val decimals = if (comma >= 0) t.substring(comma + 1).filter { it.isDigit() }.take(2) else ""
+        val rawInteger = (if (comma >= 0) t.substring(0, comma) else t).replace(",", "")
+        var digits = 0
+        val kept = StringBuilder()
+        for (c in rawInteger) {
+            if (c != '.') {
+                if (digits == 13) break
+                digits++
+            }
+            kept.append(c)
+        }
+        var integer = kept.toString().replace(Regex("^0+(?=\\d)"), "")
+        if (integer.isEmpty() && (comma >= 0 || t.isNotEmpty())) integer = "0"
+        if (integer.startsWith(".")) integer = "0$integer"
+        if (integer.isEmpty()) return ""
+        return if (comma >= 0) "$integer,$decimals" else integer
     }
+
+    private const val AMOUNT_FORMAT = "Use só números e vírgula para os centavos, ex.: 1.250,50"
 
     /** Por que o valor digitado não serve (mensagem específica), ou null se é um valor positivo com até 2 casas. */
     fun amountIssue(input: String): String? {
         val text = input.replace(Regex("\\s|R\\$"), "")
         if (text.isEmpty()) return "Informe o valor"
         if (Money.parse(input) != null) return null
-        val normalized = if (text.contains(',')) text.replace(".", "").replace(',', '.') else text
-        return when {
-            !Regex("^\\d+(\\.\\d*)?$").matches(normalized) -> "Use só números e vírgula para os centavos, ex.: 1250,50"
-            normalized.substringAfter('.', "").length > 2 -> "Use no máximo 2 casas decimais"
-            normalized.substringBefore('.').length > 13 -> "Esse valor é alto demais"
-            else -> "O valor deve ser maior que zero"
+        if (text.any { !(it.isDigit() || it == ',' || it == '.') }) return AMOUNT_FORMAT
+        if (text.filter { it.isDigit() }.all { it == '0' }) return "O valor deve ser maior que zero"
+        val comma = text.lastIndexOf(',')
+        if (comma >= 0) {
+            if (text.indexOf(',') != comma) return AMOUNT_FORMAT
+            if (text.length - comma - 1 > 2) return "Use no máximo 2 casas decimais"
+        } else {
+            val dot = text.lastIndexOf('.')
+            if (dot >= 0 && text.indexOf('.') == dot && text.length - dot - 1 > 3) return "Use no máximo 2 casas decimais"
         }
+        val integerPart = when {
+            comma >= 0 -> text.substring(0, comma)
+            Regex("^\\d+\\.\\d{1,2}$").matches(text) -> text.substringBefore('.')
+            else -> text
+        }
+        if (integerPart.count { it.isDigit() } > 13) return "Esse valor é alto demais"
+        return AMOUNT_FORMAT
     }
 
     /** [amount] já normalizado ("1234.56"). */
@@ -126,7 +162,8 @@ object Validation {
         return when {
             words.size < 2 -> "Informe nome e sobrenome"
             name.length > 120 -> "Use no máximo 120 caracteres"
-            !words.all { w -> w.all { it.isLetter() || it == '\'' || it == '-' || it == '.' } } -> "Use só letras no nome"
+            // letras (com acento), apóstrofo reto ou tipográfico (D’Ávila, comum no teclado do celular), hífen e ponto (Jr.)
+            !words.all { w -> w.all { it.isLetter() || Character.getType(it) == Character.NON_SPACING_MARK.toInt() || it in "'’ʼ-." } } -> "Use só letras no nome"
             else -> null
         }
     }

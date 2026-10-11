@@ -19,7 +19,7 @@ object RegisterValidation {
         else if (!Validation.cpfValid(document)) put(RegisterField.Document, "CPF inválido: confira os dígitos")
         if (email.isBlank()) put(RegisterField.Email, "Informe o e-mail")
         else if (!this@RegisterValidation.email.matches(email.trim())) put(RegisterField.Email, "Informe um e-mail válido")
-        if (Phone.toE164BR(phone) == null) put(RegisterField.Phone, "Informe DDD e número, ex.: 11 99999-8888")
+        Phone.issue(phone)?.let { put(RegisterField.Phone, it) }
         Validation.passwordIssue(password, email)?.let { put(RegisterField.Password, it) }
         if (password != confirm) put(RegisterField.Confirm, "As senhas não conferem")
     }

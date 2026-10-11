@@ -39,28 +39,61 @@ export function sameAccount(source: { branch: string; accountNumber: string }, b
   return source.branch === branch && source.accountNumber === number
 }
 
-/** Deixa digitar só um valor em reais: dígitos e uma vírgula, até 2 casas e 13 dígitos inteiros ("." vira vírgula, a menos que seja milhar). */
+/**
+ * Deixa digitar só um valor em reais: dígitos, ponto de milhar e uma vírgula com até 2 casas, até 13 dígitos inteiros.
+ * O texto fica como foi digitado ("1.500" continua "1.500"; quem decide o valor é parseAmount). Só reescreve o que é
+ * claramente de outro padrão: "1,234.56" (EUA) vira "1234,56" e "1,234,567" vira "1234567".
+ */
 export function sanitizeAmount(raw: string): string {
-  let text = raw.replace(/[^\d,.]/g, '')
-  text = text.includes(',') ? text.replace(/\./g, '') : text.replace('.', ',').replace(/\./g, '')
-  const comma = text.indexOf(',')
-  const head = (comma >= 0 ? text.slice(0, comma) : text).replace(/^0+/, '').slice(0, 13)
-  const integer = head || (comma >= 0 || text ? '0' : '')
-  if (comma < 0) return integer
-  return `${integer},${text.slice(comma + 1).replace(/\D/g, '').slice(0, 2)}`
+  let t = raw.replace(/[^\d,.]/g, '')
+  const lastComma = t.lastIndexOf(',')
+  const lastDot = t.lastIndexOf('.')
+  if (lastComma >= 0 && lastDot > lastComma) {
+    t = t.slice(0, lastDot).replace(/,/g, '') + ',' + t.slice(lastDot + 1)
+  } else if ((t.match(/,/g) ?? []).length > 1) {
+    const groups = t.split(',')
+    if (groups.slice(1).every((g) => g.length === 3)) t = groups.join('')
+  }
+  const comma = t.indexOf(',')
+  const decimals = comma >= 0 ? t.slice(comma + 1).replace(/\D/g, '').slice(0, 2) : ''
+  let integer = (comma >= 0 ? t.slice(0, comma) : t).replace(/,/g, '')
+  let digits = 0
+  let kept = ''
+  for (const c of integer) {
+    if (c !== '.') {
+      if (digits === 13) break
+      digits++
+    }
+    kept += c
+  }
+  integer = kept.replace(/^0+(?=\d)/, '')
+  if (integer === '' && (comma >= 0 || t !== '')) integer = '0'
+  if (integer.startsWith('.')) integer = '0' + integer
+  if (integer === '' ) return comma >= 0 ? `0,${decimals}` : ''
+  return comma >= 0 ? `${integer},${decimals}` : integer
 }
+
+const AMOUNT_FORMAT = 'Use só números e vírgula para os centavos, ex.: 1.250,50'
 
 /** Por que o valor digitado não serve (mensagem específica), ou null se é um valor positivo com até 2 casas. */
 export function amountIssue(input: string): string | null {
   const text = input.replace(/\s|R\$/g, '')
   if (!text) return 'Informe o valor'
   if (parseAmount(input) !== null) return null
-  const normalized = text.includes(',') ? text.replace(/\./g, '').replace(/,/g, '.') : text
-  if (!/^\d+(\.\d*)?$/.test(normalized)) return 'Use só números e vírgula para os centavos, ex.: 1250,50'
-  const [int, dec = ''] = normalized.split('.')
-  if (dec.length > 2) return 'Use no máximo 2 casas decimais'
-  if (int.length > 13) return 'Esse valor é alto demais'
-  return 'O valor deve ser maior que zero'
+  if (/[^\d,.]/.test(text)) return AMOUNT_FORMAT
+  const digitsOnly = text.replace(/\D/g, '')
+  if (/^0*$/.test(digitsOnly)) return 'O valor deve ser maior que zero'
+  const comma = text.lastIndexOf(',')
+  if (comma >= 0) {
+    if (text.indexOf(',') !== comma) return AMOUNT_FORMAT
+    if (text.slice(comma + 1).length > 2) return 'Use no máximo 2 casas decimais'
+  } else {
+    const dot = text.lastIndexOf('.')
+    if (dot >= 0 && text.indexOf('.') === dot && text.slice(dot + 1).length > 3) return 'Use no máximo 2 casas decimais'
+  }
+  const integerDigits = (comma >= 0 ? text.slice(0, comma) : text.includes('.') && /^\d+\.\d{1,2}$/.test(text) ? text.split('.')[0] : text).replace(/\D/g, '')
+  if (integerDigits.length > 13) return 'Esse valor é alto demais'
+  return AMOUNT_FORMAT
 }
 
 /** `amount` já normalizado ("1234.56"). */
@@ -114,7 +147,8 @@ export function fullNameIssue(name: string): string | null {
   const words = name.trim().split(/\s+/).filter(Boolean)
   if (words.length < 2) return 'Informe nome e sobrenome'
   if (name.length > 120) return 'Use no máximo 120 caracteres'
-  if (!words.every((w) => /^[\p{L}'.-]+$/u.test(w))) return 'Use só letras no nome'
+  // letras (com acento), apóstrofo reto ou tipográfico (D’Ávila, comum no teclado do celular), hífen e ponto (Jr.)
+  if (!words.every((w) => /^[\p{L}\p{M}'’ʼ.-]+$/u.test(w))) return 'Use só letras no nome'
   return null
 }
 

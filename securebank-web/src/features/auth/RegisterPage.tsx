@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { login, register } from '../../services/auth'
 import { messageFor } from '../../lib/errors'
-import { toE164BR } from '../../lib/phone'
+import { phoneIssue, toE164BR } from '../../lib/phone'
 import { cpfValid, fullNameIssue, maskCpf, maskPhone, passwordIssue, withMask } from '../../lib/validation'
 import { useAuth } from '../../stores/auth'
 import { Alert, Button, Field, Input } from '../../components/ui'
@@ -22,7 +22,10 @@ const schema = z
       else if (!cpfValid(v)) ctx.addIssue({ code: 'custom', message: 'CPF inválido: confira os dígitos' })
     }),
     email: z.string().min(1, 'Informe o e-mail').email('Informe um e-mail válido'),
-    phone: z.string().refine((v) => toE164BR(v) !== null, 'Informe DDD e número, ex.: 11 99999-8888'),
+    phone: z.string().superRefine((v, ctx) => {
+      const m = phoneIssue(v)
+      if (m) ctx.addIssue({ code: 'custom', message: m })
+    }),
     password: z.string(),
     confirm: z.string(),
   })
@@ -73,7 +76,7 @@ export function RegisterPage() {
           </Field>
         </div>
         <Field label="E-mail" htmlFor="email" error={errors.email?.message}>
-          <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register('email')} />
+          <Input id="email" type="email" autoComplete="email" maxLength={254} aria-invalid={!!errors.email} {...form.register('email')} />
         </Field>
         <Field label="Senha" htmlFor="password" error={errors.password?.message} hint="12 a 128 caracteres, sem ser previsível e sem conter o seu e-mail. Uma frase longa vale mais que símbolos.">
           <Input id="password" type="password" autoComplete="new-password" aria-invalid={!!errors.password} {...form.register('password')} />

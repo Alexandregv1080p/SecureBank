@@ -90,7 +90,7 @@ export function LoginPage() {
       <form onSubmit={first.handleSubmit(submitCredentials)} noValidate className="flex flex-col gap-5">
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="E-mail" htmlFor="email" error={first.formState.errors.email?.message}>
-          <Input id="email" type="email" autoComplete="username" autoFocus aria-invalid={!!first.formState.errors.email} {...first.register('email')} />
+          <Input id="email" type="email" autoComplete="username" autoFocus maxLength={254} aria-invalid={!!first.formState.errors.email} {...first.register('email')} />
         </Field>
         <Field label="Senha" htmlFor="password" error={first.formState.errors.password?.message}>
           <Input id="password" type="password" autoComplete="current-password" aria-invalid={!!first.formState.errors.password} {...first.register('password')} />

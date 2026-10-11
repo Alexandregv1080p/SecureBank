@@ -12,11 +12,15 @@ class UtilTest {
         assertEquals("1234.56", Money.parse("1234.56"))
         assertEquals("10", Money.parse("10"))
         assertEquals("0.5", Money.parse("R$ 0,5"))
+        assertEquals("1500", Money.parse("1.500")) // padrão brasileiro: mil e quinhentos
+        assertEquals("1500000.50", Money.parse("1.500.000,50"))
+        assertEquals("1.5", Money.parse("1.5"))
+        assertEquals("1.50", Money.parse("1.50"))
     }
 
     @Test
     fun parseRejectsZeroNegativeTooManyDecimalsAndGarbage() {
-        for (bad in listOf("", "0", "0,00", "-5", "10,001", "abc", "1,2,3", "12345678901234")) {
+        for (bad in listOf("", "0", "0,00", "-5", "10,001", "abc", "1,2,3", "12345678901234", "0.500", "1.5000", "1.23,4", "1,234.56")) {
             assertNull("deveria recusar '$bad'", Money.parse(bad))
         }
     }
@@ -31,6 +35,11 @@ class UtilTest {
         assertEquals("+5511999998888", Phone.toE164BR("11 99999-8888"))
         assertEquals("+5511999998888", Phone.toE164BR("+55 (11) 99999-8888"))
         assertNull(Phone.toE164BR("1199"))
+        assertEquals("+551133334444", Phone.toE164BR("11 3333-4444")) // fixo
+        assertNull(Phone.toE164BR("00 99999-8888")) // DDD que não existe
+        assertNull(Phone.toE164BR("11 12345-6789")) // celular precisa começar com 9
+        assertEquals("+5511933334444", Phone.toE164BR("11 93333-4444"))
+        assertNull(Phone.toE164BR("11 93333-444")) // fixo não começa com 9
     }
 
     @Test

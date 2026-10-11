@@ -36,7 +36,7 @@ class RegisterViewModel(private val auth: AuthRepository) : ViewModel() {
         when (field) {
             RegisterField.Name -> it.copy(name = value, errors = cleared, error = null)
             RegisterField.Document -> it.copy(document = Validation.maskCpf(value), errors = cleared, error = null)
-            RegisterField.Email -> it.copy(email = value, errors = cleared, error = null)
+            RegisterField.Email -> it.copy(email = value.take(254), errors = cleared, error = null)
             RegisterField.Phone -> it.copy(phone = Validation.maskPhone(value), errors = cleared, error = null)
             RegisterField.Password -> it.copy(password = value, errors = cleared, error = null)
             RegisterField.Confirm -> it.copy(confirm = value, errors = cleared, error = null)

@@ -98,6 +98,10 @@ data class SbColors(
     val pageBottom: Color,
     val glowA: Color,
     val glowB: Color,
+    /** Campos de formulário: fundo, borda em repouso (contraste >= 3:1 sobre o fundo) e placeholder (>= 4,5:1). */
+    val field: Color,
+    val fieldBorder: Color,
+    val fieldPlaceholder: Color,
 )
 
 private val DarkSb = SbColors(
@@ -114,6 +118,9 @@ private val DarkSb = SbColors(
     pageBottom = Color(0xFF1B1253),
     glowA = Color(0x807A5CFF),
     glowB = Color(0x2138D9C7),
+    field = Color(0x12FFFFFF),
+    fieldBorder = Color(0x6BFFFFFF),
+    fieldPlaceholder = Color(0xFF9B97C7),
 )
 
 private val LightSb = SbColors(
@@ -130,6 +137,9 @@ private val LightSb = SbColors(
     pageBottom = Color(0xFFECEBFA),
     glowA = Color(0x297A5CFF),
     glowB = Color(0x140F9D8F),
+    field = Color(0xFFFFFFFF),
+    fieldBorder = Color(0xFF837FAE),
+    fieldPlaceholder = Color(0xFF6E6996),
 )
 
 private val LocalSb = staticCompositionLocalOf { DarkSb }

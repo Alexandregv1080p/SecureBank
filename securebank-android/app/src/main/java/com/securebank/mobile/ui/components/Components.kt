@@ -100,6 +100,8 @@ fun SbTextField(
             enabled = enabled,
             singleLine = true,
             isError = error != null,
+            colors = sbFieldColors(),
+            shape = MaterialTheme.shapes.medium,
             visualTransformation = if (password && !visible) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (password) KeyboardType.Password else keyboardType,

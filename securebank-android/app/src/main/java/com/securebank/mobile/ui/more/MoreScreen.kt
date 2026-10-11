@@ -53,7 +53,7 @@ fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer:
                     Text("Tema escuro", style = MaterialTheme.typography.titleSmall)
                     Text("Desligue para usar o tema claro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Switch(checked = darkTheme, onCheckedChange = onToggleTheme)
+                Switch(checked = darkTheme, onCheckedChange = onToggleTheme, colors = com.securebank.mobile.ui.components.sbSwitchColors())
             }
         }
         TextButton(onClick = onLogout) { Text("Sair da conta", color = MaterialTheme.colorScheme.error) }

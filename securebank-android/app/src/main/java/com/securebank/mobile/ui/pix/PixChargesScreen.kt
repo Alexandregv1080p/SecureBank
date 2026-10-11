@@ -77,7 +77,7 @@ fun PixChargesScreen(viewModel: PixChargesViewModel) {
                     Text("Validade", style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ChargeValidity.entries.forEach { v ->
-                            FilterChip(selected = s.validity == v, onClick = { viewModel.onValidity(v) }, label = { Text(v.label) })
+                            com.securebank.mobile.ui.components.SbFilterChip(selected = s.validity == v, onClick = { viewModel.onValidity(v) }, label = v.label)
                         }
                     }
                     PrimaryButton("Criar cobrança", onClick = viewModel::create, loading = s.creating)

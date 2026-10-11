@@ -56,10 +56,10 @@ fun PixReceiveScreen(viewModel: PixReceiveViewModel, onKeys: () -> Unit) {
                     Text("Receber na chave", style = MaterialTheme.typography.labelLarge)
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         keys.value.forEach { k ->
-                            FilterChip(
+                            com.securebank.mobile.ui.components.SbFilterChip(
                                 selected = k.id == s.selectedKeyId,
                                 onClick = { viewModel.onKey(k.id) },
-                                label = { Text("${PixValidation.typeLabel(k.type)}: ${k.key}", maxLines = 1) },
+                                label = "${PixValidation.typeLabel(k.type)}: ${k.key}",
                             )
                         }
                     }

@@ -189,3 +189,7 @@ Transferir pergunta ao servidor quem recebe (`GET /transfers/destination`) antes
 ## Abrir conta e Câmbio
 
 Abrir conta explica os dois tipos (hoje funcionam do mesmo jeito, com os mesmos limites iniciais; para render, Investimentos), envia `Idempotency-Key` (um toque duplo devolve a mesma conta) e mostra o resumo com agência, número (copiar) e os limites iniciais vindos do servidor. Câmbio ganhou revisão: a cotação é conferida de novo ao revisar e a cada 30 s (avisando se mudou), com total, saldo depois e carteira depois; a cotação enviada ao servidor é a da revisão, e o servidor continua recusando se ela mudar (`FX_RATE_CHANGED`). O mesmo vale no web.
+
+## Campos e controles nos dois temas
+
+Os campos de texto, interruptores, rádios e chips usam tokens próprios do tema (`SbColors.field`, `fieldBorder`, `fieldPlaceholder`; ver `ui/components/Fields.kt`) em vez do `outline` do Material, que é um token de divisória (branco a 11%) e deixava o contorno quase invisível no escuro. A borda em repouso tem contraste de pelo menos 3:1 sobre o fundo nos dois temas e o placeholder pelo menos 4,5:1; foco, erro e desativado têm cores próprias. No web a mesma regra vive na classe `.field` (`index.css`, tokens `--field-*`), com foco em anel, erro, desativado, autopreenchimento do navegador, seta própria no select e ícone de data.

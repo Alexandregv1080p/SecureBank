@@ -151,7 +151,7 @@ private fun Details(s: PixSendState, accounts: List<Account>, vm: PixSendViewMod
                     Text("Agendar para outra data", style = MaterialTheme.typography.titleSmall)
                     Text("O dinheiro só sai na data escolhida.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Switch(checked = s.scheduleOn, onCheckedChange = vm::onSchedule)
+                Switch(checked = s.scheduleOn, onCheckedChange = vm::onSchedule, colors = com.securebank.mobile.ui.components.sbSwitchColors())
             }
             if (s.scheduleOn) {
                 SbTextField(

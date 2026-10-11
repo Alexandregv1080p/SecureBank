@@ -105,7 +105,7 @@ private fun LockPanel(container: AppContainer) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(end = 12.dp),
                     )
-                    Switch(checked = enabled, onCheckedChange = { wanted ->
+                    Switch(colors = com.securebank.mobile.ui.components.sbSwitchColors(), checked = enabled, onCheckedChange = { wanted ->
                         if (wanted) {
                             container.lockSettings.enabled = true
                             enabled = true

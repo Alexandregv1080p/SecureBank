@@ -54,8 +54,8 @@ export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
   )
 }
 
-const inputClass =
-  'min-h-10 w-full rounded-ui border border-line bg-surface-2 px-3 text-sm text-ink transition placeholder:text-muted/70 hover:border-muted/50 focus-visible:border-accent aria-[invalid=true]:border-danger'
+// O visual dos campos (borda, foco, erro, desativado, autopreenchimento) vive em .field no index.css, nos dois temas.
+const inputClass = 'field'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className = '', ...props },

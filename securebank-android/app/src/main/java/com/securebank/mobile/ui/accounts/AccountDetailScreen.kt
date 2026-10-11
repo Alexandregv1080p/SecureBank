@@ -146,15 +146,15 @@ fun AccountDetailScreen(viewModel: AccountDetailViewModel, onDeposit: () -> Unit
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                        FilterChip(selected = statement.category == null, onClick = { viewModel.setCategory(null) }, label = { Text("Tudo") })
+                        com.securebank.mobile.ui.components.SbFilterChip(selected = statement.category == null, onClick = { viewModel.setCategory(null) }, label = "Tudo")
                         Format.categories.forEach { c ->
-                            FilterChip(selected = statement.category == c, onClick = { viewModel.setCategory(c) }, label = { Text(Format.categoryLabel(c)) })
+                            com.securebank.mobile.ui.components.SbFilterChip(selected = statement.category == c, onClick = { viewModel.setCategory(c) }, label = Format.categoryLabel(c))
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = statement.direction == null, onClick = { viewModel.setDirection(null) }, label = { Text("Entradas e saídas") })
-                        FilterChip(selected = statement.direction == "CREDIT", onClick = { viewModel.setDirection("CREDIT") }, label = { Text("Entradas") })
-                        FilterChip(selected = statement.direction == "DEBIT", onClick = { viewModel.setDirection("DEBIT") }, label = { Text("Saídas") })
+                        com.securebank.mobile.ui.components.SbFilterChip(selected = statement.direction == null, onClick = { viewModel.setDirection(null) }, label = "Entradas e saídas")
+                        com.securebank.mobile.ui.components.SbFilterChip(selected = statement.direction == "CREDIT", onClick = { viewModel.setDirection("CREDIT") }, label = "Entradas")
+                        com.securebank.mobile.ui.components.SbFilterChip(selected = statement.direction == "DEBIT", onClick = { viewModel.setDirection("DEBIT") }, label = "Saídas")
                     }
                 }
             }

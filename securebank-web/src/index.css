@@ -38,6 +38,12 @@
   --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -28px rgba(5, 2, 30, 0.9);
   --panel-solid: #1d1558;
   --radius: 12px;
+  /* Campos de formulário: fundo próprio e borda com contraste de não-texto (>= 3:1) sobre o fundo e sobre os cartões. */
+  --field-bg: rgba(255, 255, 255, 0.07);
+  --field-bg-disabled: rgba(255, 255, 255, 0.03);
+  --field-border: rgba(255, 255, 255, 0.42);
+  --field-border-hover: rgba(255, 255, 255, 0.62);
+  --field-placeholder: #9b97c7;
   color-scheme: dark;
 }
 
@@ -71,6 +77,11 @@
   --page: linear-gradient(165deg, #f4f2ff 0%, #ecebfa 100%);
   --card-shadow: 0 1px 2px rgba(23, 18, 61, 0.05), 0 18px 36px -24px rgba(60, 40, 160, 0.3);
   --panel-solid: #ffffff;
+  --field-bg: #ffffff;
+  --field-bg-disabled: #eceaf7;
+  --field-border: #837fae;
+  --field-border-hover: #5f5b88;
+  --field-placeholder: #6e6996;
   color-scheme: light;
 }
 
@@ -232,5 +243,87 @@ h3 {
   }
   .no-print {
     display: none !important;
+  }
+}
+
+/*
+ * Campos de formulário (input, select): um só visual para os dois temas, a partir dos tokens --field-*.
+ * Borda legível em repouso, anel de foco do acento, estado de erro, desativado e o autopreenchimento do navegador
+ * (que pinta o campo de amarelo/azul claro e deixa o texto ilegível no escuro).
+ */
+@layer components {
+  .field {
+    min-height: 2.5rem;
+    width: 100%;
+    border-radius: var(--radius);
+    border: 1px solid var(--field-border);
+    background-color: var(--field-bg);
+    color: var(--text);
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s,
+      background-color 0.15s;
+  }
+  .field::placeholder {
+    color: var(--field-placeholder);
+    opacity: 1;
+  }
+  .field:hover:not(:disabled) {
+    border-color: var(--field-border-hover);
+  }
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
+  }
+  .field[aria-invalid='true'] {
+    border-color: var(--danger);
+  }
+  .field[aria-invalid='true']:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 32%, transparent);
+  }
+  .field:disabled {
+    background-color: var(--field-bg-disabled);
+    color: var(--muted);
+    cursor: not-allowed;
+    border-color: color-mix(in srgb, var(--field-border) 55%, transparent);
+  }
+  .field:-webkit-autofill,
+  .field:-webkit-autofill:hover,
+  .field:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--text);
+    box-shadow: 0 0 0 1000px var(--panel-solid) inset;
+    transition: background-color 9999s ease-out;
+  }
+
+  /* Select: seta própria na cor do texto (a nativa some ou fica preta no escuro) e opções sólidas. */
+  select.field {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 2.25rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.15rem) 50%,
+      calc(100% - 0.8rem) 50%;
+    background-size: 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+  }
+  select.field option {
+    background-color: var(--panel-solid);
+    color: var(--text);
+  }
+
+  /* Data: o ícone do calendário segue o tema e fica clicável com clareza. */
+  input.field[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.75;
+  }
+  input.field[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
   }
 }

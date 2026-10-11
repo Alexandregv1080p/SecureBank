@@ -35,7 +35,7 @@ fun AccountPicker(label: String, accounts: List<Account>, selectedId: String?, o
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = a.id == selectedId, onClick = null)
+                        RadioButton(selected = a.id == selectedId, onClick = null, colors = sbRadioColors())
                         Column(modifier = Modifier.weight(1f)) {
                             Text("${Format.accountTypeLabel(a.type)}, ${a.accountNumber}", style = MaterialTheme.typography.titleSmall)
                             Text("Ag. ${a.branch}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

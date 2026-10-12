@@ -29,7 +29,7 @@ public class CustomerApplicationService {
         if (customers.existsByDocument(cpf) || customers.existsByEmail(mail)) {
             throw ApplicationException.conflict("CUSTOMER_ALREADY_EXISTS", "Customer already registered");
         }
-        Customer customer = Customer.register(name, cpf, mail, new Phone(phone), time.now());
+        Customer customer = Customer.register(name, cpf, mail, Phone.forContact(phone), time.now());
         customers.save(customer);
         return customer;
     }
@@ -46,7 +46,7 @@ public class CustomerApplicationService {
         if (!newEmail.equals(customer.email()) && customers.existsByEmail(newEmail)) {
             throw ApplicationException.conflict("CUSTOMER_ALREADY_EXISTS", "Email already in use");
         }
-        customer.updateContact(newEmail, phone == null ? customer.phone() : new Phone(phone), time.now());
+        customer.updateContact(newEmail, phone == null ? customer.phone() : Phone.forContact(phone), time.now());
         customers.save(customer);
         return customer;
     }

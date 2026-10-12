@@ -38,6 +38,22 @@ class AuthenticationDomainTest {
         assertThatThrownBy(() -> PasswordPolicy.validate(password, EMAIL)).isInstanceOf(InvalidValueException.class);
     }
 
+    /** Os mesmos casos existem no web (validation.test.ts) e no Android (ValidationTest.kt). */
+    @ParameterizedTest
+    @ValueSource(strings = {"12345678901234", "senhasenha1234", "password12345", "qwertyuiop123", "abcdefghijklmnop",
+            "aaaabbbbaaaa", "abc123abc123abc123", "Gato123456789!", "SENHA-senha-1234", "zyxwvutsrqpo99", "ZZZZZZ-12345"})
+    void rejectsSequencesKeyboardRowsObviousWordsAndRepeatedUnits(String password) {
+        assertThatThrownBy(() -> PasswordPolicy.validate(password, EMAIL)).isInstanceOf(InvalidValueException.class)
+                .hasMessageContaining("too easy");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Correct-Horse-Battery-9", "Another-Strong-Pass-77", "Bootstrap-Test-Pass-2026!",
+            "Mesa-Cadeira-123456", "MinhaSenha-Segura-2026", "Meu-Cachorro-Rex-2024", "SecureBank-Pass-Forte-2026"})
+    void acceptsPassphrasesThatOnlyContainAPredictableBit(String password) {
+        PasswordPolicy.validate(password, EMAIL);
+    }
+
     @Test
     void rejectsPasswordsAboveTheMaximumToLimitHashingCost() {
         assertThatThrownBy(() -> PasswordPolicy.validate("aB3-".repeat(40), EMAIL))

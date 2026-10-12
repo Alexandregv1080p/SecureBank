@@ -17,7 +17,7 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 
 | Método e rota | O que faz |
 | --- | --- |
-| `POST /auth/register` | Cria cliente + usuário (senha 12+ caracteres) |
+| `POST /auth/register` | Cria cliente + usuário. Senha de 12 a 128 caracteres e não previsível (sequência, fila do teclado, palavra óbvia, repetição, e-mail); celular brasileiro com DDD válido, 11 dígitos começando com 9 ou 10 começando com 2 a 5 |
 | `POST /auth/login` | Tokens, ou `{mfaRequired, mfaToken}` se o MFA estiver ligado |
 | `POST /auth/mfa/verify` | Troca `mfaToken` + código TOTP pelos tokens |
 | `POST /auth/refresh` | Novo access + refresh (rotação; reuso revoga a sessão) |
@@ -52,7 +52,7 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `GET /accounts/{id}/statement/summary?month=YYYY-MM` | Resumo do mês (fuso de São Paulo): entradas, saídas, resultado e o mesmo por categoria; só lançamentos concluídos |
 | `GET /accounts/{id}/statement/export`   | CSV do extrato (mesmos filtros), até 5.000 linhas (`X-Truncated: true` se houver mais); campo `reference` neutraliza fórmulas de planilha |
 | `GET /accounts/{id}/limits`             | Limites com o consumo do dia                                      |
-| `POST /accounts/{id}/deposits`          | Depósito (simulado)                                               |
+| `POST /accounts/{id}/deposits`          | Depósito (simulado), até R$ 100.000,00 por operação (`DEPOSIT_LIMIT_EXCEEDED`) |
 | `POST /accounts/{id}/withdrawals`       | Saque (respeita limite de saque)                                  |
 | `POST /transfers`                       | Transferência para outra conta (`Idempotency-Key` obrigatório)    |
 | `GET /transfers`, `GET /transfers/{id}` | Transferências enviadas                                           |
@@ -100,7 +100,7 @@ Sempre o mesmo formato, com `traceId` (também no header `X-Trace-Id`):
 | 403    | `FORBIDDEN`                                                                                     |
 | 404    | `NOT_FOUND` — inclui recurso de **outro dono** (indistinguível de inexistente, anti-IDOR)         |
 | 409    | `IDEMPOTENCY_KEY_IN_USE`, `CUSTOMER_ALREADY_EXISTS`, `PIX_KEY_IN_USE`, `CONCURRENT_UPDATE` (refaça a requisição), `CONFLICT` |
-| 422    | `INVALID_MFA_CODE`, `INVALID_CURRENT_PASSWORD`, `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH`, `INSUFFICIENT_PIGGY_FUNDS`, `PIGGY_CLOSED`, `PIGGY_HAS_BALANCE`, `PIGGY_LIMIT_REACHED`, `PIX_KEY_LIMIT_REACHED` |
+| 422    | `INVALID_MFA_CODE`, `INVALID_CURRENT_PASSWORD`, `INSUFFICIENT_FUNDS`, `DEPOSIT_LIMIT_EXCEEDED`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH`, `INSUFFICIENT_PIGGY_FUNDS`, `PIGGY_CLOSED`, `PIGGY_HAS_BALANCE`, `PIGGY_LIMIT_REACHED`, `PIX_KEY_LIMIT_REACHED` |
 | 429    | `RATE_LIMITED`, `TOO_MANY_ATTEMPTS` (com `Retry-After`)                                          |
 | 500    | `INTERNAL_ERROR` — mensagem genérica; o detalhe fica só no log, com o mesmo `traceId`             |
 

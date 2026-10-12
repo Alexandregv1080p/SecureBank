@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue,
+  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue, depositIssue,
   sameAccount, sanitizeAmount,
 } from './validation'
 
@@ -113,9 +113,15 @@ describe('validation (espelha o Kotlin e o servidor)', () => {
     expect(passwordIssue('Correct-Horse-Battery-9', 'marina@example.com')).toBeNull()
     expect(passwordIssue('curta')).toBe('Use de 12 a 128 caracteres')
     expect(passwordIssue('a'.repeat(129))).toBe('Use de 12 a 128 caracteres')
-    expect(passwordIssue('senha1234567')).toBe('Essa senha é fácil de adivinhar')
-    expect(passwordIssue('aaaabbbbaaaa')).toBe('Essa senha é fácil de adivinhar')
+    const easy = (pw: string) => expect(passwordIssue(pw), pw).toMatch(/^Essa senha é fácil de adivinhar/)
+    ;['senha1234567', 'aaaabbbbaaaa', 'abcdefgh1234', 'Abcdef-12345', 'qwerty-qwerty', '987654321098', 'senhaSENHAsenha', 'abcabcabcabc', 'senha-senha-1234', 'ZZZZZZ-12345'].forEach(easy)
+    ;['Tq7#mZ2k9Lw4', 'aq7zk2aq7zk7', 'cavalo-grampo-nuvem-42', 'Correct-Horse-Battery-9'].forEach((pw) => expect(passwordIssue(pw)).toBeNull())
     expect(passwordIssue('xx-marina-xx-2026', 'Marina@example.com')).toBe('A senha não pode conter o seu e-mail')
     expect(passwordIssue('xx-ana-xx-2026-ok', 'ana@example.com')).toBeNull()
+  })
+
+  it('refuses a deposit above the per-operation cap', () => {
+    expect(depositIssue('100000.00')).toBeNull()
+    expect(depositIssue('100000.01')).toMatch(/^Um depósito é de até/)
   })
 })

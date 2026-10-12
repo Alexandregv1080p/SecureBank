@@ -96,6 +96,14 @@ export function amountIssue(input: string): string | null {
   return AMOUNT_FORMAT
 }
 
+/** Teto de um depósito (simulado), igual ao do servidor. */
+export const MAX_DEPOSIT = '100000.00'
+
+/** Depósito acima do teto por operação (`amount` normalizado). */
+export function depositIssue(amount: string): string | null {
+  return Math.round(Number(amount) * 100) > Math.round(Number(MAX_DEPOSIT) * 100) ? `Um depósito é de até ${formatBRL(MAX_DEPOSIT)} por vez` : null
+}
+
 /** `amount` já normalizado ("1234.56"). */
 export function balanceIssue(amount: string, balance: string): string | null {
   const a = Number(amount)
@@ -155,13 +163,53 @@ export function fullNameIssue(name: string): string | null {
 const COMMON_PASSWORDS = new Set([
   'password1234', '123456789012', 'qwertyuiop12', '1234567890ab', 'senha1234567', 'senhasenha123', 'passwordpassword',
   'letmein12345', 'iloveyou1234', 'admin1234567', 'welcome12345', 'changeme1234', 'abcdefghijkl', '111111111111', '000000000000',
+  'mudar1234567', 'brasil123456', '123456789abc', 'qazwsxedcrfv', '1q2w3e4r5t6y', 'q1w2e3r4t5y6',
 ])
+const BAD_WORDS = ['password', 'passwd', 'senha', 'admin', 'qwerty', 'letmein', 'welcome', 'iloveyou', 'changeme', 'master', 'login', 'brasil', 'futebol', 'mudar', 'secure']
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm', 'qazwsxedcrfv']
+
+/** "abcabcabc": a senha inteira é uma unidade curta repetida 2 vezes ou mais. */
+function repeatsAUnit(s: string): boolean {
+  const n = s.length
+  for (let unit = 1; unit <= n / 2; unit++) if (n % unit === 0 && s.slice(0, unit).repeat(n / unit) === s) return true
+  return false
+}
+
+/** Previsível: lista de comuns, poucos caracteres diferentes, só dígitos, unidade repetida, ou mais da metade é sequência/teclado/palavra óbvia. */
+function isTooEasy(lower: string): boolean {
+  if (COMMON_PASSWORDS.has(lower) || new Set(lower).size < 6) return true
+  const s = [...lower].filter((c) => /[\p{L}\p{Nd}]/u.test(c)).join('')
+  if (s === '' || /^\p{Nd}+$/u.test(s) || repeatsAUnit(lower)) return true
+  const covered = new Array<boolean>(s.length).fill(false)
+  for (const step of [1, -1, 0]) {
+    let i = 0
+    while (i < s.length) {
+      let j = i
+      while (j + 1 < s.length && s.charCodeAt(j + 1) - s.charCodeAt(j) === step) j++
+      if (j - i + 1 >= 4) for (let k = i; k <= j; k++) covered[k] = true
+      i = j + 1
+    }
+  }
+  for (const row of KEYBOARD_ROWS) {
+    for (const r of [row, [...row].reverse().join('')]) {
+      for (let i = 0; i < s.length; i++) {
+        let len = 0
+        while (i + len < s.length && r.includes(s.slice(i, i + len + 1))) len++
+        if (len >= 4) for (let k = i; k < i + len; k++) covered[k] = true
+      }
+    }
+  }
+  for (const word of BAD_WORDS) {
+    for (let i = s.indexOf(word); i >= 0; i = s.indexOf(word, i + 1)) for (let k = i; k < i + word.length; k++) covered[k] = true
+  }
+  return covered.filter(Boolean).length * 2 > s.length
+}
 
 /** Mesma política do servidor (PasswordPolicy): tamanho, não ser previsível e não conter o e-mail. */
 export function passwordIssue(password: string, email?: string): string | null {
   if (password.length < 12 || password.length > 128) return 'Use de 12 a 128 caracteres'
   const lower = password.toLowerCase()
-  if (COMMON_PASSWORDS.has(lower) || new Set(lower).size < 5) return 'Essa senha é fácil de adivinhar'
+  if (isTooEasy(lower)) return 'Essa senha é fácil de adivinhar: evite sequências, teclas em fila e palavras como "senha"'
   const local = (email ?? '').trim().toLowerCase().split('@')[0]
   if (local.length >= 4 && lower.includes(local)) return 'A senha não pode conter o seu e-mail'
   return null

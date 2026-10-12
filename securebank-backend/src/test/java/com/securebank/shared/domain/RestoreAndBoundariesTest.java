@@ -185,7 +185,7 @@ class RestoreAndBoundariesTest {
     // ---------- fronteiras da política de senha ----------
 
     @ParameterizedTest
-    @ValueSource(strings = {"Abcdef-12345", "abcdeabcdeabcde"}) // 12 caracteres; exatamente 5 distintos
+    @ValueSource(strings = {"Tq7#mZ2k9Lw4", "aq7zk2aq7zk7"}) // 12 caracteres; exatamente 6 distintos
     void acceptsTheLowerBoundaries(String password) {
         PasswordPolicy.validate(password, EMAIL);
     }

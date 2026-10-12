@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { bankingApi } from '../../services/banking'
 import { createIdempotency } from '../../lib/idempotency'
 import { formatBRL, parseAmount } from '../../lib/money'
-import { amountIssue, balanceIssue, limitIssue, sanitizeAmount, withMask } from '../../lib/validation'
+import { amountIssue, balanceIssue, depositIssue, limitIssue, sanitizeAmount, withMask } from '../../lib/validation'
 import type { LimitUsage, Transaction } from '../../services/types'
 import { formatDateTime } from '../../lib/format'
 import { ApiError } from '../../lib/api'
@@ -42,6 +42,10 @@ export function MoneyForm({ accountId, accountName, kind, balance, limit }: { ac
     setError(null)
     setDone(null)
     const value = parseAmount(amount)!
+    if (kind === 'deposit') {
+      const issue = depositIssue(value)
+      if (issue) return form.setError('amount', { message: issue })
+    }
     if (kind === 'withdraw') {
       const issue = (balance ? balanceIssue(value, balance) : null) ?? limitIssue(value, limit)
       if (issue) return form.setError('amount', { message: issue })
@@ -97,7 +101,7 @@ export function MoneyForm({ accountId, accountName, kind, balance, limit }: { ac
         label="Valor (R$)"
         htmlFor={`amount-${kind}`}
         error={form.formState.errors.amount?.message}
-        hint={kind === 'withdraw' ? withdrawHint(balance, limit) : undefined}
+        hint={kind === 'withdraw' ? withdrawHint(balance, limit) : `Até ${formatBRL('100000.00')} por depósito`}
       >
         <Input
           id={`amount-${kind}`}

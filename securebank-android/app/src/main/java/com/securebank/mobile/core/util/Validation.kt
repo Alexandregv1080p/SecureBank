@@ -171,13 +171,69 @@ object Validation {
     private val commonPasswords = setOf(
         "password1234", "123456789012", "qwertyuiop12", "1234567890ab", "senha1234567", "senhasenha123", "passwordpassword",
         "letmein12345", "iloveyou1234", "admin1234567", "welcome12345", "changeme1234", "abcdefghijkl", "111111111111", "000000000000",
+        "mudar1234567", "brasil123456", "123456789abc", "qazwsxedcrfv", "1q2w3e4r5t6y", "q1w2e3r4t5y6",
     )
+    private val badWords = listOf(
+        "password", "passwd", "senha", "admin", "qwerty", "letmein", "welcome", "iloveyou", "changeme", "master", "login",
+        "brasil", "futebol", "mudar", "secure",
+    )
+    private val keyboardRows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm", "qazwsxedcrfv")
+
+    /** "abcabcabc": a senha inteira é uma unidade curta repetida 2 vezes ou mais. */
+    private fun repeatsAUnit(s: String): Boolean {
+        val n = s.length
+        for (unit in 1..n / 2) if (n % unit == 0 && s.substring(0, unit).repeat(n / unit) == s) return true
+        return false
+    }
+
+    /** Previsível: lista de comuns, poucos caracteres diferentes, só dígitos, unidade repetida, ou mais da metade é sequência/teclado/palavra óbvia. */
+    private fun isTooEasy(lower: String): Boolean {
+        if (lower in commonPasswords || lower.toSet().size < 6) return true
+        val s = lower.filter { it.isLetterOrDigit() }
+        if (s.isEmpty() || s.all { it.isDigit() } || repeatsAUnit(lower)) return true
+        val covered = BooleanArray(s.length)
+        for (step in intArrayOf(1, -1, 0)) {
+            var i = 0
+            while (i < s.length) {
+                var j = i
+                while (j + 1 < s.length && s[j + 1] - s[j] == step) j++
+                if (j - i + 1 >= 4) for (k in i..j) covered[k] = true
+                i = j + 1
+            }
+        }
+        for (row in keyboardRows) {
+            for (r in listOf(row, row.reversed())) {
+                for (i in s.indices) {
+                    var len = 0
+                    while (i + len < s.length && r.contains(s.substring(i, i + len + 1))) len++
+                    if (len >= 4) for (k in i until i + len) covered[k] = true
+                }
+            }
+        }
+        for (word in badWords) {
+            var i = s.indexOf(word)
+            while (i >= 0) {
+                for (k in i until i + word.length) covered[k] = true
+                i = s.indexOf(word, i + 1)
+            }
+        }
+        return covered.count { it } * 2 > s.length
+    }
+
+    /** Teto de um depósito (simulado), igual ao do servidor. */
+    const val MAX_DEPOSIT = "100000.00"
+
+    /** Depósito acima do teto por operação ([amount] normalizado). */
+    fun depositIssue(amount: String): String? {
+        val a = amount.toBigDecimalOrNull() ?: return null
+        return if (a > BigDecimal(MAX_DEPOSIT)) "Um depósito é de até ${Money.format(MAX_DEPOSIT)} por vez" else null
+    }
 
     /** Mesma política do servidor (PasswordPolicy): tamanho, não ser previsível e não conter o e-mail. */
     fun passwordIssue(password: String, email: String? = null): String? {
         if (password.length < 12 || password.length > 128) return "Use de 12 a 128 caracteres"
         val lower = password.lowercase()
-        if (lower in commonPasswords || lower.toSet().size < 5) return "Essa senha é fácil de adivinhar"
+        if (isTooEasy(lower)) return "Essa senha é fácil de adivinhar: evite sequências, teclas em fila e palavras como \"senha\""
         val local = email?.trim()?.lowercase()?.substringBefore('@').orEmpty()
         if (local.length >= 4 && lower.contains(local)) return "A senha não pode conter o seu e-mail"
         return null

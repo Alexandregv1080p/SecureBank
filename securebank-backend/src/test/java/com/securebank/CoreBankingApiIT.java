@@ -241,6 +241,25 @@ class CoreBankingApiIT {
     }
 
     @Test
+    void aDepositIsCappedPerOperationAndTheCapIsExplained() throws Exception {
+        String alice = customer();
+        String account = openAccount(alice);
+
+        deposit(alice, account, "100000.00").andExpect(status().isCreated());
+        deposit(alice, account, "100000.01").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("DEPOSIT_LIMIT_EXCEEDED"));
+        deposit(alice, account, "999999999999999.99").andExpect(status().isUnprocessableEntity());
+        assertThat(balance(alice, account)).isEqualTo("100000.00");
+    }
+
+    @Test
+    void registrationRejectsAPhoneWithoutARealAreaCode() throws Exception {
+        String body = TestUsers.registerBody(TestUsers.newEmail(), TestUsers.PASSWORD).replace("+5511999990001", "+5500999990001");
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void openingAnAccountWithAnIdempotencyKeyNeverCreatesTwoAndTheKeyIsOptional() throws Exception {
         String alice = customer();
         String key = "open-" + UUID.randomUUID();

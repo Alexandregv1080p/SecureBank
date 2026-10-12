@@ -66,7 +66,7 @@ fun MoneyScreen(container: AppContainer, viewModel: MoneyViewModel, onBack: () -
                 value = s.amount,
                 onValueChange = viewModel::onAmount,
                 error = s.amountError,
-                hint = if (withdraw) withdrawHint(s) else null,
+                hint = if (withdraw) withdrawHint(s) else "Até ${com.securebank.mobile.core.util.Money.format(com.securebank.mobile.core.util.Validation.MAX_DEPOSIT)} por depósito",
                 keyboardType = KeyboardType.Decimal,
                 mask = com.securebank.mobile.core.util.Validation::sanitizeAmount,
                 imeAction = ImeAction.Done,

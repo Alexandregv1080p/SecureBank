@@ -8,6 +8,7 @@ private val messages = mapOf(
     "INVALID_MFA_CHALLENGE" to "A verificação expirou. Entre novamente.",
     "CUSTOMER_ALREADY_EXISTS" to "Já existe um cadastro com esses dados.",
     "INSUFFICIENT_FUNDS" to "Saldo insuficiente.",
+    "DEPOSIT_LIMIT_EXCEEDED" to "Um depósito é de até R$ 100.000,00 por vez.",
     "LIMIT_EXCEEDED" to "Este valor ultrapassa o seu limite.",
     "ACCOUNT_NOT_ACTIVE" to "A conta não está ativa para esta operação.",
     "CUSTOMER_NOT_ACTIVE" to "Seu cadastro não está ativo. Fale com o suporte.",

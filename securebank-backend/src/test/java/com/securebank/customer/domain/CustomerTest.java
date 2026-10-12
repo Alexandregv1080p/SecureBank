@@ -92,4 +92,22 @@ class CustomerTest {
         assertThatThrownBy(() -> customer.updateContact(new Email("x@example.com"), new Phone("+5521988887777"), NOW))
                 .isInstanceOf(CustomerNotActiveException.class);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"+5511999998888", "+5521988887777", "+551133334444", "+5551933334444", "+14155550123"})
+    void acceptsRealBrazilianAndForeignNumbersForContact(String phone) {
+        assertThat(Phone.forContact(phone).value()).isEqualTo(phone);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"+5500999998888", "+5511123456789", "+55119333344", "+551193333444", "+5552999998888", "11999998888"})
+    void rejectsNumbersWithoutARealAreCodeOrWithTheWrongDigitForContact(String phone) {
+        assertThatThrownBy(() -> Phone.forContact(phone)).isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
+    void storedCustomersWithOlderNumbersStillLoad() {
+        // a regra brasileira vale ao cadastrar ou atualizar; o que já está gravado continua carregando
+        assertThat(new Phone("+5500999998888").value()).isEqualTo("+5500999998888");
+    }
 }

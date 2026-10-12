@@ -22,6 +22,12 @@ class ValidationTest {
     }
 
     @Test
+    fun aDepositAboveTheCapIsRefused() {
+        assertNull(Validation.depositIssue("100000.00"))
+        assertTrue(Validation.depositIssue("100000.01")!!.startsWith("Um depósito é de até"))
+    }
+
+    @Test
     fun theSameAccountIsDetectedOnlyWithBranchAndNumber() {
         assertTrue(Validation.sameAccount("0001", "100048-9", "0001", "100048-9"))
         assertFalse(Validation.sameAccount("0001", "100048-9", "0002", "100048-9"))
@@ -128,8 +134,10 @@ class ValidationTest {
         assertNull(Validation.passwordIssue("Correct-Horse-Battery-9", "marina@example.com"))
         assertEquals("Use de 12 a 128 caracteres", Validation.passwordIssue("curta"))
         assertEquals("Use de 12 a 128 caracteres", Validation.passwordIssue("a".repeat(129)))
-        assertEquals("Essa senha é fácil de adivinhar", Validation.passwordIssue("senha1234567"))
-        assertEquals("Essa senha é fácil de adivinhar", Validation.passwordIssue("aaaabbbbaaaa"))
+        listOf("senha1234567", "aaaabbbbaaaa", "abcdefgh1234", "Abcdef-12345", "qwerty-qwerty", "987654321098", "senhaSENHAsenha", "abcabcabcabc", "senha-senha-1234", "ZZZZZZ-12345").forEach {
+            assertTrue(it, Validation.passwordIssue(it)!!.startsWith("Essa senha é fácil de adivinhar"))
+        }
+        listOf("Tq7#mZ2k9Lw4", "aq7zk2aq7zk7", "cavalo-grampo-nuvem-42", "Correct-Horse-Battery-9").forEach { assertNull(it, Validation.passwordIssue(it)) }
         assertEquals("A senha não pode conter o seu e-mail", Validation.passwordIssue("xx-marina-xx-2026", "Marina@example.com"))
         assertNull(Validation.passwordIssue("xx-ana-xx-2026-ok", "ana@example.com")) // parte local curta não conta
     }

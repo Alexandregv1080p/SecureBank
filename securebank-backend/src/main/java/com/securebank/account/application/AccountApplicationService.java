@@ -103,9 +103,15 @@ public class AccountApplicationService {
         return retry.execute(() -> doWithdraw(requester, id, amount));
     }
 
+    /** Depósito simulado: um teto por operação, para um valor absurdo não virar saldo (nem estourar o armazenamento). */
+    public static final BigDecimal MAX_DEPOSIT = new BigDecimal("100000.00");
+
     private Transaction doDeposit(CustomerId requester, AccountId id, BigDecimal amount) {
         customers.requireActive(requester);
         Account account = findOwned(requester, id);
+        if (amount != null && amount.compareTo(MAX_DEPOSIT) > 0) {
+            throw ApplicationException.unprocessable("DEPOSIT_LIMIT_EXCEEDED", "A deposit is limited to R$ 100,000.00 per operation");
+        }
         Transaction transaction = account.deposit(moneyOf(account, amount), null, time.now());
         accounts.save(account);
         transactions.save(transaction);

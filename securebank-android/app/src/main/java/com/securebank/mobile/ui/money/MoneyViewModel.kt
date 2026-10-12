@@ -65,7 +65,8 @@ class MoneyViewModel(
         if (s.loading) return
         val value = Money.parse(s.amount)
         val issue = Validation.amountIssue(s.amount)
-            ?: if (kind == MoneyKind.WITHDRAW) value?.let { v -> s.balance?.let { Validation.balanceIssue(v, it) } ?: Validation.limitIssue(v, s.limit) } else null
+            ?: if (kind == MoneyKind.WITHDRAW) value?.let { v -> s.balance?.let { Validation.balanceIssue(v, it) } ?: Validation.limitIssue(v, s.limit) }
+            else value?.let { v -> Validation.depositIssue(v) }
         if (value == null || issue != null) {
             _state.update { it.copy(amountError = issue ?: OperationValidation.AMOUNT_MESSAGE) }
             return

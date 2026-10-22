@@ -32,6 +32,10 @@ class PixKeyTypeTest {
         assertThat(PixKeyType.PHONE.normalize("+5511999998888")).isEqualTo("+5511999998888");
         assertThatThrownBy(() -> PixKeyType.PHONE.normalize("11999998888")).isInstanceOf(InvalidValueException.class);
         assertThatThrownBy(() -> PixKeyType.PHONE.normalize("+0123456789012")).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> PixKeyType.PHONE.normalize("+5500999998888")).isInstanceOf(InvalidValueException.class); // DDD 00
+        assertThatThrownBy(() -> PixKeyType.PHONE.normalize("+5511899998888")).isInstanceOf(InvalidValueException.class); // celular sem 9
+        assertThat(PixKeyType.PHONE.normalize("+551133334444")).isEqualTo("+551133334444"); // fixo
+        assertThat(PixKeyType.PHONE.normalize("+14155550123")).isEqualTo("+14155550123"); // fora do Brasil só confere o formato
     }
 
     @Test
@@ -65,10 +69,12 @@ class PixKeyTypeTest {
 
     @Test
     void elevenDigitsCanBeACpfOrAPhoneAndBothAreTried() {
-        List<PixKeyType.Candidate> found = PixKeyType.candidates("529.982.247-25");
+        List<PixKeyType.Candidate> found = PixKeyType.candidates("119.234.567-33");
         assertThat(found).containsExactly(
-                new PixKeyType.Candidate(PixKeyType.CPF, "52998224725"),
-                new PixKeyType.Candidate(PixKeyType.PHONE, "+5552998224725"));
+                new PixKeyType.Candidate(PixKeyType.CPF, "11923456733"),
+                new PixKeyType.Candidate(PixKeyType.PHONE, "+5511923456733"));
+        // 52 não é DDD: esse CPF não pode ser um celular
+        assertThat(PixKeyType.candidates("529.982.247-25")).containsExactly(new PixKeyType.Candidate(PixKeyType.CPF, "52998224725"));
     }
 
     @Test

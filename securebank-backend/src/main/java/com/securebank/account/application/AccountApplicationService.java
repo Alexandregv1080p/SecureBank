@@ -4,6 +4,7 @@ import com.securebank.account.domain.Account;
 import com.securebank.audit.application.AuditEntry;
 import com.securebank.audit.application.AuditService;
 import com.securebank.audit.domain.AuditEvent;
+import com.securebank.account.domain.AccountStatus;
 import com.securebank.account.domain.AccountType;
 import com.securebank.account.domain.Branch;
 import com.securebank.customer.application.CustomerApplicationService;
@@ -68,8 +69,13 @@ public class AccountApplicationService {
         this.outbox = outbox;
     }
 
+    public static final int MAX_OPEN_ACCOUNTS = 5;
+
     public Account open(CustomerId requester, AccountType type) {
         customers.requireActive(requester);
+        if (accounts.findByCustomer(requester).stream().filter(a -> a.status() != AccountStatus.CLOSED).count() >= MAX_OPEN_ACCOUNTS) {
+            throw ApplicationException.unprocessable("ACCOUNT_LIMIT_REACHED", "A customer can have at most " + MAX_OPEN_ACCOUNTS + " open accounts");
+        }
         Instant now = time.now();
         Account account = Account.open(requester, numbers.next(), BRANCH, type, Money.BRL, now);
         accounts.save(account);

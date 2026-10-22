@@ -11,6 +11,7 @@ private val messages = mapOf(
     "DEPOSIT_LIMIT_EXCEEDED" to "Um depósito é de até R$ 100.000,00 por vez.",
     "LIMIT_EXCEEDED" to "Este valor ultrapassa o seu limite.",
     "ACCOUNT_NOT_ACTIVE" to "A conta não está ativa para esta operação.",
+    "ACCOUNT_LIMIT_REACHED" to "Você já tem 5 contas abertas. Encerre uma para abrir outra.",
     "CUSTOMER_NOT_ACTIVE" to "Seu cadastro não está ativo. Fale com o suporte.",
     "NOT_FOUND" to "Não encontramos o que você procurou. Confira os dados.",
     "CURRENCY_MISMATCH" to "As contas usam moedas diferentes.",

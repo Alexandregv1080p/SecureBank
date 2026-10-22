@@ -253,6 +253,17 @@ class CoreBankingApiIT {
     }
 
     @Test
+    void aCustomerCannotOpenMoreThanFiveAccounts() throws Exception {
+        String alice = customer();
+        for (int i = 0; i < 5; i++) {
+            openAccount(alice);
+        }
+        mvc.perform(as(alice, post("/api/v1/accounts")).contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"CHECKING\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_LIMIT_REACHED"));
+    }
+
+    @Test
     void registrationRejectsAPhoneWithoutARealAreaCode() throws Exception {
         String body = TestUsers.registerBody(TestUsers.newEmail(), TestUsers.PASSWORD).replace("+5511999990001", "+5500999990001");
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))

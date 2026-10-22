@@ -11,6 +11,7 @@ const messages: Record<string, string> = {
   DEPOSIT_LIMIT_EXCEEDED: 'Um depósito é de até R$ 100.000,00 por vez.',
   LIMIT_EXCEEDED: 'Este valor ultrapassa o seu limite.',
   ACCOUNT_NOT_ACTIVE: 'A conta não está ativa para esta operação.',
+  ACCOUNT_LIMIT_REACHED: 'Você já tem 5 contas abertas. Encerre uma para abrir outra.',
   CUSTOMER_NOT_ACTIVE: 'Seu cadastro não está ativo. Fale com o suporte.',
   NOT_FOUND: 'Não encontramos o que você procurou. Confira os dados.',
   CURRENCY_MISMATCH: 'As contas usam moedas diferentes.',

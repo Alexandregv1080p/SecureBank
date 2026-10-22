@@ -29,9 +29,13 @@ public final class TestUsers {
     }
 
     public static String registerBody(String email, String password) {
+        return registerBody(email, password, "+5511999990001");
+    }
+
+    public static String registerBody(String email, String password, String phone) {
         return String.format("""
-                {"name":"Cliente Teste","document":"%s","email":"%s","phone":"+5511999990001","password":"%s"}""",
-                cpf(), email, password);
+                {"name":"Cliente Teste","document":"%s","email":"%s","phone":"%s","password":"%s"}""",
+                cpf(), email, phone, password);
     }
 
     public static String newEmail() {
@@ -40,9 +44,14 @@ public final class TestUsers {
 
     /** Registra um cliente novo e faz login. */
     public static Login registerAndLogin(MockMvc mvc) throws Exception {
+        return registerAndLogin(mvc, "+5511999990001");
+    }
+
+    /** Igual a {@link #registerAndLogin(MockMvc)}, com o celular escolhido (para buscas que precisam de um número só deste cliente). */
+    public static Login registerAndLogin(MockMvc mvc, String phone) throws Exception {
         String email = newEmail();
         MvcResult registered = mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content(registerBody(email, PASSWORD))).andExpect(status().isCreated()).andReturn();
+                .content(registerBody(email, PASSWORD, phone))).andExpect(status().isCreated()).andReturn();
         String userId = read(registered, "$.userId");
         String customerId = read(registered, "$.customerId");
         MvcResult login = login(mvc, email, PASSWORD);

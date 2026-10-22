@@ -67,7 +67,8 @@ class CustomerSearchApiIT {
 
     @Test
     void findsByPhoneDigitsAndByNameFragment() throws Exception {
-        var customer = TestUsers.registerAndLogin(mvc);
+        // celular só deste cliente: com o mesmo número em todos, a primeira página (20) pode nem ter o dele
+        var customer = TestUsers.registerAndLogin(mvc, "+55119" + String.format("%08d", System.nanoTime() % 100_000_000L));
         String admin = TestUsers.adminToken(mvc);
         Map<String, Object> row = row(customer.email());
         String phone = ((String) row.get("phone")).replaceAll("\\D", "");

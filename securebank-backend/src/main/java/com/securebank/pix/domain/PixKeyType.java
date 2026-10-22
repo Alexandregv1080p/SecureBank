@@ -36,6 +36,7 @@ public enum PixKeyType {
                 if (!E164.matcher(value).matches()) {
                     throw new InvalidValueException("Invalid Pix phone key (use +5511999998888)");
                 }
+                com.securebank.customer.domain.Phone.forContact(value); // +55: DDD e quantidade de dígitos válidos
                 return value;
             }
             default -> {

@@ -38,7 +38,7 @@ public class UserAdminApplicationService {
     }
 
     public User createStaff(String email, String password, Role role) {
-        Email mail = new Email(email);
+        Email mail = Email.forInput(email);
         PasswordPolicy.validate(password, mail);
         if (users.existsByEmail(mail)) {
             throw ApplicationException.conflict("USER_ALREADY_EXISTS", "User already exists");

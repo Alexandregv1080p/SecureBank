@@ -7,6 +7,7 @@ import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PaymentId;
 import com.securebank.shared.domain.TransactionId;
+import com.securebank.shared.domain.Text;
 import java.time.Instant;
 
 /** Pagamento de boleto/convênio a partir de uma conta. */
@@ -62,7 +63,7 @@ public final class Payment {
         if (barcode == null || !barcode.matches("\\d{44}|\\d{47}|\\d{48}")) {
             throw new InvalidValueException("Barcode must have 44, 47 or 48 digits");
         }
-        String text = description == null || description.isBlank() ? null : description.trim();
+        String text = Text.optional(description);
         if (text != null && text.length() > MAX_DESCRIPTION) {
             throw new InvalidValueException("Description must have at most " + MAX_DESCRIPTION + " characters");
         }

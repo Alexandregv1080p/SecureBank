@@ -36,10 +36,17 @@ public final class Customer {
         return new Customer(id, name, document, email, phone, status, createdAt, updatedAt);
     }
 
+    /** Nome e sobrenome: letras de qualquer alfabeto (com acento), apóstrofo reto ou tipográfico, hífen e ponto (Jr.). */
+    private static final java.util.regex.Pattern FULL_NAME =
+            java.util.regex.Pattern.compile("[\\p{L}\\p{M}'’ʼ.-]+( [\\p{L}\\p{M}'’ʼ.-]+)+");
+
     public static Customer register(String name, Cpf document, Email email, Phone phone, Instant now) {
-        String trimmed = name == null ? "" : name.trim();
+        String trimmed = name == null ? "" : name.trim().replaceAll("\\s+", " ");
         if (trimmed.length() < 2 || trimmed.length() > 120) {
             throw new InvalidValueException("Name must have 2-120 characters");
+        }
+        if (!FULL_NAME.matcher(trimmed).matches()) {
+            throw new InvalidValueException("Name must be a first and last name using letters, apostrophes, hyphens and dots");
         }
         if (document == null || email == null || phone == null || now == null) {
             throw new InvalidValueException("Document, email and phone are required");

@@ -24,7 +24,7 @@ public class CustomerApplicationService {
 
     public Customer register(String name, String document, String email, String phone) {
         Cpf cpf = new Cpf(document);
-        Email mail = new Email(email);
+        Email mail = Email.forInput(email);
         // Resposta genérica de propósito: não confirmar qual dado (CPF ou e-mail) já existe.
         if (customers.existsByDocument(cpf) || customers.existsByEmail(mail)) {
             throw ApplicationException.conflict("CUSTOMER_ALREADY_EXISTS", "Customer already registered");
@@ -42,7 +42,7 @@ public class CustomerApplicationService {
     /** Atualização parcial: o que vier nulo permanece como está. */
     public Customer updateContact(CustomerId id, String email, String phone) {
         Customer customer = get(id);
-        Email newEmail = email == null ? customer.email() : new Email(email);
+        Email newEmail = email == null ? customer.email() : Email.forInput(email);
         if (!newEmail.equals(customer.email()) && customers.existsByEmail(newEmail)) {
             throw ApplicationException.conflict("CUSTOMER_ALREADY_EXISTS", "Email already in use");
         }

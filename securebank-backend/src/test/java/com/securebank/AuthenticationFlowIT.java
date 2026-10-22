@@ -243,6 +243,7 @@ class AuthenticationFlowIT {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("INVALID_CURRENT_PASSWORD"));
         changePassword(login.accessToken(), TestUsers.PASSWORD, "short").andExpect(status().isBadRequest());
+        changePassword(login.accessToken(), TestUsers.PASSWORD, TestUsers.PASSWORD).andExpect(status().isBadRequest()); // igual à atual
 
         changePassword(login.accessToken(), TestUsers.PASSWORD, newPassword).andExpect(status().isNoContent());
 

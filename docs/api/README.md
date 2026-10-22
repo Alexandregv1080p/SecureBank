@@ -17,13 +17,13 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 
 | Método e rota | O que faz |
 | --- | --- |
-| `POST /auth/register` | Cria cliente + usuário. Senha de 12 a 128 caracteres e não previsível (sequência, fila do teclado, palavra óbvia, repetição, e-mail); celular brasileiro com DDD válido, 11 dígitos começando com 9 ou 10 começando com 2 a 5 |
+| `POST /auth/register` | Cria cliente + usuário. Nome e sobrenome só com letras (espaços repetidos viram um), e-mail em formato estrito (sem ponto dobrado, domínio com TLD de letras). Senha de 12 a 128 caracteres e não previsível (sequência, fila do teclado, palavra óbvia, repetição, e-mail); celular brasileiro com DDD válido, 11 dígitos começando com 9 ou 10 começando com 2 a 5 |
 | `POST /auth/login` | Tokens, ou `{mfaRequired, mfaToken}` se o MFA estiver ligado |
 | `POST /auth/mfa/verify` | Troca `mfaToken` + código TOTP pelos tokens |
 | `POST /auth/refresh` | Novo access + refresh (rotação; reuso revoga a sessão) |
 | `POST /auth/logout` | Revoga a sessão atual |
 | `GET /security/sessions`, `DELETE /security/sessions/{id}` | Sessões ativas |
-| `POST /security/password` | Troca de senha (revoga as outras sessões) |
+| `POST /security/password` | Troca de senha (revoga as outras sessões); a nova senha segue a mesma política e precisa ser diferente da atual |
 | `POST /security/mfa`, `/mfa/confirm`, `DELETE /security/mfa` | MFA em duas etapas; desligar exige código |
 | `GET /audit` | Auditoria (SUPPORT/ADMIN) |
 | `/admin/**` | Limites, bloqueio de conta, usuários da equipe (ADMIN); consulta de cliente (SUPPORT/ADMIN) |
@@ -121,3 +121,5 @@ curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer
 e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
 → `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
 [`consistency.md`](../architecture/consistency.md).
+
+Textos livres (descrição de transferência, pagamento e cobrança, mensagem de Pix, nome de porquinho) recusam quebra de linha, caracteres de controle e marcas de direção (U+202E); emojis e acentos passam. Conta aberta: até 5 por cliente (`ACCOUNT_LIMIT_REACHED`).

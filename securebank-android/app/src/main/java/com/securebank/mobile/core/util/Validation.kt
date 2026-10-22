@@ -229,6 +229,19 @@ object Validation {
         return if (a > BigDecimal(MAX_DEPOSIT)) "Um depósito é de até ${Money.format(MAX_DEPOSIT)} por vez" else null
     }
 
+    private const val EMAIL_ATOM = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+    private val emailRegex = Regex("^$EMAIL_ATOM(\\.$EMAIL_ATOM)*@([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,24}$")
+
+    /** Mesmo formato que o servidor exige no cadastro: sem ponto dobrado ou nas pontas, domínio com TLD de letras. */
+    fun emailIssue(email: String): String? {
+        val v = email.trim().lowercase()
+        return when {
+            v.isEmpty() -> "Informe o e-mail"
+            v.length > 254 || v.indexOf('@') > 64 || !emailRegex.matches(v) -> "Informe um e-mail válido, como nome@exemplo.com"
+            else -> null
+        }
+    }
+
     /** Mesma política do servidor (PasswordPolicy): tamanho, não ser previsível e não conter o e-mail. */
     fun passwordIssue(password: String, email: String? = null): String? {
         if (password.length < 12 || password.length > 128) return "Use de 12 a 128 caracteres"

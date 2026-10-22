@@ -7,6 +7,7 @@ object PasswordValidation {
     fun validate(current: String, next: String, confirm: String): Map<PasswordField, String> = buildMap {
         if (current.isEmpty()) put(PasswordField.Current, "Informe a senha atual")
         Validation.passwordIssue(next)?.let { put(PasswordField.Next, it) }
+        if (next.isNotEmpty() && next == current) put(PasswordField.Next, "A nova senha deve ser diferente da atual")
         if (next != confirm) put(PasswordField.Confirm, "As senhas não conferem")
     }
 }

@@ -7,6 +7,7 @@ import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PixScheduleId;
 import com.securebank.shared.domain.PixTransferId;
+import com.securebank.shared.domain.Text;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -70,7 +71,7 @@ public final class PixSchedule {
         if (scheduledFor.isAfter(today.plusDays(MAX_DAYS_AHEAD))) {
             throw new InvalidValueException("The date must be within " + MAX_DAYS_AHEAD + " days");
         }
-        String text = message == null || message.isBlank() ? null : message.trim();
+        String text = Text.optional(message);
         if (text != null && text.length() > MESSAGE_MAX) {
             throw new InvalidValueException("Message must have at most " + MESSAGE_MAX + " characters");
         }

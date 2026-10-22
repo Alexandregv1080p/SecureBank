@@ -5,6 +5,7 @@ import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PixTransferId;
 import com.securebank.shared.domain.TransactionId;
+import com.securebank.shared.domain.Text;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -62,7 +63,7 @@ public final class PixTransfer {
         if (!amount.isPositive()) {
             throw new InvalidValueException("Amount must be greater than zero");
         }
-        String text = message == null || message.isBlank() ? null : message.trim();
+        String text = Text.optional(message);
         if (text != null && text.length() > MESSAGE_MAX) {
             throw new InvalidValueException("Message must have at most " + MESSAGE_MAX + " characters");
         }

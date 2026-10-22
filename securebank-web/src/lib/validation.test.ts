@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue, depositIssue,
+  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue, depositIssue, emailIssue,
   sameAccount, sanitizeAmount,
 } from './validation'
 
@@ -118,6 +118,11 @@ describe('validation (espelha o Kotlin e o servidor)', () => {
     ;['Tq7#mZ2k9Lw4', 'aq7zk2aq7zk7', 'cavalo-grampo-nuvem-42', 'Correct-Horse-Battery-9'].forEach((pw) => expect(passwordIssue(pw)).toBeNull())
     expect(passwordIssue('xx-marina-xx-2026', 'Marina@example.com')).toBe('A senha não pode conter o seu e-mail')
     expect(passwordIssue('xx-ana-xx-2026-ok', 'ana@example.com')).toBeNull()
+  })
+
+  it('o e-mail segue o formato que o servidor exige', () => {
+    ;['ana@example.com', 'ana.souza+banco@mail.example.com.br', 'a_b-c@x1.io', 'ANA@Example.COM'].forEach((e) => expect(emailIssue(e)).toBeNull())
+    ;['a@b', 'a b@x.com', 'a@@x.com', 'user@x..com', '.user@x.com', 'user.@x.com', 'us..er@x.com', 'user@-x.com', 'user@x-.com', 'user@x.c', 'user@x.123', 'ÁÉ@x.com', 'user@x_y.com', '@x.com', 'user@.com', ''].forEach((e) => expect(emailIssue(e), e).not.toBeNull())
   })
 
   it('refuses a deposit above the per-operation cap', () => {

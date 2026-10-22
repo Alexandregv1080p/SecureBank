@@ -79,7 +79,7 @@ public class AuthApplicationService {
 
     @Transactional
     public User register(String name, String document, String email, String phone, String password) {
-        Email mail = new Email(email);
+        Email mail = Email.forInput(email);
         PasswordPolicy.validate(password, mail);
         if (users.existsByEmail(mail)) {
             throw ApplicationException.conflict("CUSTOMER_ALREADY_EXISTS", "Customer already registered");

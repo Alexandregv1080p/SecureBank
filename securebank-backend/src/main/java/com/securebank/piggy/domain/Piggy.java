@@ -5,6 +5,7 @@ import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PiggyId;
+import com.securebank.shared.domain.Text;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -136,8 +137,8 @@ public final class Piggy {
     }
 
     private static String validName(String name) {
-        String trimmed = name == null ? "" : name.trim();
-        if (trimmed.isEmpty()) {
+        String trimmed = Text.optional(name);
+        if (trimmed == null) {
             throw new InvalidValueException("Piggy name is required");
         }
         if (trimmed.length() > NAME_MAX) {

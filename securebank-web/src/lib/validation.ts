@@ -205,6 +205,17 @@ function isTooEasy(lower: string): boolean {
   return covered.filter(Boolean).length * 2 > s.length
 }
 
+const EMAIL_ATOM = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+const EMAIL = new RegExp(`^${EMAIL_ATOM}(\\.${EMAIL_ATOM})*@([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,24}$`)
+
+/** Mesmo formato que o servidor exige no cadastro: sem ponto dobrado ou nas pontas, domínio com TLD de letras. */
+export function emailIssue(email: string): string | null {
+  const v = email.trim().toLowerCase()
+  if (v === '') return 'Informe o e-mail'
+  if (v.length > 254 || v.indexOf('@') > 64 || !EMAIL.test(v)) return 'Informe um e-mail válido, como nome@exemplo.com'
+  return null
+}
+
 /** Mesma política do servidor (PasswordPolicy): tamanho, não ser previsível e não conter o e-mail. */
 export function passwordIssue(password: string, email?: string): string | null {
   if (password.length < 12 || password.length > 128) return 'Use de 12 a 128 caracteres'

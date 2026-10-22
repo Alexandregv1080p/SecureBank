@@ -7,6 +7,7 @@ import QRCode from 'qrcode'
 import { securityApi } from '../../services/security'
 import { formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
+import { passwordIssue } from '../../lib/validation'
 import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 
 export function SecurityPage() {
@@ -103,9 +104,13 @@ function MfaPanel() {
 const passwordSchema = z
   .object({
     current: z.string().min(1, 'Informe a senha atual'),
-    next: z.string().min(12, 'Use ao menos 12 caracteres').max(128),
+    next: z.string().superRefine((v, ctx) => {
+      const m = passwordIssue(v)
+      if (m) ctx.addIssue({ code: 'custom', message: m })
+    }),
     confirm: z.string(),
   })
+  .refine((v) => v.next !== v.current, { path: ['next'], message: 'A nova senha deve ser diferente da atual' })
   .refine((v) => v.next === v.confirm, { path: ['confirm'], message: 'As senhas não conferem' })
 
 function PasswordPanel() {

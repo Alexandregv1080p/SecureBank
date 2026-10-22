@@ -14,6 +14,7 @@ import com.securebank.shared.application.BankTime;
 import com.securebank.shared.application.RateLimiter;
 import com.securebank.shared.domain.SessionId;
 import com.securebank.shared.domain.UserId;
+import com.securebank.shared.domain.InvalidValueException;
 import java.util.List;
 import java.util.OptionalLong;
 import org.springframework.stereotype.Service;
@@ -93,6 +94,9 @@ public class SecurityApplicationService {
         if (!hasher.matches(currentPassword, user.passwordHash())) {
             limiter.hit(failKey, settings.loginMaxFailures(), settings.loginFailureWindow());
             throw ApplicationException.unprocessable("INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+        }
+        if (newPassword != null && newPassword.equals(currentPassword)) {
+            throw new InvalidValueException("The new password must be different from the current one");
         }
         PasswordPolicy.validate(newPassword, user.email());
         limiter.reset(failKey);

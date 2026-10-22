@@ -6,7 +6,7 @@ import { Link, Navigate, useNavigate } from 'react-router'
 import { login, register } from '../../services/auth'
 import { messageFor } from '../../lib/errors'
 import { phoneIssue, toE164BR } from '../../lib/phone'
-import { cpfValid, fullNameIssue, maskCpf, maskPhone, passwordIssue, withMask } from '../../lib/validation'
+import { cpfValid, emailIssue, fullNameIssue, maskCpf, maskPhone, passwordIssue, withMask } from '../../lib/validation'
 import { useAuth } from '../../stores/auth'
 import { Alert, Button, Field, Input } from '../../components/ui'
 import { AuthLayout } from './AuthLayout'
@@ -21,7 +21,10 @@ const schema = z
       if (v.replace(/\D/g, '').length !== 11) ctx.addIssue({ code: 'custom', message: 'O CPF tem 11 dígitos' })
       else if (!cpfValid(v)) ctx.addIssue({ code: 'custom', message: 'CPF inválido: confira os dígitos' })
     }),
-    email: z.string().min(1, 'Informe o e-mail').email('Informe um e-mail válido'),
+    email: z.string().superRefine((v, ctx) => {
+      const m = emailIssue(v)
+      if (m) ctx.addIssue({ code: 'custom', message: m })
+    }),
     phone: z.string().superRefine((v, ctx) => {
       const m = phoneIssue(v)
       if (m) ctx.addIssue({ code: 'custom', message: m })
@@ -52,7 +55,7 @@ export function RegisterPage() {
   async function onSubmit(v: Values) {
     setError(null)
     try {
-      await register({ name: v.name.trim(), document: v.document.replace(/\D/g, ''), email: v.email, phone: toE164BR(v.phone)!, password: v.password })
+      await register({ name: v.name.trim().replace(/\s+/g, ' '), document: v.document.replace(/\D/g, ''), email: v.email, phone: toE164BR(v.phone)!, password: v.password })
       await login(v.email, v.password)
       navigate('/', { replace: true })
     } catch (e) {

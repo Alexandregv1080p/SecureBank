@@ -7,6 +7,7 @@ import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.TransactionId;
 import com.securebank.shared.domain.TransferId;
+import com.securebank.shared.domain.Text;
 import java.time.Instant;
 
 /**
@@ -66,7 +67,7 @@ public final class Transfer {
         if (!amount.isPositive()) {
             throw new InvalidValueException("Amount must be greater than zero");
         }
-        String text = description == null || description.isBlank() ? null : description.trim();
+        String text = Text.optional(description);
         if (text != null && text.length() > MAX_DESCRIPTION) {
             throw new InvalidValueException("Description must have at most " + MAX_DESCRIPTION + " characters");
         }

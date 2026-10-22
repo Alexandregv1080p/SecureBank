@@ -22,6 +22,12 @@ class ValidationTest {
     }
 
     @Test
+    fun theEmailFollowsTheServerFormat() {
+        listOf("ana@example.com", "ana.souza+banco@mail.example.com.br", "a_b-c@x1.io", "ANA@Example.COM").forEach { assertNull(it, Validation.emailIssue(it)) }
+        listOf("a@b", "a b@x.com", "a@@x.com", "user@x..com", ".user@x.com", "user.@x.com", "us..er@x.com", "user@-x.com", "user@x-.com", "user@x.c", "user@x.123", "ÁÉ@x.com", "user@x_y.com", "@x.com", "user@.com", "").forEach { assertNotNull(it, Validation.emailIssue(it)) }
+    }
+
+    @Test
     fun aDepositAboveTheCapIsRefused() {
         assertNull(Validation.depositIssue("100000.00"))
         assertTrue(Validation.depositIssue("100000.01")!!.startsWith("Um depósito é de até"))

@@ -5,6 +5,7 @@ import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.InvalidValueException;
 import com.securebank.shared.domain.Money;
 import com.securebank.shared.domain.PixTransferId;
+import com.securebank.shared.domain.Text;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -66,7 +67,7 @@ public final class PixCharge {
         if (validity.compareTo(MIN_TTL) < 0 || validity.compareTo(MAX_TTL) > 0) {
             throw new InvalidValueException("Validity must be between 1 minute and 7 days");
         }
-        String text = description == null || description.isBlank() ? null : description.trim();
+        String text = Text.optional(description);
         if (text != null && text.length() > DESCRIPTION_MAX) {
             throw new InvalidValueException("Description must have at most " + DESCRIPTION_MAX + " characters");
         }

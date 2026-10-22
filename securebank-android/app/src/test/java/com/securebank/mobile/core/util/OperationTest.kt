@@ -82,13 +82,14 @@ class OperationTest {
 
     @Test
     fun paymentRules() {
-        val ok44 = "1".repeat(44)
+        val ok44 = "00193373700000001000500940144816060680935031"
         assertTrue(OperationValidation.payment("a1", ok44, "10", "").isEmpty())
-        assertTrue(OperationValidation.payment("a1", "1".repeat(47), "10", "").isEmpty())
-        assertTrue(OperationValidation.payment("a1", "1".repeat(48), "10", "").isEmpty())
+        assertTrue(OperationValidation.payment("a1", "00190500954014481606906809350314337370000000100", "10", "").isEmpty())
+        assertTrue(OperationValidation.payment("a1", "846700000017435900240209024050002435842210108119", "10", "").isEmpty())
         // linha digitável com pontos e espaços: só os dígitos contam (47)
-        assertTrue(OperationValidation.payment("a1", "12345.67890 12345.678901 12345.678901 1 23456789012345", "10", "").isEmpty())
+        assertTrue(OperationValidation.payment("a1", "00190.50095 40144.816069 06809.350314 3 37370000000100", "10", "").isEmpty())
         assertEquals(setOf(PaymentField.Barcode), OperationValidation.payment("a1", "123", "10", "").keys)
+        assertEquals(setOf(PaymentField.Barcode), OperationValidation.payment("a1", "1".repeat(44), "10", "").keys) // dígito verificador
         assertEquals(setOf(PaymentField.Account), OperationValidation.payment("", ok44, "10", "").keys)
         assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "abc", "").keys)
     }
@@ -106,7 +107,7 @@ class OperationTest {
 
     @Test
     fun paymentsAndPixCheckBalanceAndLimitBeforeAskingForTheBiometric() {
-        val ok44 = "1".repeat(44)
+        val ok44 = "00193373700000001000500940144816060680935031"
         assertTrue(OperationValidation.payment("a1", ok44, "300", "", source, limit("1000.00", "1000.00")).isEmpty())
         assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "300,01", "", source, null).keys) // saldo
         assertEquals(setOf(PaymentField.Amount), OperationValidation.payment("a1", ok44, "200", "", source, limit("100.00", "1000.00")).keys) // por operação

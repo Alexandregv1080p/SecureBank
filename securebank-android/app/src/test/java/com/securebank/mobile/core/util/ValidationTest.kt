@@ -28,6 +28,20 @@ class ValidationTest {
     }
 
     @Test
+    fun theBoletoChecksItsCheckDigits() {
+        listOf(
+            "00193373700000001000500940144816060680935031", "00190500954014481606906809350314337370000000100",
+            "846700000017435900240209024050002435842210108119",
+        ).forEach { assertTrue(it, Validation.boletoValid(it)) }
+        listOf(
+            "00193373700000001000500940144816060680935032", "00193373800000001000500940144816060680935031",
+            "00190500954014481606906809350314337370000000101", "00190500964014481606906809350314337370000000100",
+            "846700000017435900240209024050002435842210108118", "34191790010104351004791020150008291070026000",
+            "0".repeat(44), "0".repeat(48), "1".repeat(44), "123",
+        ).forEach { assertFalse(it, Validation.boletoValid(it)) }
+    }
+
+    @Test
     fun aDepositAboveTheCapIsRefused() {
         assertNull(Validation.depositIssue("100000.00"))
         assertTrue(Validation.depositIssue("100000.01")!!.startsWith("Um depósito é de até"))

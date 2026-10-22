@@ -63,6 +63,9 @@ public final class Payment {
         if (barcode == null || !barcode.matches("\\d{44}|\\d{47}|\\d{48}")) {
             throw new InvalidValueException("Barcode must have 44, 47 or 48 digits");
         }
+        if (!BoletoCode.isValid(barcode)) {
+            throw new InvalidValueException("Barcode check digit does not match; check the number");
+        }
         String text = Text.optional(description);
         if (text != null && text.length() > MAX_DESCRIPTION) {
             throw new InvalidValueException("Description must have at most " + MAX_DESCRIPTION + " characters");

@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @Import(TestcontainersConfig.class)
 class AuthorizationIT {
 
-    private static final String BARCODE = "34191790010104351004791020150008291070026000";
+    private static final String BARCODE = "00193373700000001000500940144816060680935031";
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;

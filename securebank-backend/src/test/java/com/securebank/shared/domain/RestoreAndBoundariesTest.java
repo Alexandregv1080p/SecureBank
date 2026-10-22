@@ -96,7 +96,7 @@ class RestoreAndBoundariesTest {
         assertThat(restoredTransfer).usingRecursiveComparison().isEqualTo(transfer);
         assertThat(restoredTransfer.status()).isEqualTo(TransferStatus.COMPLETED);
 
-        Payment payment = Payment.create(AccountId.newId(), Money.brl("1.00"), "34191790010104351004791020150008291070026000",
+        Payment payment = Payment.create(AccountId.newId(), Money.brl("1.00"), "00193373700000001000500940144816060680935031",
                 "conta", DomainFixtures.key(), NOW);
         payment.fail("LIMIT_EXCEEDED", LATER);
         Payment restoredPayment = Payment.restore(payment.id(), payment.accountId(), payment.amount(), payment.barcode(),

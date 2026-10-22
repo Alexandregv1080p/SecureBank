@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue, depositIssue, emailIssue,
+  accountNumberValid, amountIssue, maskAccountNumber, balanceIssue, cpfValid, fullNameIssue, limitIssue, maskCpf, maskPhone, passwordIssue, depositIssue, emailIssue, boletoValid,
   sameAccount, sanitizeAmount,
 } from './validation'
 
@@ -123,6 +123,11 @@ describe('validation (espelha o Kotlin e o servidor)', () => {
   it('o e-mail segue o formato que o servidor exige', () => {
     ;['ana@example.com', 'ana.souza+banco@mail.example.com.br', 'a_b-c@x1.io', 'ANA@Example.COM'].forEach((e) => expect(emailIssue(e)).toBeNull())
     ;['a@b', 'a b@x.com', 'a@@x.com', 'user@x..com', '.user@x.com', 'user.@x.com', 'us..er@x.com', 'user@-x.com', 'user@x-.com', 'user@x.c', 'user@x.123', 'ÁÉ@x.com', 'user@x_y.com', '@x.com', 'user@.com', ''].forEach((e) => expect(emailIssue(e), e).not.toBeNull())
+  })
+
+  it('o boleto confere os dígitos verificadores', () => {
+    ;['00193373700000001000500940144816060680935031', '00190500954014481606906809350314337370000000100', '846700000017435900240209024050002435842210108119'].forEach((c) => expect(boletoValid(c), c).toBe(true))
+    ;['00193373700000001000500940144816060680935032', '00193373800000001000500940144816060680935031', '00190500954014481606906809350314337370000000101', '00190500964014481606906809350314337370000000100', '846700000017435900240209024050002435842210108118', '34191790010104351004791020150008291070026000', '00000000000000000000000000000000000000000000', '000000000000000000000000000000000000000000000000', '11111111111111111111111111111111111111111111', '123'].forEach((c) => expect(boletoValid(c), c).toBe(false))
   })
 
   it('refuses a deposit above the per-operation cap', () => {

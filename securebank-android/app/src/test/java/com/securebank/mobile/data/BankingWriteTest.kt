@@ -67,7 +67,7 @@ class BankingWriteTest {
         server.enqueue(json("""{"id":"p","accountId":"a1","amount":{"amount":"99.90","currency":"BRL"},"barcode":"1","status":"COMPLETED","createdAt":"2026-10-02T14:30:00Z"}""", 201))
 
         repo.transfer(TransferRequest("a1", "0001", "123456-7", "10.00"), "key-tr-00001")
-        repo.pay(PaymentRequest("a1", "99.90", "1".repeat(44)), "key-pay-0001")
+        repo.pay(PaymentRequest("a1", "99.90", "00193373700000001000500940144816060680935031"), "key-pay-0001")
 
         val transfer = server.takeRequest()
         assertEquals("/api/v1/transfers", transfer.path)

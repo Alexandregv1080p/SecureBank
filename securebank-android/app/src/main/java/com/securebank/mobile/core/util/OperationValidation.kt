@@ -60,6 +60,7 @@ object OperationValidation {
     ): Map<PaymentField, String> = buildMap {
         if (accountId.isNullOrEmpty()) put(PaymentField.Account, "Escolha a conta")
         if (digits(barcode).length !in listOf(44, 47, 48)) put(PaymentField.Barcode, "O código tem 44, 47 ou 48 dígitos")
+        else if (!Validation.boletoValid(digits(barcode))) put(PaymentField.Barcode, "Código inválido: confira os números do boleto")
         amountFor(amount, source, limit)?.let { put(PaymentField.Amount, it) }
         if (description.length > 140) put(PaymentField.Description, "No máximo 140 caracteres")
     }

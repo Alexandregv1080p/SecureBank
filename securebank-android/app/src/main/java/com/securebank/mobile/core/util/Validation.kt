@@ -229,6 +229,53 @@ object Validation {
         return if (a > BigDecimal(MAX_DEPOSIT)) "Um depósito é de até ${Money.format(MAX_DEPOSIT)} por vez" else null
     }
 
+    private fun mod10(s: String): Int {
+        var total = 0
+        var weight = 2
+        for (i in s.indices.reversed()) {
+            val p = (s[i] - '0') * weight
+            total += p / 10 + p % 10
+            weight = if (weight == 2) 1 else 2
+        }
+        return (10 - total % 10) % 10
+    }
+
+    private fun mod11(s: String, convenio: Boolean): Int {
+        var total = 0
+        var weight = 2
+        for (i in s.indices.reversed()) {
+            total += (s[i] - '0') * weight
+            weight = if (weight == 9) 2 else weight + 1
+        }
+        val rest = total % 11
+        if (convenio) return if (rest <= 1) 0 else 11 - rest
+        val dv = 11 - rest
+        return if (dv == 0 || dv == 10 || dv == 11) 1 else dv
+    }
+
+    private fun bankBar(c: String) = mod11(c.substring(0, 4) + c.substring(5), false) == c[4] - '0'
+    private fun convenioTen(c: String) = c[2] == '6' || c[2] == '7'
+
+    /** Dígitos verificadores de boleto (Febraban): barras de 44, linha digitável de 47 (banco) e de 48 (convênio). Só dígitos. */
+    fun boletoValid(code: String): Boolean {
+        if (code.length !in listOf(44, 47, 48) || !code.all { it.isDigit() } || code.toSet().size == 1) return false
+        return when {
+            code.length == 47 ->
+                mod10(code.substring(0, 9)) == code[9] - '0' && mod10(code.substring(10, 20)) == code[20] - '0' &&
+                    mod10(code.substring(21, 31)) == code[31] - '0' &&
+                    bankBar(code.substring(0, 4) + code.substring(32, 47) + code.substring(4, 9) + code.substring(10, 20) + code.substring(21, 31))
+            code.length == 48 -> (0 until 4).all { b ->
+                val block = code.substring(b * 12, b * 12 + 11)
+                (if (convenioTen(code)) mod10(block) else mod11(block, true)) == code[b * 12 + 11] - '0'
+            }
+            code[0] == '8' -> {
+                val rest = code.substring(0, 3) + code.substring(4)
+                (if (convenioTen(code)) mod10(rest) else mod11(rest, true)) == code[3] - '0'
+            }
+            else -> bankBar(code)
+        }
+    }
+
     private const val EMAIL_ATOM = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
     private val emailRegex = Regex("^$EMAIL_ATOM(\\.$EMAIL_ATOM)*@([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,24}$")
 

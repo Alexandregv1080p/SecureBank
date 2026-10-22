@@ -91,6 +91,6 @@ class RateLimitIT {
         return mvc.perform(bearer(token, post("/api/v1/payments")).contentType(MediaType.APPLICATION_JSON)
                 .header("Idempotency-Key", "idem-" + UUID.randomUUID())
                 .content(String.format("{\"accountId\":\"%s\",\"amount\":\"1.00\","
-                        + "\"barcode\":\"34191790010104351004791020150008291070026000\"}", account)));
+                        + "\"barcode\":\"00193373700000001000500940144816060680935031\"}", account)));
     }
 }

@@ -123,3 +123,5 @@ e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header
 [`consistency.md`](../architecture/consistency.md).
 
 Textos livres (descrição de transferência, pagamento e cobrança, mensagem de Pix, nome de porquinho) recusam quebra de linha, caracteres de controle e marcas de direção (U+202E); emojis e acentos passam. Conta aberta: até 5 por cliente (`ACCOUNT_LIMIT_REACHED`).
+
+Pagamento de boleto confere os dígitos verificadores (Febraban): código de barras de 44, linha digitável bancária de 47 e de arrecadação/convênio de 48; número com dígito trocado ou inventado volta `INVALID_VALUE`.

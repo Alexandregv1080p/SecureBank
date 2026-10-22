@@ -10,7 +10,7 @@ import { formatBRL, parseAmount } from '../../lib/money'
 import { accountTypeLabel, formatDateTime } from '../../lib/format'
 import { ApiError } from '../../lib/api'
 import { messageFor } from '../../lib/errors'
-import { amountIssue, balanceIssue, limitIssue, sanitizeAmount, withMask } from '../../lib/validation'
+import { amountIssue, balanceIssue, boletoValid, limitIssue, sanitizeAmount, withMask } from '../../lib/validation'
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { useAccounts, useRefreshMoney } from '../accounts/hooks'
 
@@ -18,7 +18,11 @@ const digits = (v: string) => v.replace(/\D/g, '')
 
 const schema = z.object({
   accountId: z.string().min(1, 'Escolha a conta'),
-  barcode: z.string().refine((v) => [44, 47, 48].includes(digits(v).length), 'O código tem 44, 47 ou 48 dígitos'),
+  barcode: z.string().superRefine((v, ctx) => {
+    const d = digits(v)
+    if (![44, 47, 48].includes(d.length)) ctx.addIssue({ code: 'custom', message: 'O código tem 44, 47 ou 48 dígitos' })
+    else if (!boletoValid(d)) ctx.addIssue({ code: 'custom', message: 'Código inválido: confira os números do boleto' })
+  }),
   amount: z.string().superRefine((v, ctx) => {
     const m = amountIssue(v)
     if (m) ctx.addIssue({ code: 'custom', message: m })

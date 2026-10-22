@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 class PaymentServiceTest {
 
-    private static final String BARCODE = "34191790010104351004791020150008291070026000"; // 44 dígitos
+    private static final String BARCODE = "00193373700000001000500940144816060680935031"; // 44 dígitos
     private static final Money NOTHING_USED = Money.zero(Money.BRL);
 
     private final PaymentService service = new PaymentService();

@@ -216,6 +216,52 @@ export function emailIssue(email: string): string | null {
   return null
 }
 
+const mod10 = (s: string) => {
+  let total = 0
+  let weight = 2
+  for (let i = s.length - 1; i >= 0; i--) {
+    const p = Number(s[i]) * weight
+    total += Math.floor(p / 10) + (p % 10)
+    weight = weight === 2 ? 1 : 2
+  }
+  return (10 - (total % 10)) % 10
+}
+const mod11 = (s: string, convenio: boolean) => {
+  let total = 0
+  let weight = 2
+  for (let i = s.length - 1; i >= 0; i--) {
+    total += Number(s[i]) * weight
+    weight = weight === 9 ? 2 : weight + 1
+  }
+  const rest = total % 11
+  if (convenio) return rest <= 1 ? 0 : 11 - rest
+  const dv = 11 - rest
+  return dv === 0 || dv === 10 || dv === 11 ? 1 : dv
+}
+const bankBar = (c: string) => mod11(c.slice(0, 4) + c.slice(5), false) === Number(c[4])
+const convenioTen = (c: string) => c[2] === '6' || c[2] === '7'
+
+/** Dígitos verificadores de boleto (Febraban): barras de 44, linha digitável de 47 (banco) e de 48 (convênio). Só dígitos. */
+export function boletoValid(code: string): boolean {
+  if (!/^(\d{44}|\d{47}|\d{48})$/.test(code) || new Set(code).size === 1) return false
+  if (code.length === 47) {
+    if (mod10(code.slice(0, 9)) !== Number(code[9]) || mod10(code.slice(10, 20)) !== Number(code[20]) || mod10(code.slice(21, 31)) !== Number(code[31])) return false
+    return bankBar(code.slice(0, 4) + code.slice(32, 47) + code.slice(4, 9) + code.slice(10, 20) + code.slice(21, 31))
+  }
+  if (code.length === 48) {
+    for (let i = 0; i < 48; i += 12) {
+      const block = code.slice(i, i + 11)
+      if ((convenioTen(code) ? mod10(block) : mod11(block, true)) !== Number(code[i + 11])) return false
+    }
+    return true
+  }
+  if (code[0] === '8') {
+    const rest = code.slice(0, 3) + code.slice(4)
+    return (convenioTen(code) ? mod10(rest) : mod11(rest, true)) === Number(code[3])
+  }
+  return bankBar(code)
+}
+
 /** Mesma política do servidor (PasswordPolicy): tamanho, não ser previsível e não conter o e-mail. */
 export function passwordIssue(password: string, email?: string): string | null {
   if (password.length < 12 || password.length > 128) return 'Use de 12 a 128 caracteres'

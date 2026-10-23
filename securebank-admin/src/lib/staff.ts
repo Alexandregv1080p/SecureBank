@@ -1,3 +1,6 @@
+import { formatBRL, parseAmount } from './money'
+import { amountIssue } from './validation'
+
 export type StaffRole = 'ADMIN' | 'SUPPORT'
 
 export interface StaffSection {
@@ -120,3 +123,17 @@ export function searchError(query: string): string | null {
 }
 
 export const accountStatusLabel = (status: string) => ({ ACTIVE: 'Ativa', BLOCKED: 'Bloqueada', CLOSED: 'Encerrada' })[status] ?? status
+
+export const cardStatusLabel = (status: string) => ({ ACTIVE: 'Ativo', BLOCKED: 'Bloqueado', CANCELED: 'Cancelado' })[status] ?? status
+
+/** Limite de crédito decidido pela equipe: múltiplo de R$ 100, de R$ 100 a R$ 100.000 e nunca abaixo do que o cliente já deve. */
+export function creditLimitIssue(input: string, used: string): string | null {
+  const parsed = parseAmount(input)
+  if (parsed === null) return amountIssue(input)
+  const cents = Math.round(Number(parsed) * 100)
+  if (cents % 10000 !== 0) return 'Use um valor múltiplo de R$ 100,00'
+  if (cents < 10000) return 'O limite mínimo é R$ 100,00'
+  if (cents > 10_000_000) return 'O limite máximo é R$ 100.000,00'
+  if (cents < Math.round(Number(used) * 100)) return `Abaixo do que o cliente já usa (${formatBRL(used)})`
+  return null
+}

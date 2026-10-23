@@ -70,7 +70,21 @@ export interface Overview {
   security: { failedLogins24h: number; accessDenied24h: number; outboxPending: number }
 }
 
+export interface CreditCardAdmin {
+  id: string
+  accountId: string
+  last4: string
+  status: 'ACTIVE' | 'BLOCKED' | 'CANCELED'
+  dueDay: number
+  creditLimit: Money
+  used: Money
+  available: Money
+  createdAt: string
+}
+
 export const staffApi = {
+  creditCards: (customerId: string) => api<CreditCardAdmin[]>(`/admin/customers/${customerId}/credit-cards`),
+  setCreditLimit: (cardId: string, limit: string) => api<{ cardId: string; creditLimit: Money }>(`/admin/credit/cards/${cardId}/limit`, { method: 'PUT', body: { limit } }),
   overview: (days: number) => api<Overview>(`/admin/overview?days=${days}`),
   audit: (page: number, event?: string, userId?: string) => {
     const q = new URLSearchParams({ page: String(page), size: '20' })

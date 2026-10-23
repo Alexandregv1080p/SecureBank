@@ -7,6 +7,7 @@ import { accountLabel, accountTypeLabel, formatDate } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
 import { accountStatusLabel, isUuid, searchError } from '../../lib/staff'
 import { Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
+import { CreditCardsPanel } from './CreditCardsPanel'
 import { DataList, DataRow } from './parts'
 
 export function CustomersPage() {
@@ -139,6 +140,7 @@ function CustomerDetail({ id }: { id: string }) {
           </ul>
         )}
       </Panel>
+      <CreditCardsPanel customerId={id} />
     </div>
   )
 }

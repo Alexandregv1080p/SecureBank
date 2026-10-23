@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
+import { creditLimitIssue, auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
 
 describe('seções do painel por papel', () => {
   it('o administrador vê todas as seções', () => {
@@ -99,5 +99,16 @@ describe('busca de clientes', () => {
 
   it('a busca de cliente tem rótulo na auditoria', () => {
     expect(auditEventLabel('CUSTOMER_SEARCHED')).toBe('Busca de cliente')
+  })
+})
+
+describe('limite de crédito pela equipe', () => {
+  it('confere múltiplo, faixa e dívida', () => {
+    expect(creditLimitIssue('50.000,00', '1200.00')).toBeNull()
+    expect(creditLimitIssue('100.000,00', '0')).toBeNull()
+    expect(creditLimitIssue('100.100,00', '0')).toMatch(/máximo/)
+    expect(creditLimitIssue('1.250,00', '0')).toMatch(/múltiplo/)
+    expect(creditLimitIssue('1.000,00', '1200.00')).toMatch(/já usa/)
+    expect(creditLimitIssue('', '0')).not.toBeNull()
   })
 })

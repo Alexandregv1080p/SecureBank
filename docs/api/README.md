@@ -123,7 +123,7 @@ curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer
 
 ## Idempotência
 
-`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`, `/investments`, `/investments/{id}/redeem`, `/fx/buy`, `/fx/sell`, `/cards/{id}/purchases`
+`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`, `/investments`, `/investments/{id}/redeem`, `/fx/buy`, `/fx/sell`, `/cards/{id}/purchases`, `/credit/cards/{id}/purchases`, `/credit/cards/{id}/invoices/{mes}/payments`
 e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
 → `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
 [`consistency.md`](../architecture/consistency.md).

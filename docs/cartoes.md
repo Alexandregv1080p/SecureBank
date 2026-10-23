@@ -45,15 +45,31 @@ O mesmo cartão (número cifrado, CVV derivado, bloquear e cancelar com motivo, 
 
 ## Regras
 
-* **Limite inicial R$ 2.000,00** para todo cartão novo (nesta simulação não há análise; mudar o limite por cliente ainda não existe).
+* **Limite inicial R$ 2.000,00** para todo cartão novo (nesta simulação não há análise). Veja "Alterar o limite" abaixo.
 * **Vencimento** à escolha do cliente: dia 5, 10, 15, 20 ou 25. A fatura **fecha 7 dias antes** de vencer. Compra feita até o dia do fechamento (inclusive) cai na fatura que fecha ali; depois, na seguinte.
 * **Compra** à vista ou em **até 12 parcelas sem juros**, parcela mínima de R$ 5,00. Cada parcela cai numa fatura (a primeira na que ainda aceita compras, as outras nos meses seguintes); a divisão é em centavos inteiros e a última parcela leva o resto.
 * **Limite em uso** = todas as parcelas ainda não pagas (de faturas abertas e futuras). Compra maior que o disponível é recusada (`CREDIT_LIMIT_EXCEEDED`). Compras e pagamentos do mesmo cartão se enfileiram por uma trava, então o limite não estoura em corrida.
-* **Fatura** (calculada das parcelas e dos pagamentos, nada gravado como estado): `OPEN` (ainda recebe compras), `CLOSED` (fechou, aguarda o pagamento), `OVERDUE` (passou do vencimento com saldo) e `PAID`. Meses futuros aparecem como "Futura" na tela.
+* **Fatura** (calculada das parcelas, dos encargos e dos pagamentos, nada gravado como estado): `OPEN` (ainda recebe compras), `CLOSED` (fechou, aguarda o pagamento), `OVERDUE` (passou do vencimento sem o mínimo pago), `REVOLVING` (venceu com o mínimo pago e o resto rende juros) e `PAID`. Meses futuros aparecem como "Futura" na tela.
 * **Pagar a fatura** sai do saldo da conta do cartão (lançamento `CARD_INVOICE_PAYMENT`, categoria Cartões), pode ser **total ou parcial** e também **antecipada** (fatura futura). Mais que o que falta, ou fatura já paga, é recusado (`INVOICE_NOT_PAYABLE`). O pagamento libera limite na hora.
-* **Fatura vencida com saldo bloqueia novas compras** (`CREDIT_OVERDUE`) até ser quitada. **Não há juros, multa nem rotativo**: o que sobra de um pagamento parcial continua na mesma fatura.
+* **Pagamento mínimo**: o maior entre 15% da fatura e R$ 20,00 (nunca mais que a própria fatura). A resposta traz `minimumDue`, o que ainda falta para cumpri-lo.
+* **Encargos por atraso**, lançados em `credit_charges` (um por tipo e dia, então rodar de novo não duplica): **multa de 2%** uma vez, se o mínimo não foi pago até o vencimento, e **juros de 10% ao mês** (10/30 por dia, compostos) sobre o que continua devendo. Encargos entram na fatura e contam como dívida e uso de limite. Não há teto para o total de juros.
+* **Só a fatura `OVERDUE` bloqueia novas compras** (`CREDIT_OVERDUE`): pagou o mínimo, volta a comprar (a fatura fica `REVOLVING`).
+* **Avisos**: um agendador (de hora em hora, idempotente por cartão e dia) lança os encargos e avisa o cliente (notificações pelo outbox) quando a fatura **fecha**, está **perto de vencer** e **venceu**. Cada aviso sai uma vez só (`credit_notices`).
 * **Cancelar** um cartão de crédito com dívida é recusado (`CARD_HAS_DEBT`): pague tudo antes.
-* Cada conta pode ter até 3 cartões de débito **e** até 3 de crédito.
+* Cada conta pode ter até 3 cartões de débito **e** até 3 de crédito (adicionais contam entre os de crédito).
+
+## Alterar o limite
+
+* **Cliente** (`PUT /credit/cards/{id}/limit {limit}`): múltiplo de R$ 100,00, de R$ 100,00 a **R$ 10.000,00**. Reduzir vale na hora, mas **nunca abaixo do que já está em uso** (`CREDIT_LIMIT_BELOW_USED`). Aumentar exige cartão ativo e nenhuma fatura bloqueando (`CREDIT_OVERDUE`). Acima de R$ 10.000,00: `CREDIT_LIMIT_ABOVE_MAX`.
+* **Equipe** (`PUT /admin/credit/cards/{id}/limit`, permissão `MANAGE_LIMITS`): até R$ 100.000,00, também nunca abaixo da dívida. `GET /admin/customers/{id}/credit-cards` mostra limite, uso e vencimento. Toda mudança é auditada (`CREDIT_LIMIT_CHANGED`) e avisa o cliente.
+
+## Parcelar a fatura
+
+Para uma fatura fechada (`CLOSED`, `OVERDUE` ou `REVOLVING`) com pelo menos R$ 50,00 em aberto: `GET /credit/cards/{id}/invoices/{AAAA-MM}/refinance` lista as opções (2 a 12 parcelas, juros de **5% ao mês**, tabela Price, parcela mínima de R$ 10,00) e `POST` (`{installments}`, `Idempotency-Key`) faz o parcelamento. A fatura é quitada por um "pagamento" `REFINANCE` (nenhum dinheiro sai da conta) e vira uma compra parcelada (`kind = REFINANCE`) nas próximas faturas abertas, com juros e usando limite. Auditoria `CREDIT_INVOICE_REFINANCED`.
+
+## Cartão adicional
+
+`POST /credit/cards/{id}/additional {holderName}` cria um cartão com **número, CVV e nome próprios** que gasta o **limite do principal** e cai nas **faturas do principal** (`credit_additional_cards`; a compra guarda `madeWith`). Pagar, parcelar e mudar o limite só pelo principal (`CARD_IS_ADDITIONAL`). Bloquear o principal bloqueia o uso dos adicionais; o principal só é cancelado depois dos adicionais (`CARD_HAS_ADDITIONAL`), e o adicional cancela sem dívida própria. O adicional ocupa uma das 3 vagas de crédito da conta.
 
 ## API
 
@@ -64,15 +80,18 @@ O mesmo cartão (número cifrado, CVV derivado, bloquear e cancelar com motivo, 
 | `GET /credit/cards/{id}/invoices`, `.../invoices/{AAAA-MM}` | Faturas (da mais nova para a mais antiga) e o detalhe com itens e pagamentos |
 | `POST /credit/cards/{id}/purchases` `{amount, merchant, installments}` | Compra à vista ou parcelada (`Idempotency-Key` obrigatório) |
 | `GET /credit/cards/{id}/purchases` | Compras do cartão (paginado) |
-| `POST /credit/cards/{id}/invoices/{AAAA-MM}/payments` `{amount}` | Paga (parte de) uma fatura (`Idempotency-Key` obrigatório) |
+| `POST /credit/cards/{id}/invoices/{AAAA-MM}/payments` `{amount}` | Paga (parte de) uma fatura, inclusive só o mínimo (`Idempotency-Key` obrigatório) |
+| `PUT /credit/cards/{id}/limit` `{limit}` | O cliente muda o limite |
+| `GET`/`POST /credit/cards/{id}/invoices/{AAAA-MM}/refinance` | Opções e parcelamento da fatura (`Idempotency-Key` no POST) |
+| `POST /credit/cards/{id}/additional` `{holderName}` | Cartão adicional |
 
-`GET /cards` lista os dois tipos com o campo `kind` (`DEBIT` ou `CREDIT`). Reveal, bloquear, desbloquear e cancelar são os mesmos `/cards/{id}/...`. Compra de débito num cartão de crédito dá `CARD_IS_CREDIT`; as rotas de crédito num cartão de débito dão 404. Auditoria: `CREDIT_PURCHASE`, `CREDIT_PURCHASE_FAILED`, `CREDIT_INVOICE_PAID`.
+`GET /cards` lista os dois tipos com o campo `kind` (`DEBIT` ou `CREDIT`). Reveal, bloquear, desbloquear e cancelar são os mesmos `/cards/{id}/...`. Compra de débito num cartão de crédito dá `CARD_IS_CREDIT`; as rotas de crédito num cartão de débito dão 404. Auditoria: `CREDIT_PURCHASE`, `CREDIT_PURCHASE_FAILED`, `CREDIT_INVOICE_PAID`, `CREDIT_LIMIT_CHANGED`, `CREDIT_INVOICE_REFINANCED`.
 
 ## Telas
 
-* **Web**: ao pedir o cartão escolhe-se Débito ou Crédito (e o dia do vencimento). A página do cartão de crédito mostra limite disponível e em uso, a fatura do mês, as faturas da mais próxima para a mais distante (com itens e pagamentos), a compra parcelada (com a lista de "Nx de R$ …") e a janela de pagamento (fatura inteira ou outro valor).
+* **Web**: ao pedir o cartão escolhe-se Débito ou Crédito (e o dia do vencimento). A página do cartão de crédito mostra limite disponível e em uso, a fatura do mês, as faturas da mais próxima para a mais distante (com itens e pagamentos), a compra parcelada (com a lista de "Nx de R$ …") a janela de pagamento (fatura inteira, **mínimo** ou outro valor), multa e juros nos itens da fatura, "Parcelar fatura" (opções do servidor), alterar o limite e pedir cartão adicional.
 * **Android**: as mesmas telas, com biometria ao mostrar os dados, ao comprar e ao pagar a fatura.
 
-## O que ainda não existe
+## Limitações conhecidas
 
-Juros e multa por atraso, pagamento mínimo, alteração de limite (pelo cliente ou pela equipe), aviso de fatura fechando ou vencendo (precisaria de um agendador), parcelamento da fatura e cartão adicional.
+Não há teto para o total de juros por atraso, o agendador roda de hora em hora (não em tempo real) e não existe tela da equipe para o limite (só a API). Nada disso é dinheiro real: é uma simulação.

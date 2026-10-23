@@ -20,6 +20,9 @@ class CreditCancellationGuard implements CardCancellationGuard {
 
     @Override
     public void check(Card card) {
+        if (card.kind() == CardKind.CREDIT && credit.hasActiveAdditional(card.id())) {
+            throw ApplicationException.unprocessable("CARD_HAS_ADDITIONAL", "Cancel the additional cards before canceling the main card");
+        }
         if (card.kind() == CardKind.CREDIT && credit.outstanding(card.id()).isPositive()) {
             throw ApplicationException.unprocessable("CARD_HAS_DEBT", "Pay the card's invoices before canceling it");
         }

@@ -348,6 +348,67 @@ class CreditApiIT {
 
     // ---------- helpers ----------
 
+    @Test
+    void anAdditionalCardSharesTheLimitAndInvoicesOfTheMainCard() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "500.00");
+        String main = issueCredit(token, account, 10);
+        String extra = read(additional(token, main, "Maria Souza").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.holderName").value("MARIA SOUZA")).andExpect(jsonPath("$.kind").value("CREDIT")).andReturn(), "$.id");
+
+        purchase(token, main, "300.00", "Loja A", 1, key()).andExpect(status().isCreated());
+        purchase(token, extra, "200.00", "Loja B", 1, key()).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cardId").value(main)).andExpect(jsonPath("$.madeWith").value(extra));
+
+        // o limite é um só, e o adicional enxerga o mesmo uso e as mesmas faturas
+        for (String id : new String[] {main, extra}) {
+            mvc.perform(as(token, get("/api/v1/credit/cards/" + id)))
+                    .andExpect(jsonPath("$.used.amount").value("500.00")).andExpect(jsonPath("$.available.amount").value("1500.00"));
+        }
+        mvc.perform(as(token, get("/api/v1/credit/cards/" + extra))).andExpect(jsonPath("$.mainCardId").value(main));
+        purchase(token, extra, "1500.01", "Loja", 1, key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CREDIT_LIMIT_EXCEEDED"));
+
+        // pagar, parcelar e mudar o limite são do principal
+        String month = firstInvoiceMonthWithDebt(token, main);
+        pay(token, extra, month, "10.00", key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CARD_IS_ADDITIONAL"));
+        limit(token, extra, "3000.00").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("CARD_IS_ADDITIONAL"));
+        additional(token, extra, "Outra Pessoa").andExpect(status().isUnprocessableEntity());
+        pay(token, main, month, "500.00", key()).andExpect(status().isCreated());
+
+        // o principal só cancela depois dos adicionais; o adicional cancela sem dívida própria
+        cancel(token, main).andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("CARD_HAS_ADDITIONAL"));
+        cancel(token, extra).andExpect(status().isOk());
+        purchase(token, extra, "10.00", "Loja", 1, key()).andExpect(status().isUnprocessableEntity());
+        cancel(token, main).andExpect(status().isOk());
+    }
+
+    @Test
+    void aBlockedMainCardAlsoStopsItsAdditionalCards() throws Exception {
+        String token = customer();
+        String main = issueCredit(token, openAccount(token), 10);
+        String extra = read(additional(token, main, "Joao").andExpect(status().isCreated()).andReturn(), "$.id");
+        mvc.perform(as(token, post("/api/v1/cards/" + main + "/block")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Perdi o cartao\"}")).andExpect(status().isOk());
+        purchase(token, extra, "10.00", "Loja", 1, key()).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CARD_NOT_USABLE"));
+    }
+
+    @Test
+    void additionalCardsNeedAHolderNameAndAnotherCustomerCannotIssueThem() throws Exception {
+        String token = customer();
+        String main = issueCredit(token, openAccount(token), 10);
+        additional(token, main, " ").andExpect(status().isBadRequest());
+        additional(customer(), main, "Intruso").andExpect(status().isNotFound());
+    }
+
+    private ResultActions additional(String token, String main, String holder) throws Exception {
+        return mvc.perform(as(token, post("/api/v1/credit/cards/" + main + "/additional")).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"holderName\":\"%s\"}", holder)));
+    }
+
     private ResultActions limit(String token, String card, String value) throws Exception {
         return mvc.perform(as(token, put("/api/v1/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
                 .content(json("{\"limit\":\"%s\"}", value)));

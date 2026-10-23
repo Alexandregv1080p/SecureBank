@@ -50,6 +50,8 @@ class CreditController {
             @NotBlank @Size(max = CardPurchaseLimits.MERCHANT_MAX) String merchant,
             @Min(1) @Max(CreditPurchase.MAX_INSTALLMENTS) Integer installments) {}
 
+    record AdditionalRequest(@NotBlank @Size(min = 2, max = Card.HOLDER_NAME_MAX) String holderName) {}
+
     record LimitRequest(@NotNull @DecimalMin("100.00") @Digits(integer = 9, fraction = 2) BigDecimal limit) {}
 
     record PayRequest(@NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount) {}
@@ -75,7 +77,7 @@ class CreditController {
     }
 
     record SummaryResponse(UUID cardId, MoneyResponse creditLimit, MoneyResponse used, MoneyResponse available, int dueDay,
-            boolean overdue, InvoiceResponse currentInvoice) {}
+            boolean overdue, InvoiceResponse currentInvoice, UUID mainCardId) {}
 
     record ItemResponse(String merchant, int number, int installments, MoneyResponse amount, LocalDate purchasedOn) {}
 
@@ -100,13 +102,13 @@ class CreditController {
 
     record RefinancedResponse(InvoiceResponse invoice, PurchaseResponse purchase, PlanResponse plan) {}
 
-    record PurchaseResponse(UUID id, UUID cardId, String kind, String merchant, MoneyResponse total, int installments,
+    record PurchaseResponse(UUID id, UUID cardId, UUID madeWith, String kind, String merchant, MoneyResponse total, int installments,
             MoneyResponse installmentAmount, Instant createdAt) {
 
         static PurchaseResponse of(CreditPurchase p) {
             MoneyResponse each = p.plan().isEmpty() ? MoneyResponse.of(CreditPurchase.split(p.total(), p.installments()).get(0))
                     : MoneyResponse.of(p.plan().get(0).amount());
-            return new PurchaseResponse(p.id(), p.cardId().value(), p.kind().name(), p.merchant(), MoneyResponse.of(p.total()), p.installments(),
+            return new PurchaseResponse(p.id(), p.cardId().value(), p.madeWithCard() == null ? null : p.madeWithCard().value(), p.kind().name(), p.merchant(), MoneyResponse.of(p.total()), p.installments(),
                     each, p.createdAt());
         }
     }
@@ -135,11 +137,20 @@ class CreditController {
         return IssuedResponse.of(card, credit.summary(current.customerId(), card.id()).terms());
     }
 
+    /** Cartão adicional do cartão principal [id]: usa o mesmo limite e as mesmas faturas. */
+    @PostMapping("/{id}/additional")
+    @ResponseStatus(HttpStatus.CREATED)
+    IssuedResponse additional(@PathVariable String id, @Valid @RequestBody AdditionalRequest request) {
+        Card card = credit.issueAdditional(current.customerId(), CardId.of(id), request.holderName());
+        return IssuedResponse.of(card, credit.summary(current.customerId(), card.id()).terms());
+    }
+
     @GetMapping("/{id}")
     SummaryResponse summary(@PathVariable String id) {
         var s = credit.summary(current.customerId(), CardId.of(id));
         return new SummaryResponse(s.card().id().value(), MoneyResponse.of(s.terms().limit()), MoneyResponse.of(s.used()),
-                MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()));
+                MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()),
+                s.mainCardId() == null ? null : s.mainCardId().value());
     }
 
     @GetMapping("/{id}/invoices")
@@ -176,7 +187,8 @@ class CreditController {
     SummaryResponse changeLimit(@PathVariable String id, @Valid @RequestBody LimitRequest request) {
         var s = credit.changeLimit(current.customerId(), CardId.of(id), request.limit());
         return new SummaryResponse(s.card().id().value(), MoneyResponse.of(s.terms().limit()), MoneyResponse.of(s.used()),
-                MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()));
+                MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()),
+                s.mainCardId() == null ? null : s.mainCardId().value());
     }
 
     @GetMapping("/{id}/invoices/{month}/refinance")

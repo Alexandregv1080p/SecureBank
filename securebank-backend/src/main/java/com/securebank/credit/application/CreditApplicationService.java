@@ -54,7 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreditApplicationService {
 
     /** Visão geral: limite, uso e a fatura do mês. */
-    public record Summary(Card card, CreditTerms terms, Money used, Money available, Invoice current, boolean overdue) {}
+    public record Summary(Card card, CreditTerms terms, Money used, Money available, Invoice current, boolean overdue,
+            CardId mainCardId) {}
 
     /** O parcelamento feito: a fatura já quitada e a "compra" parcelada que ficou no lugar. */
     public record Refinanced(Invoice invoice, CreditPurchase purchase, Refinance.Plan plan) {}
@@ -103,21 +104,32 @@ public class CreditApplicationService {
         return card;
     }
 
+    /** Emite um cartão adicional: número próprio, mas usa o limite e as faturas do principal (ocupa uma das vagas de cartão da conta). */
+    public Card issueAdditional(CustomerId requester, CardId mainId, String holderName) {
+        Card main = mainCard(requester, mainId);
+        main.ensureCanPurchase(time.today());
+        Card card = cards.issue(requester, main.accountId(), CardKind.CREDIT, holderName);
+        credit.insertAdditional(card.id(), main.id());
+        return card;
+    }
+
     /** Põe os encargos em dia antes de mostrar, então a fatura exibida é a de hoje. */
-    public Summary summary(CustomerId requester, CardId id) {
-        Card card = creditCard(requester, id);
+    public Summary summary(CustomerId requester, CardId asked) {
+        Card card = creditCard(requester, asked);
+        CardId id = ledger(asked);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
         Money used = used(totals, terms.limit().currency());
         YearMonth current = terms.invoiceFor(today);
         return new Summary(card, terms, used, CreditPolicy.available(terms, used), invoice(terms, current, totals, today),
-                hasOverdue(terms, totals, today));
+                hasOverdue(terms, totals, today), id.equals(asked) ? null : id);
     }
 
     /** Faturas com parcela ou pagamento, da mais nova para a mais antiga, mais a fatura aberta de hoje (mesmo vazia). */
-    public List<Invoice> invoices(CustomerId requester, CardId id) {
-        creditCard(requester, id);
+    public List<Invoice> invoices(CustomerId requester, CardId asked) {
+        creditCard(requester, asked);
+        CardId id = ledger(asked);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
@@ -128,8 +140,9 @@ public class CreditApplicationService {
         return new ArrayList<>(byMonth.values());
     }
 
-    public Detail invoiceDetail(CustomerId requester, CardId id, YearMonth month) {
-        creditCard(requester, id);
+    public Detail invoiceDetail(CustomerId requester, CardId asked, YearMonth month) {
+        creditCard(requester, asked);
+        CardId id = ledger(asked);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
@@ -142,6 +155,7 @@ public class CreditApplicationService {
     public PageResult<CreditPurchase> purchases(CustomerId requester, CardId id, int page, int size) {
         PageResult.validate(page, size);
         creditCard(requester, id);
+        id = ledger(id);
         return credit.purchases(id, page, size, termsOf(id).limit().currency());
     }
 
@@ -168,20 +182,26 @@ public class CreditApplicationService {
         }
     }
 
-    private CreditPurchase doPurchase(CustomerId requester, CardId id, BigDecimal amount, String merchant, int installments) {
+    private CreditPurchase doPurchase(CustomerId requester, CardId used, BigDecimal amount, String merchant, int installments) {
         customers.requireActive(requester);
-        Card card = creditCard(requester, id);
+        Card usedCard = creditCard(requester, used);
+        CardId id = ledger(used);
+        Card card = id.equals(used) ? usedCard : creditCard(requester, id);
         LocalDate today = time.today();
+        usedCard.ensureCanPurchase(today);
         card.ensureCanPurchase(today);
         CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
         Money total = new Money(amount, currency);
         CreditPurchase purchase = CreditPurchase.create(terms, total, merchant, installments, today, time.now());
+        if (!id.equals(used)) {
+            purchase = purchase.madeWith(used);
+        }
 
         Map<YearMonth, Totals> totals = credit.totals(id, currency);
         CreditPolicy.ensureCanBuy(terms, used(totals, currency), total, hasOverdue(terms, totals, today));
         credit.save(purchase);
-        audit.record(AuditEntry.of(AuditEvent.CREDIT_PURCHASE).account(card.accountId()).detail(card.id() + " | " + installments + "x"));
+        audit.record(AuditEntry.of(AuditEvent.CREDIT_PURCHASE).account(card.accountId()).detail(used + " | " + installments + "x"));
         outbox.record("CreditPurchaseCompleted", "Card", card.id().toString(), Map.of(
                 "cardId", card.id().toString(), "accountId", card.accountId().toString(), "last4", card.last4(),
                 "merchant", purchase.merchant(), "amount", total.amount().toPlainString(),
@@ -192,7 +212,7 @@ public class CreditApplicationService {
     /** Paga (tudo ou parte de) uma fatura com o saldo da conta do cartão. */
     /** As opções de parcelamento de uma fatura fechada (parcela e total com juros). */
     public Offer refinanceOptions(CustomerId requester, CardId id, YearMonth month) {
-        creditCard(requester, id);
+        mainCard(requester, id);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         Invoice invoice = invoice(terms, month, credit.totals(id, terms.limit().currency()), today);
@@ -218,7 +238,7 @@ public class CreditApplicationService {
 
     private Refinanced doRefinance(CustomerId requester, CardId id, YearMonth month, int installments) {
         customers.requireActive(requester);
-        Card card = creditCard(requester, id);
+        Card card = mainCard(requester, id);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
@@ -258,7 +278,7 @@ public class CreditApplicationService {
 
     private Invoice doPay(CustomerId requester, CardId id, YearMonth month, BigDecimal amount) {
         customers.requireActive(requester);
-        Card card = creditCard(requester, id);
+        Card card = mainCard(requester, id);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
@@ -284,7 +304,7 @@ public class CreditApplicationService {
     /** O cliente muda o limite do próprio cartão: diminui à vontade, aumenta até R$ 10.000,00 se está em dia. */
     public Summary changeLimit(CustomerId requester, CardId id, BigDecimal newLimit) {
         customers.requireActive(requester);
-        Card card = creditCard(requester, id);
+        Card card = mainCard(requester, id);
         LocalDate today = time.today();
         CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
@@ -302,7 +322,7 @@ public class CreditApplicationService {
     /** Decisão da equipe sobre o limite de um cartão (até R$ 100.000,00, nunca abaixo da dívida). */
     public Money changeLimitAsStaff(CardId id, BigDecimal newLimit) {
         Card card = cards.getAny(id);
-        if (card.kind() != CardKind.CREDIT) {
+        if (card.kind() != CardKind.CREDIT || credit.mainOf(id).isPresent()) {
             throw ApplicationException.notFound("Credit card");
         }
         CreditTerms terms = billing.accrueLocked(id, time.today());
@@ -326,7 +346,7 @@ public class CreditApplicationService {
     /** Cartões de crédito de um cliente, para a equipe: limite, uso e vencimento. */
     @Transactional(readOnly = true)
     public List<StaffView> creditCardsOf(CustomerId customer) {
-        return cards.listOpenForStaff(customer).stream().filter(c -> c.kind() == CardKind.CREDIT).map(c -> {
+        return cards.listOpenForStaff(customer).stream().filter(c -> c.kind() == CardKind.CREDIT && credit.mainOf(c.id()).isEmpty()).map(c -> {
             CreditTerms terms = termsOf(c.id());
             Money used = used(credit.totals(c.id(), terms.limit().currency()), terms.limit().currency());
             return new StaffView(c, terms, used, CreditPolicy.available(terms, used));
@@ -341,6 +361,20 @@ public class CreditApplicationService {
             throw ApplicationException.notFound("Credit card");
         }
         return card;
+    }
+
+    /** Pagar, parcelar e mudar o limite é coisa do cartão principal. */
+    private Card mainCard(CustomerId requester, CardId id) {
+        Card card = creditCard(requester, id);
+        if (credit.mainOf(id).isPresent()) {
+            throw ApplicationException.unprocessable("CARD_IS_ADDITIONAL", "This is an additional card: use the main card for this");
+        }
+        return card;
+    }
+
+    /** O cartão cujo limite e faturas valem: o principal, para quem é adicional. */
+    private CardId ledger(CardId id) {
+        return credit.mainOf(id).orElse(id);
     }
 
     private CreditTerms termsOf(CardId id) {

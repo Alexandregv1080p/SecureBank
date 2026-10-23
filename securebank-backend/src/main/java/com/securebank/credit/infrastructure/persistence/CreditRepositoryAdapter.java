@@ -71,6 +71,7 @@ class CreditRepositoryAdapter implements CreditRepository {
         entity.installments = purchase.installments();
         entity.createdAt = purchase.createdAt();
         entity.kind = purchase.kind().name();
+        entity.madeWith = purchase.madeWithCard() == null ? null : purchase.madeWithCard().value();
         em.persist(entity);
         for (CreditPurchase.Installment i : purchase.plan()) {
             CreditEntities.Installment row = new CreditEntities.Installment();
@@ -227,11 +228,31 @@ class CreditRepositoryAdapter implements CreditRepository {
                 .getResultList().stream()
                 .map(p -> CreditPurchase.restore(p.id, new CardId(p.cardId), p.merchant,
                         new Money(p.totalAmount, Currency.getInstance(p.currency)), p.installments, p.createdAt,
-                        CreditPurchase.Kind.valueOf(p.kind)))
+                        CreditPurchase.Kind.valueOf(p.kind), p.madeWith == null ? null : new CardId(p.madeWith)))
                 .toList();
         long total = em.createQuery("select count(p) from CreditPurchaseEntity p where p.cardId = :card", Long.class)
                 .setParameter("card", cardId.value()).getSingleResult();
         return new PageResult<>(items, page, size, total);
+    }
+
+    @Override
+    public Optional<CardId> mainOf(CardId additional) {
+        List<?> rows = em.createNativeQuery("select main_card_id from credit_additional_cards where card_id = :card")
+                .setParameter("card", additional.value()).getResultList();
+        return rows.stream().findFirst().map(r -> new CardId((UUID) r));
+    }
+
+    @Override
+    public void insertAdditional(CardId additional, CardId main) {
+        em.createNativeQuery("insert into credit_additional_cards (card_id, main_card_id) values (:card, :main)")
+                .setParameter("card", additional.value()).setParameter("main", main.value()).executeUpdate();
+    }
+
+    @Override
+    public boolean hasActiveAdditional(CardId main) {
+        return ((Number) em.createNativeQuery("select count(*) from credit_additional_cards a join cards c on c.id = a.card_id"
+                        + " where a.main_card_id = :main and c.status <> 'CANCELED'")
+                .setParameter("main", main.value()).getSingleResult()).longValue() > 0;
     }
 
     private static CreditTerms toDomain(CreditEntities.Terms e) {

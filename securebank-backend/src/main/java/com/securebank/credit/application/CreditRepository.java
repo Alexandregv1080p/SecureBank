@@ -89,5 +89,13 @@ public interface CreditRepository {
     /** [transactionId] é nulo no parcelamento da fatura (kind REFINANCE): não sai dinheiro da conta. */
     void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, String kind, Instant now);
 
+    /** O cartão principal, se [additional] é um cartão adicional. */
+    Optional<CardId> mainOf(CardId additional);
+
+    void insertAdditional(CardId additional, CardId main);
+
+    /** O principal ainda tem cartão adicional não cancelado? */
+    boolean hasActiveAdditional(CardId main);
+
     PageResult<CreditPurchase> purchases(CardId cardId, int page, int size, java.util.Currency currency);
 }

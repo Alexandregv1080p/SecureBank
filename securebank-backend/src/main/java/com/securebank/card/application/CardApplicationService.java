@@ -89,6 +89,11 @@ public class CardApplicationService {
 
     /** Emite o cartão (débito ou crédito); o crédito acrescenta as condições dele no módulo de crédito, na mesma transação. */
     public Card issue(CustomerId requester, AccountId accountId, CardKind kind) {
+        return issue(requester, accountId, kind, null);
+    }
+
+    /** [holderName] nulo = o nome do próprio cliente (cartão adicional leva o nome de quem vai usar). */
+    public Card issue(CustomerId requester, AccountId accountId, CardKind kind, String holderName) {
         customers.requireActive(requester);
         Account account = accountService.findOwned(requester, accountId);
         if (account.status() != AccountStatus.ACTIVE) {
@@ -99,7 +104,7 @@ public class CardApplicationService {
                     "An account can have at most " + MAX_OPEN_PER_ACCOUNT + " cards. Cancel one to issue another");
         }
         String number = CardNumber.generate();
-        Card card = Card.issue(requester, account.id(), kind, customers.get(requester).name(), number, time.today(), time.now());
+        Card card = Card.issue(requester, account.id(), kind, holderName == null ? customers.get(requester).name() : holderName, number, time.today(), time.now());
         cards.insert(card, secrets.encrypt(number), secrets.fingerprint(number));
         audit.record(AuditEntry.of(AuditEvent.CARD_ISSUED).account(account.id()).detail(card.id() + " | " + kind));
         return card;

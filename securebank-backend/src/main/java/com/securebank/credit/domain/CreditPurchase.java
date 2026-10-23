@@ -36,9 +36,10 @@ public final class CreditPurchase {
     private final Instant createdAt;
     private final List<Installment> plan;
     private final Kind kind;
+    private final CardId madeWith;
 
     private CreditPurchase(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt,
-            List<Installment> plan, Kind kind) {
+            List<Installment> plan, Kind kind, CardId madeWith) {
         this.id = id;
         this.cardId = cardId;
         this.merchant = merchant;
@@ -47,6 +48,7 @@ public final class CreditPurchase {
         this.createdAt = createdAt;
         this.plan = List.copyOf(plan);
         this.kind = kind;
+        this.madeWith = madeWith;
     }
 
     public static CreditPurchase create(CreditTerms terms, Money total, String merchant, int installments, LocalDate today,
@@ -70,7 +72,7 @@ public final class CreditPurchase {
         for (int i = 0; i < installments; i++) {
             plan.add(new Installment(UUID.randomUUID(), i + 1, amounts.get(i), first.plusMonths(i)));
         }
-        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, total, installments, now, plan, Kind.PURCHASE);
+        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, total, installments, now, plan, Kind.PURCHASE, null);
     }
 
     /** O parcelamento de uma fatura: as parcelas começam na primeira fatura que ainda não fechou. */
@@ -81,11 +83,17 @@ public final class CreditPurchase {
         for (int i = 0; i < offer.installments(); i++) {
             plan.add(new Installment(UUID.randomUUID(), i + 1, offer.installment(), first.plusMonths(i)));
         }
-        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, offer.total(), offer.installments(), now, plan, Kind.REFINANCE);
+        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, offer.total(), offer.installments(), now, plan, Kind.REFINANCE, null);
     }
 
-    public static CreditPurchase restore(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt, Kind kind) {
-        return new CreditPurchase(id, cardId, merchant, total, installments, createdAt, List.of(), kind);
+    public static CreditPurchase restore(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt, Kind kind,
+            CardId madeWith) {
+        return new CreditPurchase(id, cardId, merchant, total, installments, createdAt, List.of(), kind, madeWith);
+    }
+
+    /** A mesma compra, feita com um cartão adicional (ela continua na fatura do principal). */
+    public CreditPurchase madeWith(CardId additional) {
+        return new CreditPurchase(id, cardId, merchant, total, installments, createdAt, plan, kind, additional);
     }
 
     /** Divide em parcelas iguais de centavos inteiros; o que sobra da divisão vai para a última. */
@@ -109,6 +117,8 @@ public final class CreditPurchase {
     public int installments() { return installments; }
     public Instant createdAt() { return createdAt; }
     public Kind kind() { return kind; }
+    /** O cartão adicional usado, ou nulo se foi o principal. */
+    public CardId madeWithCard() { return madeWith; }
     /** As parcelas planejadas (vazio numa compra reconstituída: elas ficam no repositório). */
     public List<Installment> plan() { return plan; }
 }

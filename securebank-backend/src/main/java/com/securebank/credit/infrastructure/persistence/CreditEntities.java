@@ -35,6 +35,7 @@ final class CreditEntities {
         int installments;
         Instant createdAt;
         String kind;
+        UUID madeWith;
     }
 
     @Entity(name = "CreditInstallmentEntity")

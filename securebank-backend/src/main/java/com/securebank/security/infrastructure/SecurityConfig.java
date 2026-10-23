@@ -100,7 +100,7 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/admin/customers/*/credit-cards").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(PUT, "/api/v1/admin/credit/cards/*/limit").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(PUT, "/api/v1/credit/cards/*/limit").hasAuthority(Permission.MANAGE_CARD.name())
-                        .requestMatchers(POST, "/api/v1/credit/cards", "/api/v1/credit/cards/*/purchases",
+                        .requestMatchers(POST, "/api/v1/credit/cards", "/api/v1/credit/cards/*/additional", "/api/v1/credit/cards/*/purchases",
                                 "/api/v1/credit/cards/*/invoices/*/payments", "/api/v1/credit/cards/*/invoices/*/refinance")
                                 .hasAuthority(Permission.MANAGE_CARD.name())
                         .requestMatchers(GET, "/api/v1/cards", "/api/v1/cards/*", "/api/v1/cards/*/purchases")

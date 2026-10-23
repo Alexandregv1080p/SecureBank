@@ -20,6 +20,7 @@ final class CreditEntities {
         BigDecimal creditLimit;
         String currency;
         int dueDay;
+        java.time.LocalDate billedOn;
         @Version Long version;
     }
 

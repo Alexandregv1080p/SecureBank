@@ -76,30 +76,96 @@ class CreditRepositoryAdapter implements CreditRepository {
 
     @Override
     public Map<YearMonth, Totals> totals(CardId cardId, Currency currency) {
-        Map<YearMonth, BigDecimal> owed = new HashMap<>();
-        for (Object[] row : em.createQuery("select i.invoiceMonth, sum(i.amount) from CreditInstallmentEntity i"
-                        + " where i.cardId = :card group by i.invoiceMonth", Object[].class)
+        Map<YearMonth, BigDecimal> owed = sums("select i.invoiceMonth, sum(i.amount) from CreditInstallmentEntity i"
+                + " where i.cardId = :card group by i.invoiceMonth", cardId);
+        Map<YearMonth, BigDecimal> paid = sums("select p.invoiceMonth, sum(p.amount) from CreditPaymentEntity p"
+                + " where p.cardId = :card group by p.invoiceMonth", cardId);
+        Map<YearMonth, BigDecimal> fees = new HashMap<>();
+        for (Object raw : em.createNativeQuery("select invoice_month, sum(amount) from credit_charges where card_id = :card"
+                        + " group by invoice_month")
                 .setParameter("card", cardId.value()).getResultList()) {
-            owed.put(YearMonth.parse((String) row[0]), (BigDecimal) row[1]);
+            Object[] row = (Object[]) raw;
+            fees.put(YearMonth.parse((String) row[0]), (BigDecimal) row[1]);
         }
-        Map<YearMonth, BigDecimal> paid = new HashMap<>();
-        for (Object[] row : em.createQuery("select p.invoiceMonth, sum(p.amount) from CreditPaymentEntity p"
-                        + " where p.cardId = :card group by p.invoiceMonth", Object[].class)
-                .setParameter("card", cardId.value()).getResultList()) {
-            paid.put(YearMonth.parse((String) row[0]), (BigDecimal) row[1]);
-        }
+        java.util.Set<YearMonth> months = new java.util.HashSet<>(owed.keySet());
+        months.addAll(paid.keySet());
+        months.addAll(fees.keySet());
         Map<YearMonth, Totals> result = new HashMap<>();
-        for (YearMonth month : union(owed, paid)) {
+        for (YearMonth month : months) {
             result.put(month, new Totals(new Money(owed.getOrDefault(month, BigDecimal.ZERO), currency),
+                    new Money(fees.getOrDefault(month, BigDecimal.ZERO), currency),
                     new Money(paid.getOrDefault(month, BigDecimal.ZERO), currency)));
         }
         return result;
     }
 
-    private static java.util.Set<YearMonth> union(Map<YearMonth, BigDecimal> a, Map<YearMonth, BigDecimal> b) {
-        java.util.Set<YearMonth> months = new java.util.HashSet<>(a.keySet());
-        months.addAll(b.keySet());
-        return months;
+    private Map<YearMonth, BigDecimal> sums(String jpql, CardId cardId) {
+        Map<YearMonth, BigDecimal> sums = new HashMap<>();
+        for (Object[] row : em.createQuery(jpql, Object[].class).setParameter("card", cardId.value()).getResultList()) {
+            sums.put(YearMonth.parse((String) row[0]), (BigDecimal) row[1]);
+        }
+        return sums;
+    }
+
+    @Override
+    public List<Charge> charges(CardId cardId, YearMonth month, Currency currency) {
+        List<Charge> result = new java.util.ArrayList<>();
+        for (Object raw : em.createNativeQuery("select kind, sum(amount) from credit_charges where card_id = :card"
+                        + " and invoice_month = :month group by kind order by kind")
+                .setParameter("card", cardId.value()).setParameter("month", month.toString()).getResultList()) {
+            Object[] row = (Object[]) raw;
+            result.add(new Charge((String) row[0], new Money((BigDecimal) row[1], currency)));
+        }
+        return result;
+    }
+
+    @Override
+    public boolean hasCharge(CardId cardId, YearMonth month, String kind) {
+        return ((Number) em.createNativeQuery("select count(*) from credit_charges where card_id = :card and invoice_month = :month"
+                        + " and kind = :kind")
+                .setParameter("card", cardId.value()).setParameter("month", month.toString()).setParameter("kind", kind)
+                .getSingleResult()).longValue() > 0;
+    }
+
+    @Override
+    public Optional<java.time.LocalDate> lastInterestDate(CardId cardId, YearMonth month) {
+        Object last = em.createNativeQuery("select max(accrued_on) from credit_charges where card_id = :card and invoice_month = :month"
+                        + " and kind = 'INTEREST'")
+                .setParameter("card", cardId.value()).setParameter("month", month.toString()).getSingleResult();
+        return Optional.ofNullable(last).map(d -> d instanceof java.sql.Date sql ? sql.toLocalDate() : (java.time.LocalDate) d);
+    }
+
+    @Override
+    public boolean saveCharge(CardId cardId, YearMonth month, String kind, Money amount, java.time.LocalDate accruedOn, Instant now) {
+        return em.createNativeQuery("insert into credit_charges (id, card_id, invoice_month, kind, amount, currency, accrued_on, created_at)"
+                        + " values (:id, :card, :month, :kind, :amount, :currency, :on, :now) on conflict do nothing")
+                .setParameter("id", UUID.randomUUID()).setParameter("card", cardId.value()).setParameter("month", month.toString())
+                .setParameter("kind", kind).setParameter("amount", amount.amount())
+                .setParameter("currency", amount.currency().getCurrencyCode()).setParameter("on", accruedOn).setParameter("now", now)
+                .executeUpdate() > 0;
+    }
+
+    @Override
+    public boolean markNotice(CardId cardId, YearMonth month, String kind, java.time.LocalDate today) {
+        return em.createNativeQuery("insert into credit_notices (card_id, invoice_month, kind, sent_on) values (:card, :month, :kind, :on)"
+                        + " on conflict do nothing")
+                .setParameter("card", cardId.value()).setParameter("month", month.toString()).setParameter("kind", kind)
+                .setParameter("on", today).executeUpdate() > 0;
+    }
+
+    @Override
+    public List<CardId> dueForBilling(java.time.LocalDate today, int limit) {
+        return em.createQuery("select t.cardId from CreditTermsEntity t where t.billedOn is null or t.billedOn < :today order by t.cardId",
+                        UUID.class)
+                .setParameter("today", today).setMaxResults(limit).getResultList().stream().map(CardId::new).toList();
+    }
+
+    @Override
+    public void markBilled(CardId cardId, java.time.LocalDate today) {
+        CreditEntities.Terms terms = em.find(CreditEntities.Terms.class, cardId.value());
+        if (terms != null) {
+            terms.billedOn = today;
+        }
     }
 
     @Override

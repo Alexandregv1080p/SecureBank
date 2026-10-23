@@ -61,12 +61,13 @@ class CreditController {
         }
     }
 
-    record InvoiceResponse(String month, LocalDate closingDate, LocalDate dueDate, MoneyResponse total, MoneyResponse paid,
-            MoneyResponse remaining, String status) {
+    record InvoiceResponse(String month, LocalDate closingDate, LocalDate dueDate, MoneyResponse principal, MoneyResponse charges,
+            MoneyResponse total, MoneyResponse paid, MoneyResponse remaining, MoneyResponse minimumDue, String status) {
 
         static InvoiceResponse of(Invoice i) {
-            return new InvoiceResponse(i.month().toString(), i.closingDate(), i.dueDate(), MoneyResponse.of(i.total()),
-                    MoneyResponse.of(i.paid()), MoneyResponse.of(i.remaining()), i.status().name());
+            return new InvoiceResponse(i.month().toString(), i.closingDate(), i.dueDate(), MoneyResponse.of(i.principal()),
+                    MoneyResponse.of(i.charges()), MoneyResponse.of(i.total()), MoneyResponse.of(i.paid()),
+                    MoneyResponse.of(i.remaining()), MoneyResponse.of(i.minimumDue()), i.status().name());
         }
     }
 
@@ -77,7 +78,10 @@ class CreditController {
 
     record PaymentResponse(MoneyResponse amount, Instant createdAt) {}
 
-    record InvoiceDetailResponse(InvoiceResponse invoice, List<ItemResponse> items, List<PaymentResponse> payments) {}
+    record ChargeResponse(String kind, MoneyResponse amount) {}
+
+    record InvoiceDetailResponse(InvoiceResponse invoice, List<ItemResponse> items, List<ChargeResponse> charges,
+            List<PaymentResponse> payments) {}
 
     record PurchaseResponse(UUID id, UUID cardId, String merchant, MoneyResponse total, int installments,
             MoneyResponse installmentAmount, Instant createdAt) {
@@ -131,6 +135,7 @@ class CreditController {
         var d = credit.invoiceDetail(current.customerId(), CardId.of(id), parse(month));
         return new InvoiceDetailResponse(InvoiceResponse.of(d.invoice()),
                 d.items().stream().map(CreditController::item).toList(),
+                d.charges().stream().map(c -> new ChargeResponse(c.kind(), MoneyResponse.of(c.amount()))).toList(),
                 d.payments().stream().map(p -> new PaymentResponse(MoneyResponse.of(p.amount()), p.createdAt())).toList());
     }
 

@@ -15,8 +15,16 @@ import java.util.Optional;
 
 public interface CreditRepository {
 
-    /** Total das parcelas e o já pago de uma fatura. */
-    record Totals(Money total, Money paid) {}
+    /** Principal (parcelas), encargos por atraso e o já pago de uma fatura. */
+    record Totals(Money principal, Money charges, Money paid) {
+
+        public Money total() {
+            return principal.plus(charges);
+        }
+    }
+
+    /** Soma de um tipo de encargo (LATE_FEE ou INTEREST) numa fatura. */
+    record Charge(String kind, Money amount) {}
 
     /** Uma parcela na fatura, com o estabelecimento e o dia da compra. */
     record Item(String merchant, int number, int installments, Money amount, LocalDate purchasedOn) {}
@@ -55,6 +63,25 @@ public interface CreditRepository {
     List<Item> items(CardId cardId, YearMonth month, java.util.Currency currency);
 
     List<Payment> payments(CardId cardId, YearMonth month, java.util.Currency currency);
+
+    /** Encargos de uma fatura, somados por tipo. */
+    List<Charge> charges(CardId cardId, YearMonth month, java.util.Currency currency);
+
+    boolean hasCharge(CardId cardId, YearMonth month, String kind);
+
+    /** O último dia de juros já lançado na fatura. */
+    Optional<LocalDate> lastInterestDate(CardId cardId, YearMonth month);
+
+    /** Lança um encargo do dia; `false` se esse encargo desse dia já existia (rodar de novo não duplica). */
+    boolean saveCharge(CardId cardId, YearMonth month, String kind, Money amount, LocalDate accruedOn, Instant now);
+
+    /** Registra que o aviso saiu; `false` se já tinha saído (cada aviso sai uma vez só). */
+    boolean markNotice(CardId cardId, YearMonth month, String kind, LocalDate today);
+
+    /** Cartões que o agendador ainda não processou hoje. */
+    List<CardId> dueForBilling(LocalDate today, int limit);
+
+    void markBilled(CardId cardId, LocalDate today);
 
     void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, Instant now);
 

@@ -54,9 +54,11 @@ public class CreditApplicationService {
     /** Visão geral: limite, uso e a fatura do mês. */
     public record Summary(Card card, CreditTerms terms, Money used, Money available, Invoice current, boolean overdue) {}
 
-    public record Detail(Invoice invoice, List<CreditRepository.Item> items, List<CreditRepository.Payment> payments) {}
+    public record Detail(Invoice invoice, List<CreditRepository.Item> items, List<CreditRepository.Charge> charges,
+            List<CreditRepository.Payment> payments) {}
 
     private final CreditRepository credit;
+    private final CreditBillingService billing;
     private final CardApplicationService cards;
     private final AccountApplicationService accountService;
     private final AccountRepository accounts;
@@ -67,10 +69,11 @@ public class CreditApplicationService {
     private final OutboxService outbox;
     private final TransactionalRetry retry;
 
-    public CreditApplicationService(CreditRepository credit, CardApplicationService cards, AccountApplicationService accountService,
+    public CreditApplicationService(CreditRepository credit, CreditBillingService billing, CardApplicationService cards, AccountApplicationService accountService,
             AccountRepository accounts, CustomerApplicationService customers, TransactionRepository transactions, BankTime time,
             AuditService audit, OutboxService outbox, TransactionalRetry retry) {
         this.credit = credit;
+        this.billing = billing;
         this.cards = cards;
         this.accountService = accountService;
         this.accounts = accounts;
@@ -92,12 +95,12 @@ public class CreditApplicationService {
         return card;
     }
 
-    @Transactional(readOnly = true)
+    /** Põe os encargos em dia antes de mostrar, então a fatura exibida é a de hoje. */
     public Summary summary(CustomerId requester, CardId id) {
         Card card = creditCard(requester, id);
-        CreditTerms terms = termsOf(id);
-        Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
         LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
         Money used = used(totals, terms.limit().currency());
         YearMonth current = terms.invoiceFor(today);
         return new Summary(card, terms, used, CreditPolicy.available(terms, used), invoice(terms, current, totals, today),
@@ -105,12 +108,11 @@ public class CreditApplicationService {
     }
 
     /** Faturas com parcela ou pagamento, da mais nova para a mais antiga, mais a fatura aberta de hoje (mesmo vazia). */
-    @Transactional(readOnly = true)
     public List<Invoice> invoices(CustomerId requester, CardId id) {
         creditCard(requester, id);
-        CreditTerms terms = termsOf(id);
-        Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
         LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        Map<YearMonth, Totals> totals = credit.totals(id, terms.limit().currency());
         TreeMap<YearMonth, Invoice> byMonth = new TreeMap<>(Comparator.reverseOrder());
         totals.keySet().forEach(m -> byMonth.put(m, invoice(terms, m, totals, today)));
         YearMonth current = terms.invoiceFor(today);
@@ -118,13 +120,14 @@ public class CreditApplicationService {
         return new ArrayList<>(byMonth.values());
     }
 
-    @Transactional(readOnly = true)
     public Detail invoiceDetail(CustomerId requester, CardId id, YearMonth month) {
         creditCard(requester, id);
-        CreditTerms terms = termsOf(id);
+        LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
         Map<YearMonth, Totals> totals = credit.totals(id, currency);
-        return new Detail(invoice(terms, month, totals, time.today()), credit.items(id, month, currency), credit.payments(id, month, currency));
+        return new Detail(invoice(terms, month, totals, today), credit.items(id, month, currency), credit.charges(id, month, currency),
+                credit.payments(id, month, currency));
     }
 
     @Transactional(readOnly = true)
@@ -162,7 +165,7 @@ public class CreditApplicationService {
         Card card = creditCard(requester, id);
         LocalDate today = time.today();
         card.ensureCanPurchase(today);
-        CreditTerms terms = credit.lockTerms(id).orElseThrow(() -> ApplicationException.notFound("Credit card"));
+        CreditTerms terms = billing.accrueLocked(id, today);
         java.util.Currency currency = terms.limit().currency();
         Money total = new Money(amount, currency);
         CreditPurchase purchase = CreditPurchase.create(terms, total, merchant, installments, today, time.now());
@@ -199,9 +202,9 @@ public class CreditApplicationService {
     private Invoice doPay(CustomerId requester, CardId id, YearMonth month, BigDecimal amount) {
         customers.requireActive(requester);
         Card card = creditCard(requester, id);
-        CreditTerms terms = credit.lockTerms(id).orElseThrow(() -> ApplicationException.notFound("Credit card"));
-        java.util.Currency currency = terms.limit().currency();
         LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        java.util.Currency currency = terms.limit().currency();
         Money money = new Money(amount, currency);
         Invoice invoice = invoice(terms, month, credit.totals(id, currency), today);
         invoice.ensureCanPay(money);
@@ -235,8 +238,8 @@ public class CreditApplicationService {
 
     private static Invoice invoice(CreditTerms terms, YearMonth month, Map<YearMonth, Totals> totals, LocalDate today) {
         java.util.Currency currency = terms.limit().currency();
-        Totals t = totals.getOrDefault(month, new Totals(Money.zero(currency), Money.zero(currency)));
-        return Invoice.of(terms, month, t.total(), t.paid(), today);
+        Totals t = totals.getOrDefault(month, new Totals(Money.zero(currency), Money.zero(currency), Money.zero(currency)));
+        return Invoice.of(terms, month, t.principal(), t.charges(), t.paid(), today);
     }
 
     private static Money used(Map<YearMonth, Totals> totals, java.util.Currency currency) {
@@ -244,6 +247,6 @@ public class CreditApplicationService {
     }
 
     private static boolean hasOverdue(CreditTerms terms, Map<YearMonth, Totals> totals, LocalDate today) {
-        return totals.keySet().stream().anyMatch(m -> invoice(terms, m, totals, today).status() == InvoiceStatus.OVERDUE);
+        return totals.keySet().stream().anyMatch(m -> invoice(terms, m, totals, today).blocksPurchases());
     }
 }

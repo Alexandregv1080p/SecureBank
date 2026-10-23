@@ -94,6 +94,19 @@ public class NotificationService {
             case "CreditInvoicePaid" -> notifyOwner(event, event.text("accountId"), "CREDIT_INVOICE_PAID", "Fatura paga",
                     "Você pagou " + event.text("amount") + " " + event.text("currency") + " da fatura " + event.text("month")
                             + " do cartão final " + event.text("last4") + ".");
+            case "CreditInvoiceClosed" -> notifyOwner(event, event.text("accountId"), "CREDIT_INV_CLOSED", "Fatura fechada",
+                    "A fatura de " + event.text("month") + " do cartão final " + event.text("last4") + " fechou em R$ " + event.text("amount")
+                            + " e vence em " + event.text("dueDate") + ". Pague pelo menos R$ " + event.text("minimum") + " para evitar multa.");
+            case "CreditInvoiceDueSoon" -> notifyOwner(event, event.text("accountId"), "CREDIT_INV_DUE", "Fatura perto de vencer",
+                    "A fatura de " + event.text("month") + " do cartão final " + event.text("last4") + " vence em " + event.text("dueDate")
+                            + ": faltam R$ " + event.text("amount") + ".");
+            case "CreditInvoiceOverdue" -> notifyOwner(event, event.text("accountId"), "CREDIT_INV_OVERDUE", "Fatura vencida",
+                    "true".equals(event.text("revolving"))
+                            ? "A fatura de " + event.text("month") + " do cartão final " + event.text("last4") + " venceu e o restante (R$ "
+                                    + event.text("amount") + ") rende juros de 10% ao mês."
+                            : "A fatura de " + event.text("month") + " do cartão final " + event.text("last4")
+                                    + " venceu sem o mínimo pago: há multa de 2%, juros de 10% ao mês e novas compras ficam bloqueadas. Faltam R$ "
+                                    + event.text("amount") + ".");
             case "CardBlocked" -> notifyOwner(event, event.text("accountId"), "CARD_BLOCKED", "Cartão bloqueado",
                     "O cartão final " + event.text("last4") + " foi bloqueado. Se não foi você, cancele-o e fale com o suporte.");
             case "CardUnblocked" -> notifyOwner(event, event.text("accountId"), "CARD_UNBLOCKED", "Cartão desbloqueado",

@@ -80,31 +80,81 @@ class CreditDomainTest {
         assertThatThrownBy(() -> CreditPurchase.create(t, Money.zero(Money.BRL), "Loja", 1, today, DomainFixtures.NOW)).isInstanceOf(InvalidValueException.class);
     }
 
+    private static Invoice invoice(CreditTerms t, String principal, String charges, String paid, LocalDate today) {
+        return Invoice.of(t, YearMonth.of(2026, 11), Money.brl(principal), Money.brl(charges), Money.brl(paid), today);
+    }
+
     @Test
     void theInvoiceStatusFollowsTheCalendarAndWhatWasPaid() {
+        CreditTerms t = terms(10); // novembro: fecha dia 3, vence dia 10
+        assertThat(invoice(t, "200.00", "0", "0", LocalDate.of(2026, 11, 3)).status()).isEqualTo(InvoiceStatus.OPEN);
+        assertThat(invoice(t, "200.00", "0", "0", LocalDate.of(2026, 11, 4)).status()).isEqualTo(InvoiceStatus.CLOSED);
+        assertThat(invoice(t, "200.00", "0", "0", LocalDate.of(2026, 11, 10)).status()).isEqualTo(InvoiceStatus.CLOSED); // vence no dia: ainda dá tempo
+        assertThat(invoice(t, "200.00", "0", "0", LocalDate.of(2026, 11, 11)).status()).isEqualTo(InvoiceStatus.OVERDUE);
+        assertThat(invoice(t, "200.00", "0", "200.00", LocalDate.of(2026, 11, 11)).status()).isEqualTo(InvoiceStatus.PAID);
+        assertThat(invoice(t, "0", "0", "0", LocalDate.of(2026, 11, 11)).status()).isNotEqualTo(InvoiceStatus.OVERDUE); // fatura vazia
+    }
+
+    @Test
+    void theMinimumPaymentIs15PercentWithAFloorOf20AndNeverMoreThanTheInvoice() {
+        assertThat(Invoice.minimumOf(Money.brl("1000.00"))).isEqualTo(Money.brl("150.00"));
+        assertThat(Invoice.minimumOf(Money.brl("200.00"))).isEqualTo(Money.brl("30.00"));
+        assertThat(Invoice.minimumOf(Money.brl("100.00"))).isEqualTo(Money.brl("20.00")); // 15% seria 15,00: vale o piso
+        assertThat(Invoice.minimumOf(Money.brl("12.00"))).isEqualTo(Money.brl("12.00")); // fatura menor que o piso: paga tudo
+        assertThat(Invoice.minimumOf(Money.zero(Money.BRL))).isEqualTo(Money.zero(Money.BRL));
+        assertThat(Invoice.minimumOf(Money.brl("33.33"))).isEqualTo(Money.brl("20.00"));
+        assertThat(Invoice.minimumOf(Money.brl("1000.10"))).isEqualTo(Money.brl("150.02")); // arredonda ao centavo
+    }
+
+    @Test
+    void payingTheMinimumKeepsTheInvoiceInRevolvingAndNotPayingBlocksPurchases() {
         CreditTerms t = terms(10);
-        YearMonth month = YearMonth.of(2026, 11); // fecha dia 3, vence dia 10
-        Money total = Money.brl("200.00");
-        Money none = Money.zero(Money.BRL);
-        assertThat(Invoice.of(t, month, total, none, LocalDate.of(2026, 11, 3)).status()).isEqualTo(InvoiceStatus.OPEN);
-        assertThat(Invoice.of(t, month, total, none, LocalDate.of(2026, 11, 4)).status()).isEqualTo(InvoiceStatus.CLOSED);
-        assertThat(Invoice.of(t, month, total, none, LocalDate.of(2026, 11, 10)).status()).isEqualTo(InvoiceStatus.CLOSED); // vence no dia: ainda dá tempo
-        assertThat(Invoice.of(t, month, total, none, LocalDate.of(2026, 11, 11)).status()).isEqualTo(InvoiceStatus.OVERDUE);
-        assertThat(Invoice.of(t, month, total, Money.brl("50.00"), LocalDate.of(2026, 11, 11)).status()).isEqualTo(InvoiceStatus.OVERDUE);
-        assertThat(Invoice.of(t, month, total, total, LocalDate.of(2026, 11, 11)).status()).isEqualTo(InvoiceStatus.PAID);
-        assertThat(Invoice.of(t, month, none, none, LocalDate.of(2026, 11, 11)).status()).isNotEqualTo(InvoiceStatus.OVERDUE); // fatura vazia
+        LocalDate afterDue = LocalDate.of(2026, 11, 11);
+        Invoice noMinimum = invoice(t, "200.00", "0", "29.99", afterDue); // mínimo é 30,00
+        assertThat(noMinimum.status()).isEqualTo(InvoiceStatus.OVERDUE);
+        assertThat(noMinimum.blocksPurchases()).isTrue();
+        assertThat(noMinimum.minimumDue()).isEqualTo(Money.brl("0.01"));
+
+        Invoice minimum = invoice(t, "200.00", "0", "30.00", afterDue);
+        assertThat(minimum.status()).isEqualTo(InvoiceStatus.REVOLVING);
+        assertThat(minimum.blocksPurchases()).isFalse();
+        assertThat(minimum.minimumDue()).isEqualTo(Money.zero(Money.BRL));
+        assertThat(minimum.remaining()).isEqualTo(Money.brl("170.00"));
+
+        // antes do vencimento, ainda é só fatura fechada
+        assertThat(invoice(t, "200.00", "0", "30.00", LocalDate.of(2026, 11, 10)).status()).isEqualTo(InvoiceStatus.CLOSED);
+    }
+
+    @Test
+    void chargesAddToTheInvoiceAndTheMinimumStaysOnThePrincipal() {
+        CreditTerms t = terms(10);
+        Invoice invoice = invoice(t, "200.00", "10.50", "30.00", LocalDate.of(2026, 11, 20));
+        assertThat(invoice.total()).isEqualTo(Money.brl("210.50"));
+        assertThat(invoice.remaining()).isEqualTo(Money.brl("180.50"));
+        assertThat(invoice.minimum()).isEqualTo(Money.brl("30.00")); // sobre o principal, não sobre os encargos
+        assertThat(invoice(t, "200.00", "10.50", "210.50", LocalDate.of(2026, 11, 20)).status()).isEqualTo(InvoiceStatus.PAID);
+    }
+
+    @Test
+    void lateFeeIs2PercentAndInterestIs10PercentAMonthPerDay() {
+        assertThat(CreditCharges.lateFee(Money.brl("200.00"))).isEqualTo(Money.brl("4.00"));
+        assertThat(CreditCharges.lateFee(Money.brl("170.00"))).isEqualTo(Money.brl("3.40"));
+        assertThat(CreditCharges.lateFee(Money.brl("33.33"))).isEqualTo(Money.brl("0.67"));
+        assertThat(CreditCharges.dailyInterest(Money.brl("300.00"))).isEqualTo(Money.brl("1.00")); // 10% / 30 = 0,3333% ao dia
+        assertThat(CreditCharges.dailyInterest(Money.brl("200.00"))).isEqualTo(Money.brl("0.67"));
+        assertThat(CreditCharges.dailyInterest(Money.brl("0.40"))).isEqualTo(Money.zero(Money.BRL)); // menos de 1 centavo
     }
 
     @Test
     void payingMoreThanWhatIsLeftOrNothingIsRefused() {
         CreditTerms t = terms(10);
-        Invoice invoice = Invoice.of(t, YearMonth.of(2026, 11), Money.brl("200.00"), Money.brl("50.00"), LocalDate.of(2026, 11, 5));
+        Invoice invoice = invoice(t, "200.00", "0", "50.00", LocalDate.of(2026, 11, 5));
         assertThat(invoice.remaining()).isEqualTo(Money.brl("150.00"));
         invoice.ensureCanPay(Money.brl("150.00"));
         invoice.ensureCanPay(Money.brl("0.01"));
         assertThatThrownBy(() -> invoice.ensureCanPay(Money.brl("150.01"))).isInstanceOf(InvoiceNotPayableException.class);
         assertThatThrownBy(() -> invoice.ensureCanPay(Money.zero(Money.BRL))).isInstanceOf(InvalidValueException.class);
-        Invoice paid = Invoice.of(t, YearMonth.of(2026, 11), Money.brl("200.00"), Money.brl("200.00"), LocalDate.of(2026, 11, 5));
+        Invoice paid = invoice(t, "200.00", "0", "200.00", LocalDate.of(2026, 11, 5));
         assertThatThrownBy(() -> paid.ensureCanPay(Money.brl("1.00"))).isInstanceOf(InvoiceNotPayableException.class);
     }
 

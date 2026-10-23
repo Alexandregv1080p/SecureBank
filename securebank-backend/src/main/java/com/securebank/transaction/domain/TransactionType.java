@@ -14,7 +14,9 @@ public enum TransactionType {
     /** Compra de moeda estrangeira (débito em reais) e venda (crédito em reais). */
     FX_BUY(TransactionCategory.FX), FX_SELL(TransactionCategory.FX),
     /** Compra no cartão de débito (débito da conta). */
-    CARD_PURCHASE(TransactionCategory.CARDS);
+    CARD_PURCHASE(TransactionCategory.CARDS),
+    /** Pagamento da fatura do cartão de crédito (débito da conta). */
+    CARD_INVOICE_PAYMENT(TransactionCategory.CARDS);
 
     private final TransactionCategory category;
 

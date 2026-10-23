@@ -88,6 +88,12 @@ public class NotificationService {
             case "CardPurchaseCompleted" -> notifyOwner(event, event.text("accountId"), "CARD_PURCHASE", "Compra no débito",
                     "Compra de " + event.text("amount") + " " + event.text("currency") + " em " + event.text("merchant")
                             + " no cartão final " + event.text("last4") + ".");
+            case "CreditPurchaseCompleted" -> notifyOwner(event, event.text("accountId"), "CREDIT_PURCHASE", "Compra no crédito",
+                    "Compra de " + event.text("amount") + " " + event.text("currency") + " em " + event.text("merchant")
+                            + " (" + event.text("installments") + "x) no cartão final " + event.text("last4") + ".");
+            case "CreditInvoicePaid" -> notifyOwner(event, event.text("accountId"), "CREDIT_INVOICE_PAID", "Fatura paga",
+                    "Você pagou " + event.text("amount") + " " + event.text("currency") + " da fatura " + event.text("month")
+                            + " do cartão final " + event.text("last4") + ".");
             case "CardBlocked" -> notifyOwner(event, event.text("accountId"), "CARD_BLOCKED", "Cartão bloqueado",
                     "O cartão final " + event.text("last4") + " foi bloqueado. Se não foi você, cancele-o e fale com o suporte.");
             case "CardUnblocked" -> notifyOwner(event, event.text("accountId"), "CARD_UNBLOCKED", "Cartão desbloqueado",

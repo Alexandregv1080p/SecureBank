@@ -43,7 +43,8 @@ class IdempotencyFilter extends OncePerRequestFilter {
             "/api/v1/piggies/*/deposits", "/api/v1/piggies/*/withdrawals", "/api/v1/pix/transfers",
             "/api/v1/pix/transfers/*/refund", "/api/v1/pix/charges/*/pay",
             "/api/v1/pix/schedules", "/api/v1/investments", "/api/v1/investments/*/redeem",
-            "/api/v1/fx/buy", "/api/v1/fx/sell", "/api/v1/cards/*/purchases");
+            "/api/v1/fx/buy", "/api/v1/fx/sell", "/api/v1/cards/*/purchases",
+            "/api/v1/credit/cards/*/purchases", "/api/v1/credit/cards/*/invoices/*/payments");
     /**
      * Abrir conta: a chave é OPCIONAL (clientes antigos seguem sem ela), mas quem a manda não cria duas contas num toque
      * duplo ou numa nova tentativa de rede.

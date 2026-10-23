@@ -43,11 +43,11 @@ class CardController {
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount,
             @NotBlank @Size(max = CardPurchase.MERCHANT_MAX) String merchant) {}
 
-    record CardResponse(UUID id, UUID accountId, String holderName, String maskedNumber, String last4, int expiryMonth,
+    record CardResponse(UUID id, UUID accountId, String kind, String holderName, String maskedNumber, String last4, int expiryMonth,
             int expiryYear, String status, String statusReason, Instant createdAt) {
 
         static CardResponse of(Card c) {
-            return new CardResponse(c.id().value(), c.accountId().value(), c.holderName(), CardNumber.masked(c.last4()),
+            return new CardResponse(c.id().value(), c.accountId().value(), c.kind().name(), c.holderName(), CardNumber.masked(c.last4()),
                     c.last4(), c.expiry().getMonthValue(), c.expiry().getYear(), c.status().name(), c.statusReason(), c.createdAt());
         }
     }

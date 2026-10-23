@@ -8,6 +8,7 @@ import com.securebank.audit.application.AuditEntry;
 import com.securebank.audit.application.AuditService;
 import com.securebank.audit.domain.AuditEvent;
 import com.securebank.card.domain.Card;
+import com.securebank.card.domain.CardKind;
 import com.securebank.card.domain.CardNumber;
 import com.securebank.card.domain.CardPurchase;
 import com.securebank.card.domain.CardPurchaseService;
@@ -62,11 +63,13 @@ public class CardApplicationService {
     private final AuditService audit;
     private final OutboxService outbox;
     private final TransactionalRetry retry;
+    private final List<CardCancellationGuard> guards;
 
     public CardApplicationService(CardRepository cards, CardSecrets secrets, AccountApplicationService accountService,
             AccountRepository accounts, CustomerApplicationService customers, LimitUsage limitUsage,
             TransactionRepository transactions, BankTime time, AuditService audit, OutboxService outbox,
-            TransactionalRetry retry) {
+            TransactionalRetry retry, List<CardCancellationGuard> guards) {
+        this.guards = guards;
         this.cards = cards;
         this.secrets = secrets;
         this.accountService = accountService;
@@ -81,19 +84,24 @@ public class CardApplicationService {
     }
 
     public Card issue(CustomerId requester, AccountId accountId) {
+        return issue(requester, accountId, CardKind.DEBIT);
+    }
+
+    /** Emite o cartão (débito ou crédito); o crédito acrescenta as condições dele no módulo de crédito, na mesma transação. */
+    public Card issue(CustomerId requester, AccountId accountId, CardKind kind) {
         customers.requireActive(requester);
         Account account = accountService.findOwned(requester, accountId);
         if (account.status() != AccountStatus.ACTIVE) {
             throw ApplicationException.unprocessable("ACCOUNT_NOT_ACTIVE", "The account is not active");
         }
-        if (cards.countOpenByAccount(account.id()) >= MAX_OPEN_PER_ACCOUNT) {
+        if (cards.countOpenByAccount(account.id(), kind) >= MAX_OPEN_PER_ACCOUNT) {
             throw ApplicationException.unprocessable("CARD_LIMIT_REACHED",
                     "An account can have at most " + MAX_OPEN_PER_ACCOUNT + " cards. Cancel one to issue another");
         }
         String number = CardNumber.generate();
-        Card card = Card.issue(requester, account.id(), customers.get(requester).name(), number, time.today(), time.now());
+        Card card = Card.issue(requester, account.id(), kind, customers.get(requester).name(), number, time.today(), time.now());
         cards.insert(card, secrets.encrypt(number), secrets.fingerprint(number));
-        audit.record(AuditEntry.of(AuditEvent.CARD_ISSUED).account(account.id()).detail(card.id().toString()));
+        audit.record(AuditEntry.of(AuditEvent.CARD_ISSUED).account(account.id()).detail(card.id() + " | " + kind));
         return card;
     }
 
@@ -138,6 +146,9 @@ public class CardApplicationService {
             java.util.function.BiConsumer<Card, Instant> action) {
         customers.requireActive(requester);
         Card card = findOwned(requester, id);
+        if (event == AuditEvent.CARD_CANCELED) {
+            guards.forEach(g -> g.check(card));
+        }
         action.accept(card, time.now());
         cards.save(card);
         String detail = card.statusReason() == null ? card.id().toString() : card.id() + " | " + card.statusReason();
@@ -173,6 +184,9 @@ public class CardApplicationService {
     private CardPurchase doPurchase(CustomerId requester, CardId id, BigDecimal amount, String merchant) {
         customers.requireActive(requester);
         Card card = findOwned(requester, id);
+        if (card.kind() != CardKind.DEBIT) {
+            throw ApplicationException.unprocessable("CARD_IS_CREDIT", "This is a credit card: purchases go through the credit endpoint");
+        }
         Account account = accountService.findOwned(requester, card.accountId());
         Instant now = time.now();
         Money money = new Money(amount, account.balance().currency());

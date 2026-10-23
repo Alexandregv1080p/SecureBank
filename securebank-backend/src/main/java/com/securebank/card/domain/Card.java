@@ -27,6 +27,7 @@ public final class Card {
     private final CardId id;
     private final CustomerId customerId;
     private final AccountId accountId;
+    private final CardKind kind;
     private final String holderName;
     private final String last4;
     private final YearMonth expiry;
@@ -36,11 +37,12 @@ public final class Card {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Card(CardId id, CustomerId customerId, AccountId accountId, String holderName, String last4, YearMonth expiry,
+    private Card(CardId id, CustomerId customerId, AccountId accountId, CardKind kind, String holderName, String last4, YearMonth expiry,
             CardStatus status, String statusReason, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.customerId = customerId;
         this.accountId = accountId;
+        this.kind = kind;
         this.holderName = holderName;
         this.last4 = last4;
         this.expiry = expiry;
@@ -53,17 +55,22 @@ public final class Card {
     /** @param today dia atual de America/Sao_Paulo: o cartão vale até o fim do mês, daqui a {@value #VALID_YEARS} anos */
     public static Card issue(CustomerId customerId, AccountId accountId, String customerName, String number, LocalDate today,
             Instant now) {
-        if (customerId == null || accountId == null || today == null || now == null) {
+        return issue(customerId, accountId, CardKind.DEBIT, customerName, number, today, now);
+    }
+
+    public static Card issue(CustomerId customerId, AccountId accountId, CardKind kind, String customerName, String number,
+            LocalDate today, Instant now) {
+        if (customerId == null || kind == null || accountId == null || today == null || now == null) {
             throw new InvalidValueException("Card requires customer, account and time");
         }
-        return new Card(CardId.newId(), customerId, accountId, holderName(customerName), CardNumber.last4(number),
+        return new Card(CardId.newId(), customerId, accountId, kind, holderName(customerName), CardNumber.last4(number),
                 YearMonth.from(today).plusYears(VALID_YEARS), CardStatus.ACTIVE, null, now, now);
     }
 
     /** Reconstitui um cartão já persistido. */
-    public static Card restore(CardId id, CustomerId customerId, AccountId accountId, String holderName, String last4,
+    public static Card restore(CardId id, CustomerId customerId, AccountId accountId, CardKind kind, String holderName, String last4,
             YearMonth expiry, CardStatus status, String statusReason, Instant createdAt, Instant updatedAt) {
-        return new Card(id, customerId, accountId, holderName, last4, expiry, status, statusReason, createdAt, updatedAt);
+        return new Card(id, customerId, accountId, kind, holderName, last4, expiry, status, statusReason, createdAt, updatedAt);
     }
 
     /** Nome como no plástico: maiúsculas, sem acento, no máximo {@value #HOLDER_NAME_MAX} caracteres. */
@@ -131,6 +138,7 @@ public final class Card {
     public CardId id() { return id; }
     public CustomerId customerId() { return customerId; }
     public AccountId accountId() { return accountId; }
+    public CardKind kind() { return kind; }
     public String holderName() { return holderName; }
     public String last4() { return last4; }
     public YearMonth expiry() { return expiry; }

@@ -136,6 +136,11 @@ public final class Account {
         return debit(TransactionType.CARD_PURCHASE, amount, reference, now);
     }
 
+    /** Pagamento de fatura do cartão de crédito: o valor sai do saldo. */
+    public Transaction payCardInvoice(Money amount, String reference, Instant now) {
+        return debit(TransactionType.CARD_INVOICE_PAYMENT, amount, reference, now);
+    }
+
     /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
     public void ensureCanCredit(Money amount) {
         ensureActive();

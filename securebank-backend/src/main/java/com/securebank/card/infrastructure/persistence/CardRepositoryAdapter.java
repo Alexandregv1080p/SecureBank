@@ -2,6 +2,7 @@ package com.securebank.card.infrastructure.persistence;
 
 import com.securebank.card.application.CardRepository;
 import com.securebank.card.domain.Card;
+import com.securebank.card.domain.CardKind;
 import com.securebank.card.domain.CardPurchase;
 import com.securebank.card.domain.CardStatus;
 import com.securebank.shared.application.PageResult;
@@ -37,10 +38,12 @@ class CardRepositoryAdapter implements CardRepository {
     }
 
     @Override
-    public long countOpenByAccount(AccountId accountId) {
-        return em.createQuery("select count(c) from CardEntity c where c.accountId = :account and c.status <> :canceled",
+    public long countOpenByAccount(AccountId accountId, CardKind kind) {
+        return em.createQuery("select count(c) from CardEntity c where c.accountId = :account and c.kind = :kind"
+                        + " and c.status <> :canceled",
                         Long.class)
                 .setParameter("account", accountId.value())
+                .setParameter("kind", kind)
                 .setParameter("canceled", CardStatus.CANCELED)
                 .getSingleResult();
     }

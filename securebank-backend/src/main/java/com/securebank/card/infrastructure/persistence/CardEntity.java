@@ -1,6 +1,7 @@
 package com.securebank.card.infrastructure.persistence;
 
 import com.securebank.card.domain.Card;
+import com.securebank.card.domain.CardKind;
 import com.securebank.card.domain.CardStatus;
 import com.securebank.shared.domain.AccountId;
 import com.securebank.shared.domain.CardId;
@@ -22,6 +23,7 @@ class CardEntity {
     @Id UUID id;
     UUID customerId;
     UUID accountId;
+    @Enumerated(EnumType.STRING) CardKind kind;
     String holderName;
     String last4;
     String numberEncrypted;
@@ -39,6 +41,7 @@ class CardEntity {
         id = card.id().value();
         customerId = card.customerId().value();
         accountId = card.accountId().value();
+        kind = card.kind();
         holderName = card.holderName();
         last4 = card.last4();
         expiryMonth = card.expiry().getMonthValue();
@@ -50,7 +53,7 @@ class CardEntity {
     }
 
     Card toDomain() {
-        return Card.restore(new CardId(id), new CustomerId(customerId), new AccountId(accountId), holderName, last4,
+        return Card.restore(new CardId(id), new CustomerId(customerId), new AccountId(accountId), kind, holderName, last4,
                 YearMonth.of(expiryYear, expiryMonth), status, statusReason, createdAt, updatedAt);
     }
 }

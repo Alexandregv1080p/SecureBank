@@ -20,6 +20,8 @@ import { ApplyInvestmentPage } from '../features/investments/ApplyInvestmentPage
 import { InvestmentDetailPage } from '../features/investments/InvestmentDetailPage'
 import { InvestmentsPage } from '../features/investments/InvestmentsPage'
 import { NewPiggyPage } from '../features/piggies/NewPiggyPage'
+import { CardDetailPage } from '../features/cards/CardDetailPage'
+import { CardsPage } from '../features/cards/CardsPage'
 import { PiggiesPage } from '../features/piggies/PiggiesPage'
 import { PiggyDetailPage } from '../features/piggies/PiggyDetailPage'
 import { PixChargesPage } from '../features/pix/PixChargesPage'
@@ -53,6 +55,8 @@ export const router = createBrowserRouter([
           { path: '/investimentos', element: <InvestmentsPage /> },
           { path: '/investimentos/aplicar/:code', element: <ApplyInvestmentPage /> },
           { path: '/investimentos/:id', element: <InvestmentDetailPage /> },
+          { path: '/cartoes', element: <CardsPage /> },
+          { path: '/cartoes/:id', element: <CardDetailPage /> },
           { path: '/porquinhos', element: <PiggiesPage /> },
           { path: '/porquinhos/novo', element: <NewPiggyPage /> },
           { path: '/porquinhos/:id', element: <PiggyDetailPage /> },

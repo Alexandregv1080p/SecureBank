@@ -15,7 +15,7 @@ class FormatTest {
 
     @Test
     fun categoriesAndMonthsAreInPortuguese() {
-        assertEquals(listOf("Depósitos e saques", "Transferências", "Pagamentos", "Pix", "Porquinhos", "Investimentos", "Câmbio"), Format.categories.map(Format::categoryLabel))
+        assertEquals(listOf("Depósitos e saques", "Transferências", "Pagamentos", "Pix", "Porquinhos", "Investimentos", "Câmbio", "Cartão de débito"), Format.categories.map(Format::categoryLabel))
         assertEquals("outubro de 2026", Format.month(java.time.YearMonth.of(2026, 10)))
         assertEquals("março de 2027", Format.month(java.time.YearMonth.of(2027, 3)))
     }

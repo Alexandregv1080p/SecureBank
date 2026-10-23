@@ -82,8 +82,19 @@ fun SbTextField(
     // mesmo emitiu, é eco velho e se ignora; só um valor novo (ex.: o ViewModel limpou o campo) substitui o texto.
     var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
     val emitted = remember { ArrayDeque<String>() }
+    // O ViewModel já devolveu tudo o que o campo emitiu? Só nesse caso um valor diferente é uma mudança de fora (ex.: o
+    // ViewModel limpou o campo depois de uma compra) e vale mesmo que seja igual a algo digitado antes (como o vazio).
+    var caughtUp by remember { mutableStateOf(true) }
     LaunchedEffect(value) {
-        if (field.text != value && value !in emitted) field = TextFieldValue(value, TextRange(value.length))
+        when {
+            field.text == value -> caughtUp = true
+            caughtUp || value !in emitted -> {
+                field = TextFieldValue(value, TextRange(value.length))
+                emitted.clear()
+                caughtUp = true
+            }
+            else -> caughtUp = value == emitted.lastOrNull() // eco atrasado de algo que o campo mesmo digitou
+        }
     }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
@@ -94,6 +105,7 @@ fun SbTextField(
                 field = if (text != next.text) TextFieldValue(text, TextRange(text.length)) else next
                 emitted.addLast(text)
                 if (emitted.size > 16) emitted.removeFirst()
+                caughtUp = false
                 onValueChange(text)
             },
             modifier = Modifier.fillMaxWidth(),

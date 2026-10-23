@@ -59,6 +59,9 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `GET /transfers/destination?branch=&number=` | Quem recebe: nome (`Ana S***`) e CPF mascarados, banco, tipo e situação da conta, e `ownAccount`. Limitada por taxa (como a consulta de chave Pix): 404 se a conta não existe, 4xx se o formato é inválido |
 | `POST /payments`                        | Pagamento de boleto (`Idempotency-Key` obrigatório)               |
 | `GET /payments`, `GET /payments/{id}`   | Pagamentos                                                        |
+| `POST /cards`, `GET /cards`, `GET /cards/{id}` | Cartão de débito virtual (até 3 abertos por conta); ver [cartoes.md](../cartoes.md) |
+| `POST /cards/{id}/reveal`, `/block`, `/unblock`, `/cancel` | Mostra número e CVV (auditado), bloqueia, desbloqueia e cancela (definitivo) |
+| `POST /cards/{id}/purchases`, `GET /cards/{id}/purchases` | Compra simulada no débito, com limite próprio `CARD` (`Idempotency-Key` obrigatório) e histórico |
 | `POST /piggies`, `GET /piggies`, `GET /piggies/{id}` | Porquinho: reserva com nome e meta opcional, guardada numa conta (até 20 ativos) |
 | `PATCH /piggies/{id}`                   | Renomeia e/ou muda a meta (`clearGoal: true` remove a meta)       |
 | `POST /piggies/{id}/deposits`           | Guarda dinheiro: sai da conta e entra no porquinho (`Idempotency-Key` obrigatório) |
@@ -100,7 +103,7 @@ Sempre o mesmo formato, com `traceId` (também no header `X-Trace-Id`):
 | 403    | `FORBIDDEN`                                                                                     |
 | 404    | `NOT_FOUND` — inclui recurso de **outro dono** (indistinguível de inexistente, anti-IDOR)         |
 | 409    | `IDEMPOTENCY_KEY_IN_USE`, `CUSTOMER_ALREADY_EXISTS`, `PIX_KEY_IN_USE`, `CONCURRENT_UPDATE` (refaça a requisição), `CONFLICT` |
-| 422    | `INVALID_MFA_CODE`, `INVALID_CURRENT_PASSWORD`, `INSUFFICIENT_FUNDS`, `DEPOSIT_LIMIT_EXCEEDED`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `ACCOUNT_LIMIT_REACHED` (até 5 contas abertas por cliente), `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH`, `INSUFFICIENT_PIGGY_FUNDS`, `PIGGY_CLOSED`, `PIGGY_HAS_BALANCE`, `PIGGY_LIMIT_REACHED`, `PIX_KEY_LIMIT_REACHED` |
+| 422    | `INVALID_MFA_CODE`, `INVALID_CURRENT_PASSWORD`, `INSUFFICIENT_FUNDS`, `DEPOSIT_LIMIT_EXCEEDED`, `LIMIT_EXCEEDED`, `ACCOUNT_NOT_ACTIVE`, `ACCOUNT_LIMIT_REACHED` (até 5 contas abertas por cliente), `CARD_NOT_USABLE`, `CARD_LIMIT_REACHED`, `CUSTOMER_NOT_ACTIVE`, `ACCOUNT_HAS_BALANCE`, `INVALID_STATE_TRANSITION`, `CURRENCY_MISMATCH`, `INSUFFICIENT_PIGGY_FUNDS`, `PIGGY_CLOSED`, `PIGGY_HAS_BALANCE`, `PIGGY_LIMIT_REACHED`, `PIX_KEY_LIMIT_REACHED` |
 | 429    | `RATE_LIMITED`, `TOO_MANY_ATTEMPTS` (com `Retry-After`)                                          |
 | 500    | `INTERNAL_ERROR` — mensagem genérica; o detalhe fica só no log, com o mesmo `traceId`             |
 
@@ -117,7 +120,7 @@ curl -s -X POST localhost:8100/api/v1/accounts -H "$H" -H "Authorization: Bearer
 
 ## Idempotência
 
-`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`, `/investments`, `/investments/{id}/redeem`, `/fx/buy`, `/fx/sell`
+`Idempotency-Key` (8–128 caracteres `[A-Za-z0-9._-]`) é **obrigatório** em `POST /transfers`, `/payments`, `/accounts/{id}/deposits`, `/piggies/{id}/deposits`, `/pix/transfers`, `/pix/transfers/{id}/refund`, `/pix/charges/{txid}/pay`, `/pix/schedules`, `/investments`, `/investments/{id}/redeem`, `/fx/buy`, `/fx/sell`, `/cards/{id}/purchases`
 e `/withdrawals`. Mesma chave + mesmo pedido devolve a resposta original (header `Idempotency-Replayed: true`); pedido diferente
 → `422 IDEMPOTENCY_KEY_REUSED`; ainda em andamento → `409 IDEMPOTENCY_KEY_IN_PROGRESS`. Detalhes em
 [`consistency.md`](../architecture/consistency.md).

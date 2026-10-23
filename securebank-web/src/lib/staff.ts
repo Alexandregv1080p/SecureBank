@@ -60,6 +60,13 @@ export const auditEvents: Record<string, string> = {
   PIGGY_DEPOSIT: 'Guardado no porquinho',
   PIGGY_WITHDRAW: 'Resgate do porquinho',
   PIGGY_CLOSED: 'Porquinho fechado',
+  CARD_ISSUED: 'Cartão emitido',
+  CARD_REVEALED: 'Número do cartão consultado',
+  CARD_BLOCKED: 'Cartão bloqueado',
+  CARD_UNBLOCKED: 'Cartão desbloqueado',
+  CARD_CANCELED: 'Cartão cancelado',
+  CARD_PURCHASE: 'Compra no débito',
+  CARD_PURCHASE_FAILED: 'Compra no débito recusada',
   INVESTMENT_APPLIED: 'Aplicação em renda fixa',
   INVESTMENT_REDEEMED: 'Resgate de investimento',
   FX_BOUGHT: 'Compra de moeda',
@@ -84,6 +91,7 @@ export const limitLabels: Record<string, string> = {
   PAYMENT: 'Pagamento',
   PIX: 'Pix',
   FX: 'Câmbio',
+  CARD: 'Cartão de débito',
 }
 
 export const shortId = (id: string | null | undefined) => (id ? id.slice(0, 8) : '—')

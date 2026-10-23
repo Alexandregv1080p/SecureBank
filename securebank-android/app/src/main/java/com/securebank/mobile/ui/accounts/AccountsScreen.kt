@@ -92,7 +92,7 @@ private val typeOptions = listOf(
     TypeOption("SAVINGS", "Poupança", "Para separar o dinheiro do que você usa no dia a dia."),
 )
 
-private val limitNames = mapOf("WITHDRAW" to "Saque", "TRANSFER" to "Transferência", "PAYMENT" to "Pagamento", "PIX" to "Pix", "FX" to "Câmbio")
+private val limitNames = mapOf("WITHDRAW" to "Saque", "TRANSFER" to "Transferência", "PAYMENT" to "Pagamento", "PIX" to "Pix", "FX" to "Câmbio", "CARD" to "Cartão de débito")
 
 /** Igual ao teto do servidor (AccountApplicationService.MAX_OPEN_ACCOUNTS): contas encerradas não contam. */
 const val MAX_OPEN_ACCOUNTS = 5

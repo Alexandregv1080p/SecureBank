@@ -31,6 +31,7 @@ export interface Transaction {
     | 'INVEST_IN'
     | 'FX_BUY'
     | 'FX_SELL'
+    | 'CARD_PURCHASE'
   direction: 'CREDIT' | 'DEBIT'
   amount: Money
   balanceAfter: Money
@@ -47,7 +48,7 @@ export interface Page<T> {
 }
 
 export interface LimitUsage {
-  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'PIX' | 'FX'
+  type: 'WITHDRAW' | 'TRANSFER' | 'PAYMENT' | 'PIX' | 'FX' | 'CARD'
   perOperation: Money
   daily: Money
   usedToday: Money
@@ -177,4 +178,36 @@ export interface Piggy {
 export interface FxWallet {
   currency: string
   balance: Money
+}
+
+export type CardStatus = 'ACTIVE' | 'BLOCKED' | 'CANCELED'
+
+/** Cartão de débito virtual: a listagem só traz os 4 últimos dígitos; o número inteiro vem de /reveal. */
+export interface Card {
+  id: string
+  accountId: string
+  holderName: string
+  maskedNumber: string
+  last4: string
+  expiryMonth: number
+  expiryYear: number
+  status: CardStatus
+  createdAt: string
+}
+
+export interface CardDetails {
+  number: string
+  expiryMonth: number
+  expiryYear: number
+  cvv: string
+  holderName: string
+}
+
+export interface CardPurchase {
+  id: string
+  cardId: string
+  amount: Money
+  merchant: string
+  transactionId: string
+  createdAt: string
 }

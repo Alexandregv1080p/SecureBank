@@ -22,7 +22,7 @@ import com.securebank.mobile.BuildConfig
 import com.securebank.mobile.ui.components.Panel
 
 @Composable
-fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer: () -> Unit, onPiggies: () -> Unit, onInvestments: () -> Unit, onFx: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
+fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer: () -> Unit, onCards: () -> Unit, onPiggies: () -> Unit, onInvestments: () -> Unit, onFx: () -> Unit, onNotifications: () -> Unit, onSecurity: () -> Unit, onLogout: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -31,6 +31,8 @@ fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer:
         Panel {
             Column {
                 MoreRow("Transferir entre contas", "Para outra conta do SecureBank por agência e número.", onTransfer)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                MoreRow("Cartões", "Cartão de débito virtual: número, CVV, bloqueio e compras.", onCards)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 MoreRow("Porquinhos", "Reservas com meta, separadas do saldo da conta.", onPiggies)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)

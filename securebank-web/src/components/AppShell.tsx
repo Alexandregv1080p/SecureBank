@@ -7,6 +7,7 @@ import {
   Barcode,
   Bell,
   ClipboardText,
+  CreditCard,
   CurrencyCircleDollar,
   House,
   PiggyBank,
@@ -28,6 +29,7 @@ import { TopBar } from './TopBar'
 const nav = [
   { to: '/', label: 'Início', icon: House, end: true },
   { to: '/contas', label: 'Contas', icon: Wallet },
+  { to: '/cartoes', label: 'Cartões', icon: CreditCard },
   { to: '/pix', label: 'Pix', icon: PixLogo },
   { to: '/porquinhos', label: 'Porquinhos', icon: PiggyBank },
   { to: '/investimentos', label: 'Investimentos', icon: TrendUp },

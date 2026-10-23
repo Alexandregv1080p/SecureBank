@@ -25,7 +25,7 @@ const options: { type: Type; title: string; text: string; icon: Icon }[] = [
   { type: 'SAVINGS', title: 'Poupança', text: 'Para separar o dinheiro do que você usa no dia a dia.', icon: PiggyBank },
 ]
 
-const limitNames: Record<string, string> = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix', FX: 'Câmbio' }
+const limitNames: Record<string, string> = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix', FX: 'Câmbio', CARD: 'Cartão de débito' }
 
 /**
  * Abrir conta: escolher o tipo (com a explicação), ver quantas contas já tem, abrir e ver o resumo (agência, número para

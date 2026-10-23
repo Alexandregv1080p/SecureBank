@@ -55,6 +55,10 @@ import com.securebank.mobile.ui.money.PaymentViewModel
 import com.securebank.mobile.ui.money.TransferScreen
 import com.securebank.mobile.ui.money.TransferViewModel
 import com.securebank.mobile.ui.more.MoreScreen
+import com.securebank.mobile.ui.cards.CardDetailScreen
+import com.securebank.mobile.ui.cards.CardDetailViewModel
+import com.securebank.mobile.ui.cards.CardsScreen
+import com.securebank.mobile.ui.cards.CardsViewModel
 import com.securebank.mobile.ui.piggy.NewPiggyScreen
 import com.securebank.mobile.ui.fx.FxScreen
 import com.securebank.mobile.ui.fx.FxTradeScreen
@@ -193,6 +197,7 @@ fun MainShell(container: AppContainer) {
                     darkTheme = container.theme.dark.collectAsStateWithLifecycle().value,
                     onToggleTheme = container.theme::setDark,
                     onTransfer = { nav.navigate("transfer") },
+                    onCards = { nav.navigate("cards") },
                     onPiggies = { nav.navigate("piggies") },
                     onInvestments = { nav.navigate("investments") },
                     onFx = { nav.navigate("fx") },
@@ -276,6 +281,15 @@ fun MainShell(container: AppContainer) {
                 val id = entry.arguments?.getString("id").orEmpty()
                 val vm: InvestmentDetailViewModel = viewModel(factory = viewModelFactory { initializer { InvestmentDetailViewModel(container.investments, container.banking, id) } })
                 InvestmentDetailScreen(container, vm)
+            }
+            composable("cards") {
+                val vm: CardsViewModel = viewModel(factory = viewModelFactory { initializer { CardsViewModel(container.cards, container.banking) } })
+                CardsScreen(vm, onOpen = { nav.navigate("cards/$it") })
+            }
+            composable("cards/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val vm: CardDetailViewModel = viewModel(factory = viewModelFactory { initializer { CardDetailViewModel(container.cards, container.banking, id) } })
+                CardDetailScreen(container, vm, onBack = { nav.popBackStack() })
             }
             composable("piggies") {
                 val vm: PiggiesViewModel = viewModel(factory = viewModelFactory { initializer { PiggiesViewModel(container.piggies, container.banking) } })

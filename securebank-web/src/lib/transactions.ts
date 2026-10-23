@@ -31,6 +31,8 @@ export function describeTransaction(t: Pick<Transaction, 'type' | 'direction'>):
       return 'Compra de moeda'
     case 'FX_SELL':
       return 'Venda de moeda'
+    case 'CARD_PURCHASE':
+      return 'Compra no débito'
     default:
       return 'Estorno'
   }

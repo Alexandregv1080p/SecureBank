@@ -10,7 +10,7 @@ import { messageFor } from '../../lib/errors'
 import { Badge, Button, EmptyState, ErrorState, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { MoneyForm } from './MoneyForm'
 
-const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix', FX: 'Câmbio' } as const
+const limitLabels = { WITHDRAW: 'Saque', TRANSFER: 'Transferência', PAYMENT: 'Pagamento', PIX: 'Pix', FX: 'Câmbio', CARD: 'Cartão de débito' } as const
 
 export function AccountDetailPage() {
   const { id = '' } = useParams()

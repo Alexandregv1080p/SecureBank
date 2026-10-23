@@ -14,6 +14,7 @@ import com.securebank.mobile.data.AuthRepository
 import com.securebank.mobile.data.BankingRepository
 import com.securebank.mobile.data.FxRepository
 import com.securebank.mobile.data.InvestmentRepository
+import com.securebank.mobile.data.CardRepository
 import com.securebank.mobile.data.PiggyRepository
 import com.securebank.mobile.data.PixRepository
 import com.securebank.mobile.data.SecurityRepository
@@ -33,6 +34,7 @@ class AppContainer(context: Context) {
     val banking = BankingRepository(network.banking, network.json)
     val security = SecurityRepository(network.security, network.json)
     val piggies = PiggyRepository(network.piggy, network.json, banking)
+    val cards = CardRepository(network.card, network.json, banking)
     val investments = InvestmentRepository(network.investment, network.json, banking)
     val fx = FxRepository(network.fx, network.json, banking)
     val pix = PixRepository(network.pix, network.json, banking)

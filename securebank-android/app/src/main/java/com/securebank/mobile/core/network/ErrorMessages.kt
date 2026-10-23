@@ -10,6 +10,8 @@ private val messages = mapOf(
     "INSUFFICIENT_FUNDS" to "Saldo insuficiente.",
     "DEPOSIT_LIMIT_EXCEEDED" to "Um depósito é de até R$ 100.000,00 por vez.",
     "LIMIT_EXCEEDED" to "Este valor ultrapassa o seu limite.",
+    "CARD_NOT_USABLE" to "Este cartão não aceita compras agora: está bloqueado, cancelado ou vencido.",
+    "CARD_LIMIT_REACHED" to "Esta conta já tem 3 cartões. Cancele um para pedir outro.",
     "ACCOUNT_NOT_ACTIVE" to "A conta não está ativa para esta operação.",
     "ACCOUNT_LIMIT_REACHED" to "Você já tem 5 contas abertas. Encerre uma para abrir outra.",
     "CUSTOMER_NOT_ACTIVE" to "Seu cadastro não está ativo. Fale com o suporte.",

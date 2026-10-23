@@ -34,7 +34,7 @@ Eventos de auditoria: `CARD_ISSUED`, `CARD_REVEALED`, `CARD_BLOCKED`, `CARD_UNBL
 
 ## Telas
 
-* **Web** (`/cartoes`, `/cartoes/:id`): cartão desenhado, pedir cartão, mostrar número/CVV (30 s), copiar número, bloquear/desbloquear, cancelar, cada um numa janela de confirmação que explica o que acontece, pede o motivo (uma opção e, em "Outro motivo", o relato) e, no cancelamento, avisa que é definitivo e que basta pedir outro cartão, comprar no débito e compras recentes.
+* **Web** (`/cartoes`, `/cartoes/:id`): cartão desenhado que **vira em 3D ao passar o mouse** e mostra o verso (tarja, CVV e aviso de uso simulado; o CVV só aparece depois de "Mostrar número e CVV"). Em tela de toque ou pelo teclado, o botão "Ver o verso" faz o mesmo; com "reduzir movimento" ligado o giro é instantâneo. Também: pedir cartão, mostrar número/CVV (30 s), copiar número, bloquear/desbloquear, cancelar, cada um numa janela de confirmação que explica o que acontece, pede o motivo (uma opção e, em "Outro motivo", o relato) e, no cancelamento, avisa que é definitivo e que basta pedir outro cartão, comprar no débito e compras recentes.
 * **Android** (**Mais → Cartões**): as mesmas telas e a mesma confirmação com motivo, com biometria ao mostrar os dados e ao comprar.
 
 As validações de valor, saldo, limite e estabelecimento existem nos dois clientes (`lib/card.ts` e `CardValidation.kt`, com os mesmos casos de teste) e o servidor confere de novo.

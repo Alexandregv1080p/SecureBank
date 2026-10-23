@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { CaretLeft, Eye, EyeSlash } from '@phosphor-icons/react'
+import { ArrowsClockwise, CaretLeft, Eye, EyeSlash } from '@phosphor-icons/react'
 import { bankingApi } from '../../services/banking'
 import { cardApi } from '../../services/cards'
 import type { Card, CardDetails } from '../../services/types'
@@ -35,6 +35,7 @@ export function CardDetailPage() {
   })
   const limit = limits.data?.find((l) => l.type === 'CARD')
   const [details, setDetails] = useState<CardDetails | null>(null)
+  const [flipped, setFlipped] = useState(false)
 
   if (card.isPending) return <Skeleton className="h-64" />
   if (card.isError) return <ErrorState message={messageFor(card.error)} onRetry={() => card.refetch()} />
@@ -48,7 +49,12 @@ export function CardDetailPage() {
       </Link>
 
       <section className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,24rem)_1fr] lg:items-center">
-        <CardVisual card={c} details={details} />
+        <div className="flex flex-col items-start gap-2">
+          <CardVisual card={c} details={details} flipped={flipped} />
+          <Button variant="ghost" className="-ml-2" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped}>
+            <ArrowsClockwise size={16} /> {flipped ? 'Ver a frente' : 'Ver o verso'}
+          </Button>
+        </div>
         <div className="flex flex-col gap-3">
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <Badge tone={c.status === 'ACTIVE' ? 'ok' : 'warn'}>{statusLabel[c.status]}</Badge>
@@ -59,7 +65,7 @@ export function CardDetailPage() {
               Motivo do {c.status === 'BLOCKED' ? 'bloqueio' : 'cancelamento'}: <span className="text-ink">{c.statusReason}</span>
             </p>
           )}
-          <dl className="grid gap-4 sm:grid-cols-2">
+          <dl className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
             <div>
               <dt className="text-xs uppercase tracking-wider text-muted">Saldo da conta</dt>
               <dd className="num mt-1 text-2xl font-semibold tracking-tight">{account ? formatBRL(account.balance.amount) : '—'}</dd>

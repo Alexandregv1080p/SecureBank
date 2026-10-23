@@ -347,3 +347,32 @@ dialog.app-dialog[open] {
     animation: none;
   }
 }
+
+/* Cartão que vira: frente e verso empilhados em 3D; vira ao passar o mouse (só onde há mouse) ou quando data-flipped. */
+.flip-card {
+  perspective: 1200px;
+}
+.flip-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+.flip-card[data-flipped='true'] .flip-inner {
+  transform: rotateY(180deg);
+}
+@media (hover: hover) {
+  .flip-card:hover .flip-inner {
+    transform: rotateY(180deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner {
+    transition: none;
+  }
+}

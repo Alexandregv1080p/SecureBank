@@ -10,6 +10,7 @@ import com.securebank.mobile.core.network.CreditPurchase
 import com.securebank.mobile.core.network.CreditSummary
 import com.securebank.mobile.core.network.Invoice
 import com.securebank.mobile.core.network.InvoiceDetail
+import com.securebank.mobile.core.network.RefinanceOffer
 import com.securebank.mobile.core.util.CreditValidation
 import com.securebank.mobile.core.network.LimitUsage
 import com.securebank.mobile.core.network.messageFor
@@ -53,8 +54,17 @@ data class CardDetailState(
     /** Fatura que o cliente está pagando (a tela mostra a janela de pagamento). */
     val payTarget: Invoice? = null,
     val payAmount: String = "",
-    val payAll: Boolean = true,
+    /** ALL, MIN ou OTHER. */
+    val payMode: String = "ALL",
     val payError: String? = null,
+    /** Fatura que o cliente quer parcelar, as opções do servidor e a escolhida. */
+    val splitTarget: Invoice? = null,
+    val splitOffer: RefinanceOffer? = null,
+    val splitChoice: Int? = null,
+    val limitInput: String = "",
+    val limitError: String? = null,
+    val additionalName: String = "",
+    val additionalError: String? = null,
     val details: CardDetails? = null,
     val secondsLeft: Int = 0,
     val merchant: String = "",
@@ -124,9 +134,9 @@ class CardDetailViewModel(
         }
     }
 
-    fun openPay(invoice: Invoice) = _state.update { it.copy(payTarget = invoice, payAmount = "", payAll = true, payError = null) }
+    fun openPay(invoice: Invoice) = _state.update { it.copy(payTarget = invoice, payAmount = "", payMode = "ALL", payError = null) }
     fun closePay() = _state.update { it.copy(payTarget = null, payError = null) }
-    fun onPayAll(all: Boolean) = _state.update { it.copy(payAll = all, payError = null) }
+    fun onPayMode(mode: String) = _state.update { it.copy(payMode = mode, payError = null) }
     fun onPayAmount(raw: String) = _state.update { it.copy(payAmount = Validation.sanitizeAmount(raw), payError = null) }
 
     /** Paga a fatura aberta na janela: inteira ou o valor digitado; a tela já pediu a biometria. */
@@ -135,8 +145,12 @@ class CardDetailViewModel(
         val invoice = s.payTarget ?: return
         if (s.loading) return
         val remaining = invoice.remaining.amount
-        val value = if (s.payAll) remaining else Money.parse(s.payAmount)
-        val issue = if (s.payAll) null else CreditValidation.payIssue(s.payAmount, remaining)
+        val value = when (s.payMode) {
+            "ALL" -> remaining
+            "MIN" -> invoice.minimumDue.amount
+            else -> Money.parse(s.payAmount)
+        }
+        val issue = if (s.payMode == "OTHER") CreditValidation.payIssue(s.payAmount, remaining) else null
         if (value == null || issue != null) {
             _state.update { it.copy(payError = issue ?: Validation.amountIssue(s.payAmount)) }
             return
@@ -144,6 +158,69 @@ class CardDetailViewModel(
         runCatchingUi {
             intent.run(Payload(id, value, invoice.month)) { key -> credit.payInvoice(id, invoice.month, value, key) }
             _state.update { it.copy(payTarget = null, done = "Pagamento de ${Money.format(value)} da fatura de ${CreditValidation.monthLabel(invoice.month)} feito.") }
+        }
+    }
+
+    /** Abre a janela de parcelamento e busca as opções (com juros) no servidor. */
+    fun openSplit(invoice: Invoice) {
+        _state.update { it.copy(splitTarget = invoice, splitOffer = null, splitChoice = null, error = null) }
+        viewModelScope.launch {
+            try {
+                val offer = credit.refinanceOptions(id, invoice.month)
+                _state.update { it.copy(splitOffer = offer) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(splitTarget = null, error = messageFor(e)) }
+            }
+        }
+    }
+
+    fun closeSplit() = _state.update { it.copy(splitTarget = null, splitOffer = null, splitChoice = null) }
+    fun onSplitChoice(n: Int) = _state.update { it.copy(splitChoice = n) }
+
+    /** Parcela a fatura na opção escolhida; a tela já pediu a biometria. */
+    fun refinance() {
+        val s = _state.value
+        val invoice = s.splitTarget ?: return
+        val n = s.splitChoice ?: return
+        if (s.loading) return
+        runCatchingUi {
+            intent.run(Payload(id, n.toString(), invoice.month)) { key -> credit.refinance(id, invoice.month, n, key) }
+            _state.update { it.copy(splitTarget = null, splitOffer = null, splitChoice = null, done = "Fatura de ${CreditValidation.monthLabel(invoice.month)} parcelada em ${n}x.") }
+        }
+    }
+
+    fun onLimit(raw: String) = _state.update { it.copy(limitInput = Validation.sanitizeAmount(raw), limitError = null, error = null, done = null) }
+
+    fun changeLimit() {
+        val s = _state.value
+        if (s.loading) return
+        val issue = CreditValidation.limitIssue(s.limitInput, s.summary?.used?.amount ?: "0")
+        if (issue != null) {
+            _state.update { it.copy(limitError = issue) }
+            return
+        }
+        val value = Money.parse(s.limitInput)!!
+        runCatchingUi {
+            credit.changeLimit(id, value)
+            _state.update { it.copy(limitInput = "", done = "Novo limite: ${Money.format(value)}.") }
+        }
+    }
+
+    fun onAdditionalName(v: String) = _state.update { it.copy(additionalName = v.take(40), additionalError = null, error = null, done = null) }
+
+    fun addAdditional() {
+        val s = _state.value
+        if (s.loading) return
+        val issue = CreditValidation.holderIssue(s.additionalName)
+        if (issue != null) {
+            _state.update { it.copy(additionalError = issue) }
+            return
+        }
+        runCatchingUi {
+            val card = credit.addAdditional(id, s.additionalName)
+            _state.update { it.copy(additionalName = "", done = "Cartão adicional final ${card.last4} criado. Ele está na lista de cartões.") }
         }
     }
 

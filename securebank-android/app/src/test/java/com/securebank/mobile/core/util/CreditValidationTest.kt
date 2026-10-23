@@ -56,4 +56,26 @@ class CreditValidationTest {
         assertTrue(CreditValidation.dueHint("OVERDUE", "2026-11-03", "2026-11-10").startsWith("Venceu em 10/11"))
         assertEquals("Fatura paga", CreditValidation.dueHint("PAID", "2026-11-03", "2026-11-10"))
     }
+
+    @Test
+    fun theLimitIsCheckedLikeTheServer() {
+        assertNull(CreditValidation.limitIssue("3.000,00", "500.00"))
+        assertTrue(CreditValidation.limitIssue("3.050,00", "0.00")!!.contains("múltiplo"))
+        assertTrue(CreditValidation.limitIssue("10.100,00", "0.00")!!.contains("equipe"))
+        assertTrue(CreditValidation.limitIssue("500,00", "800.00")!!.contains("em uso"))
+        assertNotNull(CreditValidation.limitIssue("", "0.00"))
+    }
+
+    @Test
+    fun revolvingHasItsOwnLabelAndHint() {
+        assertEquals("No rotativo", CreditValidation.invoiceStatusLabel("REVOLVING"))
+        assertTrue(CreditValidation.dueHint("REVOLVING", "2026-11-03", "2026-11-10").contains("juros"))
+    }
+
+    @Test
+    fun theAdditionalHolderNeedsTwoToFortyCharacters() {
+        assertNull(CreditValidation.holderIssue("Maria"))
+        assertNotNull(CreditValidation.holderIssue(" a "))
+        assertNotNull(CreditValidation.holderIssue("x".repeat(41)))
+    }
 }

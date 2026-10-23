@@ -120,6 +120,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                 }
 
                 if (isCredit) InvoicesPanel(s, viewModel)
+                if (isCredit && c.status == "ACTIVE") LimitAndAdditionalPanels(s, viewModel) { run -> confirmPurchase(run) }
 
                 Panel {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -147,7 +148,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                 Panel {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Compras recentes", style = MaterialTheme.typography.titleMedium)
-                        val rows = if (isCredit) s.creditPurchases.map { Triple(it.merchant, it.createdAt, it.total.amount) to (if (it.installments > 1) "${it.installments}x de ${Money.format(it.installmentAmount.amount)}" else "à vista") }
+                        val rows = if (isCredit) s.creditPurchases.map { Triple(it.merchant, it.createdAt, it.total.amount) to ((if (it.installments > 1) "${it.installments}x de ${Money.format(it.installmentAmount.amount)}" else "à vista") + (if (it.madeWith != null) " · cartão adicional" else "")) }
                         else s.purchases.map { Triple(it.merchant, it.createdAt, it.amount.amount) to null }
                         if (rows.isEmpty()) {
                             Text("As compras feitas com este cartão aparecem aqui${if (isCredit) " e nas faturas" else " e no extrato"}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -192,6 +193,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
 
     val current = (s.card as? Load.Ready)?.value
     s.payTarget?.let { invoice -> PayInvoiceDialog(s, invoice, viewModel, onConfirm = { confirmPurchase { viewModel.payInvoice() } }) }
+    s.splitTarget?.let { invoice -> SplitInvoiceDialog(s, invoice, viewModel, onConfirm = { confirmPurchase { viewModel.refinance() } }) }
     val action = dialog
     if (action != null && current != null) {
         CardActionDialog(

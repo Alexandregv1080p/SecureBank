@@ -9,6 +9,15 @@ object CreditValidation {
     /** Parcela mínima em centavos (R$ 5,00), como no servidor. */
     const val MIN_INSTALLMENT_CENTS = 500L
     const val CREDIT_LIMIT_START = "R$ 2.000,00"
+    const val LIMIT_MIN = 100L
+    const val LIMIT_SELF_SERVICE_MAX = 10_000L
+    const val MAX_ADDITIONAL = 2
+
+    fun chargeLabel(kind: String) = when (kind) {
+        "LATE_FEE" -> "Multa por atraso (2%)"
+        "INTEREST" -> "Juros por atraso"
+        else -> kind
+    }
 
     private val months = listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
 
@@ -16,6 +25,7 @@ object CreditValidation {
         "OPEN" -> "Aberta"
         "CLOSED" -> "Fechada"
         "OVERDUE" -> "Vencida"
+        "REVOLVING" -> "No rotativo"
         "PAID" -> "Paga"
         else -> status
     }
@@ -74,11 +84,35 @@ object CreditValidation {
         return if (cents(value) > cents(remaining)) "O valor passa do que falta na fatura (${Money.format(remaining)})" else null
     }
 
+    /** Novo limite: múltiplo de R$ 100, de R$ 100 a R$ 10.000 e nunca abaixo do que já está em uso. */
+    fun limitIssue(input: String, used: String): String? {
+        val value = Money.parse(input) ?: return Validation.amountIssue(input)
+        val c = cents(value)
+        return when {
+            c % 10_000L != 0L -> "Use um valor múltiplo de R$ 100,00"
+            c < LIMIT_MIN * 100 -> "O limite mínimo é ${brl(LIMIT_MIN * 100)}"
+            c > LIMIT_SELF_SERVICE_MAX * 100 -> "Acima de ${brl(LIMIT_SELF_SERVICE_MAX * 100)} só com a equipe do banco"
+            c < cents(used) -> "O limite não pode ficar abaixo do que já está em uso (${Money.format(used)})"
+            else -> null
+        }
+    }
+
+    /** Nome impresso no cartão adicional: 2 a 40 caracteres. */
+    fun holderIssue(name: String): String? {
+        val t = name.trim()
+        return when {
+            t.length < 2 -> "Informe o nome de quem vai usar o cartão"
+            t.length > 40 -> "No máximo 40 caracteres"
+            else -> null
+        }
+    }
+
     /** O que mostrar sobre a situação da fatura. */
     fun dueHint(status: String, closingDate: String, dueDate: String) = when (status) {
         "OPEN" -> "Fecha em ${shortDate(closingDate)} e vence em ${shortDate(dueDate)}"
         "CLOSED" -> "Fechada: vence em ${shortDate(dueDate)}"
-        "OVERDUE" -> "Venceu em ${shortDate(dueDate)}: pague para voltar a comprar"
+        "OVERDUE" -> "Venceu em ${shortDate(dueDate)}: pague o mínimo para voltar a comprar"
+        "REVOLVING" -> "Venceu em ${shortDate(dueDate)}: o mínimo foi pago, o resto rende juros"
         else -> "Fatura paga"
     }
 }

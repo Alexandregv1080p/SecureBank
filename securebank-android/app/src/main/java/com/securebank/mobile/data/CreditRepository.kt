@@ -1,6 +1,11 @@
 package com.securebank.mobile.data
 
+import com.securebank.mobile.core.network.AdditionalCardRequest
 import com.securebank.mobile.core.network.Card
+import com.securebank.mobile.core.network.LimitRequest
+import com.securebank.mobile.core.network.RefinanceOffer
+import com.securebank.mobile.core.network.RefinanceRequest
+import com.securebank.mobile.core.network.Refinanced
 import com.securebank.mobile.core.network.CreditApi
 import com.securebank.mobile.core.network.CreditPurchase
 import com.securebank.mobile.core.network.CreditPurchaseRequest
@@ -20,6 +25,17 @@ class CreditRepository(private val api: CreditApi, private val json: Json, priva
 
     suspend fun issue(accountId: String, dueDay: Int): Card =
         apiCall(json) { api.issue(IssueCreditRequest(accountId, dueDay)) }.also { banking.notifyChanged() }
+
+    suspend fun addAdditional(mainId: String, holderName: String): Card =
+        apiCall(json) { api.additional(mainId, AdditionalCardRequest(holderName.trim())) }.also { banking.notifyChanged() }
+
+    suspend fun changeLimit(id: String, limit: String): CreditSummary =
+        apiCall(json) { api.changeLimit(id, LimitRequest(limit)) }.also { banking.notifyChanged() }
+
+    suspend fun refinanceOptions(id: String, month: String): RefinanceOffer = apiCall(json) { api.refinanceOptions(id, month) }
+
+    suspend fun refinance(id: String, month: String, installments: Int, key: String): Refinanced =
+        apiCall(json) { api.refinance(id, month, RefinanceRequest(installments), key) }.also { banking.notifyChanged() }
 
     suspend fun summary(id: String): CreditSummary = apiCall(json) { api.summary(id) }
 

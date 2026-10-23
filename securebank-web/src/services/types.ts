@@ -218,16 +218,21 @@ export interface CardPurchase {
   createdAt: string
 }
 
-export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'OVERDUE' | 'PAID'
+export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'OVERDUE' | 'REVOLVING' | 'PAID'
 
 /** Fatura de um mês (AAAA-MM): vence no dia escolhido e fecha 7 dias antes. */
 export interface Invoice {
   month: string
   closingDate: string
   dueDate: string
+  principal: Money
+  /** Multa e juros por atraso. */
+  charges: Money
   total: Money
   paid: Money
   remaining: Money
+  /** Quanto falta pagar para cumprir o pagamento mínimo (zero se já cumpriu). */
+  minimumDue: Money
   status: InvoiceStatus
 }
 
@@ -239,6 +244,8 @@ export interface CreditSummary {
   dueDay: number
   overdue: boolean
   currentInvoice: Invoice
+  /** Preenchido num cartão adicional: o principal, cujo limite e faturas ele usa. */
+  mainCardId: string | null
 }
 
 export interface InvoiceItem {
@@ -252,12 +259,30 @@ export interface InvoiceItem {
 export interface InvoiceDetail {
   invoice: Invoice
   items: InvoiceItem[]
-  payments: { amount: Money; createdAt: string }[]
+  charges: { kind: 'LATE_FEE' | 'INTEREST'; amount: Money }[]
+  payments: { amount: Money; createdAt: string; kind: 'CASH' | 'REFINANCE' }[]
+}
+
+export interface RefinancePlan {
+  installments: number
+  installment: Money
+  total: Money
+  interest: Money
+  /** Juros ao mês em %, ex.: "5". */
+  monthlyRate: string
+}
+
+export interface RefinanceOffer {
+  invoice: Invoice
+  options: RefinancePlan[]
 }
 
 export interface CreditPurchase {
   id: string
   cardId: string
+  /** O cartão adicional que fez a compra (nulo = o principal). */
+  madeWith: string | null
+  kind: 'PURCHASE' | 'REFINANCE'
   merchant: string
   total: Money
   installments: number

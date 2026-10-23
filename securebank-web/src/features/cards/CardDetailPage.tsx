@@ -18,7 +18,7 @@ import { CopyButton } from '../pix/parts'
 import { useAccounts } from '../accounts/hooks'
 import { CardActionDialog } from './CardActionDialog'
 import { CardVisual } from './CardVisual'
-import { CreditHero, CreditPurchaseForm, CreditPurchases, Invoices } from './CreditPanels'
+import { AdditionalPanel, CreditHero, CreditPurchaseForm, CreditPurchases, Invoices, LimitPanel } from './CreditPanels'
 import { useRefreshCards } from './hooks'
 
 /** Quanto tempo o número e o CVV ficam na tela antes de se esconderem sozinhos. */
@@ -95,10 +95,16 @@ export function CardDetailPage() {
           <Panel title="Segurança">
             <Controls card={c} onChanged={async () => { setDetails(null); await refresh() }} />
           </Panel>
+          {credit && usable && summary.data && !summary.data.mainCardId && (
+            <>
+              <LimitPanel card={c} summary={summary.data} onDone={refresh} />
+              <AdditionalPanel card={c} />
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-6">
-          {credit && <Invoices card={c} balance={account?.balance.amount} currentMonth={summary.data?.currentInvoice.month} onChanged={refresh} />}
+          {credit && <Invoices card={c} balance={account?.balance.amount} currentMonth={summary.data?.currentInvoice.month} canManage={!summary.data?.mainCardId} onChanged={refresh} />}
           <Panel title={credit ? 'Comprar no crédito (simulado)' : 'Comprar no débito (simulado)'}>
             {usable ? (
               credit ? (

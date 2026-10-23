@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { creditPurchaseIssues, dueHint, installmentAmounts, installmentOptions, monthLabel, payIssue, shortDate } from './credit'
+import { creditPurchaseIssues, dueHint, holderIssue, installmentAmounts, installmentOptions, invoiceStatusLabel, limitIssue, monthLabel, payIssue, shortDate } from './credit'
 
 describe('crédito', () => {
   it('escreve o mês e as datas da fatura em português', () => {
@@ -45,5 +45,26 @@ describe('crédito', () => {
     expect(dueHint({ ...base, status: 'CLOSED' })).toBe('Fechada: vence em 10/11')
     expect(dueHint({ ...base, status: 'OVERDUE' })).toMatch(/^Venceu em 10\/11/)
     expect(dueHint({ ...base, status: 'PAID' })).toBe('Fatura paga')
+  })
+})
+
+describe('crédito: limite e adicional', () => {
+  it('confere o novo limite', () => {
+    expect(limitIssue('3.000,00', '500.00')).toBeNull()
+    expect(limitIssue('3.050,00', '0.00')).toMatch(/múltiplo/)
+    expect(limitIssue('10.100,00', '0.00')).toMatch(/equipe/)
+    expect(limitIssue('500,00', '800.00')).toMatch(/abaixo do que já está em uso/)
+    expect(limitIssue('', '0.00')).not.toBeNull()
+  })
+
+  it('o rotativo tem rótulo e dica próprios', () => {
+    expect(invoiceStatusLabel.REVOLVING).toBe('No rotativo')
+    expect(dueHint({ status: 'REVOLVING', dueDate: '2026-11-10', closingDate: '2026-11-03' })).toMatch(/juros/)
+  })
+
+  it('o nome do adicional vai de 2 a 40 caracteres', () => {
+    expect(holderIssue('Maria')).toBeNull()
+    expect(holderIssue(' a ')).not.toBeNull()
+    expect(holderIssue('x'.repeat(41))).not.toBeNull()
   })
 })

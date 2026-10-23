@@ -8,11 +8,17 @@ export const MAX_INSTALLMENTS = 12
 /** Parcela mínima em centavos (R$ 5,00), como no servidor. */
 export const MIN_INSTALLMENT_CENTS = 500
 export const CREDIT_LIMIT_START = 'R$ 2.000,00'
+export const LIMIT_MIN = 100
+export const LIMIT_SELF_SERVICE_MAX = 10000
+export const MAX_ADDITIONAL = 2
+
+export const chargeLabel: Record<string, string> = { LATE_FEE: 'Multa por atraso (2%)', INTEREST: 'Juros por atraso' }
 
 export const invoiceStatusLabel: Record<InvoiceStatus, string> = {
   OPEN: 'Aberta',
   CLOSED: 'Fechada',
   OVERDUE: 'Vencida',
+  REVOLVING: 'No rotativo',
   PAID: 'Paga',
 }
 
@@ -83,7 +89,29 @@ export function dueHint(invoice: Pick<Invoice, 'status' | 'dueDate' | 'closingDa
       return `Fechada: vence em ${shortDate(invoice.dueDate)}`
     case 'OVERDUE':
       return `Venceu em ${shortDate(invoice.dueDate)}: pague para voltar a comprar`
+    case 'REVOLVING':
+      return `Venceu em ${shortDate(invoice.dueDate)}: o mínimo foi pago, o resto rende juros`
     default:
       return 'Fatura paga'
   }
+}
+
+/** Novo limite do cliente: múltiplo de R$ 100, de R$ 100 a R$ 10.000 e nunca abaixo do que já está em uso. */
+export function limitIssue(value: string, used: string): string | null {
+  const parsed = parseAmount(value)
+  if (parsed === null) return amountIssue(value)
+  const cents = Math.round(Number(parsed) * 100)
+  if (cents % 10000 !== 0) return 'Use um valor múltiplo de R$ 100,00'
+  if (cents < LIMIT_MIN * 100) return `O limite mínimo é ${formatBRL(String(LIMIT_MIN))}`
+  if (cents > LIMIT_SELF_SERVICE_MAX * 100) return `Acima de ${formatBRL(String(LIMIT_SELF_SERVICE_MAX))} só com a equipe do banco`
+  if (cents < Math.round(Number(used) * 100)) return `O limite não pode ficar abaixo do que já está em uso (${formatBRL(used)})`
+  return null
+}
+
+/** Nome impresso no cartão adicional: 2 a 40 letras. */
+export function holderIssue(name: string): string | null {
+  const t = name.trim()
+  if (t.length < 2) return 'Informe o nome de quem vai usar o cartão'
+  if (t.length > 40) return 'No máximo 40 caracteres'
+  return null
 }

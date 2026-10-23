@@ -31,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,6 +49,8 @@ class CreditController {
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount,
             @NotBlank @Size(max = CardPurchaseLimits.MERCHANT_MAX) String merchant,
             @Min(1) @Max(CreditPurchase.MAX_INSTALLMENTS) Integer installments) {}
+
+    record LimitRequest(@NotNull @DecimalMin("100.00") @Digits(integer = 9, fraction = 2) BigDecimal limit) {}
 
     record PayRequest(@NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount) {}
 
@@ -152,6 +155,14 @@ class CreditController {
         var result = credit.purchases(current.customerId(), CardId.of(id), page, size);
         return new PurchasePage(result.items().stream().map(PurchaseResponse::of).toList(), result.page(), result.size(),
                 result.totalElements());
+    }
+
+    /** O cliente muda o limite do próprio cartão (múltiplo de R$ 100,00; aumenta sozinho até R$ 10.000,00). */
+    @PutMapping("/{id}/limit")
+    SummaryResponse changeLimit(@PathVariable String id, @Valid @RequestBody LimitRequest request) {
+        var s = credit.changeLimit(current.customerId(), CardId.of(id), request.limit());
+        return new SummaryResponse(s.card().id().value(), MoneyResponse.of(s.terms().limit()), MoneyResponse.of(s.used()),
+                MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()));
     }
 
     @PostMapping("/{id}/invoices/{month}/payments")

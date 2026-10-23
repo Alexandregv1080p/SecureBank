@@ -159,6 +159,42 @@ class CreditDomainTest {
     }
 
     @Test
+    void theLimitIsAMultipleOf100AndTheCustomerCanLowerItDownToWhatHeOwes() {
+        CreditTerms t = terms(10); // limite inicial 2.000,00
+        Money none = Money.zero(Money.BRL);
+        CreditLimits.checkSelfService(t, Money.brl("1500.00"), none, false);
+        CreditLimits.checkSelfService(t, Money.brl("500.00"), Money.brl("500.00"), false); // exatamente a dívida
+        CreditLimits.checkSelfService(t, Money.brl("100.00"), none, false);
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.brl("400.00"), Money.brl("500.00"), false))
+                .isInstanceOf(CreditRefusedException.class).extracting("code").isEqualTo("CREDIT_LIMIT_BELOW_USED");
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.brl("1550.00"), none, false)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.brl("50.00"), none, false)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.zero(Money.BRL), none, false)).isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
+    void anIncreaseNeedsAnInvoiceInOrderAndStopsAt10000ButALowerLimitIsAlwaysAllowed() {
+        CreditTerms t = terms(10);
+        Money none = Money.zero(Money.BRL);
+        CreditLimits.checkSelfService(t, Money.brl("10000.00"), none, false);
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.brl("10100.00"), none, false))
+                .isInstanceOf(CreditRefusedException.class).extracting("code").isEqualTo("CREDIT_LIMIT_ABOVE_MAX");
+        assertThatThrownBy(() -> CreditLimits.checkSelfService(t, Money.brl("3000.00"), none, true))
+                .isInstanceOf(CreditRefusedException.class).extracting("code").isEqualTo("CREDIT_OVERDUE");
+        CreditLimits.checkSelfService(t, Money.brl("1000.00"), none, true); // diminuir com fatura vencida pode
+    }
+
+    @Test
+    void theStaffDecidesUpTo100000ButNeverBelowTheDebt() {
+        Money none = Money.zero(Money.BRL);
+        CreditLimits.checkStaff(Money.brl("100000.00"), none);
+        CreditLimits.checkStaff(Money.brl("20000.00"), Money.brl("20000.00"));
+        assertThatThrownBy(() -> CreditLimits.checkStaff(Money.brl("100100.00"), none)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> CreditLimits.checkStaff(Money.brl("1000.00"), Money.brl("1000.01"))).isInstanceOf(CreditRefusedException.class);
+        assertThatThrownBy(() -> CreditLimits.checkStaff(Money.brl("1050.00"), none)).isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
     void aPurchaseNeedsLimitAndNoOverdueInvoice() {
         CreditTerms t = terms(10);
         CreditPolicy.ensureCanBuy(t, Money.brl("1500.00"), Money.brl("500.00"), false); // exatamente o que sobra

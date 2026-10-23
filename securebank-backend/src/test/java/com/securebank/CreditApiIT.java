@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -273,7 +274,85 @@ class CreditApiIT {
                 .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
     }
 
+    @Test
+    void theCustomerCanLowerAndRaiseTheLimitWithinTheRules() throws Exception {
+        String token = customer();
+        String card = issueCredit(token, openAccount(token), 10);
+        purchase(token, card, "500.00", "Loja", 1, key()).andExpect(status().isCreated());
+
+        limit(token, card, "1000.00").andExpect(status().isOk())
+                .andExpect(jsonPath("$.creditLimit.amount").value("1000.00")).andExpect(jsonPath("$.available.amount").value("500.00"));
+        limit(token, card, "400.00").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("CREDIT_LIMIT_BELOW_USED"));
+        limit(token, card, "500.00").andExpect(status().isOk()).andExpect(jsonPath("$.available.amount").value("0.00"));
+        limit(token, card, "1050.00").andExpect(status().isBadRequest()); // não é múltiplo de 100
+        limit(token, card, "50.00").andExpect(status().isBadRequest());
+        limit(token, card, "10100.00").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("CREDIT_LIMIT_ABOVE_MAX"));
+        limit(token, card, "10000.00").andExpect(status().isOk());
+        purchase(token, card, "9000.00", "Loja", 1, key()).andExpect(status().isCreated()); // o limite novo vale na hora
+        mvc.perform(as(token, get("/api/v1/credit/cards/" + card))).andExpect(jsonPath("$.creditLimit.amount").value("10000.00"));
+    }
+
+    @Test
+    void aBlockedCardCannotHaveItsLimitRaisedButCanHaveItLowered() throws Exception {
+        String token = customer();
+        String card = issueCredit(token, openAccount(token), 10);
+        mvc.perform(as(token, post("/api/v1/cards/" + card + "/block")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Perdi o cartao\"}")).andExpect(status().isOk());
+
+        limit(token, card, "3000.00").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("CARD_NOT_USABLE"));
+        limit(token, card, "500.00").andExpect(status().isOk());
+    }
+
+    @Test
+    void anotherCustomerCannotChangeMyLimit() throws Exception {
+        String token = customer();
+        String card = issueCredit(token, openAccount(token), 10);
+        limit(customer(), card, "100.00").andExpect(status().isNotFound());
+        mvc.perform(as(token, get("/api/v1/credit/cards/" + card))).andExpect(jsonPath("$.creditLimit.amount").value("2000.00"));
+    }
+
+    @Test
+    void theStaffSeesTheCustomersCreditCardsAndAdminsSetTheLimitAboveTheSelfServiceCeiling() throws Exception {
+        TestUsers.Login customer = TestUsers.registerAndLogin(mvc);
+        String account = openAccount(customer.accessToken());
+        String card = issueCredit(customer.accessToken(), account, 15);
+        purchase(customer.accessToken(), card, "700.00", "Loja", 1, key()).andExpect(status().isCreated());
+        String support = TestUsers.staffToken(mvc, "SUPPORT");
+        String admin = TestUsers.staffToken(mvc, "ADMIN");
+
+        mvc.perform(as(support, get("/api/v1/admin/customers/" + customer.customerId() + "/credit-cards")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(card)).andExpect(jsonPath("$[0].used.amount").value("700.00"))
+                .andExpect(jsonPath("$[0].dueDay").value(15)).andExpect(jsonPath("$[0].number").doesNotExist());
+
+        // suporte só lê; quem decide o limite é o admin
+        mvc.perform(as(support, put("/api/v1/admin/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"20000.00\"}")).andExpect(status().isForbidden());
+        mvc.perform(as(admin, put("/api/v1/admin/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"20000.00\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.creditLimit.amount").value("20000.00"));
+        mvc.perform(as(admin, put("/api/v1/admin/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"600.00\"}")).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CREDIT_LIMIT_BELOW_USED"));
+        mvc.perform(as(admin, put("/api/v1/admin/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"100100.00\"}")).andExpect(status().isBadRequest());
+        mvc.perform(as(customer.accessToken(), get("/api/v1/credit/cards/" + card))).andExpect(jsonPath("$.creditLimit.amount").value("20000.00"));
+        // um cliente comum não chega nas rotas da equipe
+        mvc.perform(as(customer.accessToken(), put("/api/v1/admin/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"100000.00\"}")).andExpect(status().isForbidden());
+        // e o do débito não é de crédito
+        String debit = read(mvc.perform(as(customer.accessToken(), post("/api/v1/cards")).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"accountId\":\"%s\"}", account))).andExpect(status().isCreated()).andReturn(), "$.id");
+        mvc.perform(as(admin, put("/api/v1/admin/credit/cards/" + debit + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"limit\":\"1000.00\"}")).andExpect(status().isNotFound());
+    }
+
     // ---------- helpers ----------
+
+    private ResultActions limit(String token, String card, String value) throws Exception {
+        return mvc.perform(as(token, put("/api/v1/credit/cards/" + card + "/limit")).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"limit\":\"%s\"}", value)));
+    }
+
 
     /** Mês (AAAA-MM) da primeira fatura que ficou com saldo a pagar. */
     private String firstInvoiceMonthWithDebt(String token, String card) throws Exception {

@@ -42,6 +42,11 @@ public final class CreditTerms {
         return new CreditTerms(cardId, limit, dueDay);
     }
 
+    /** As mesmas condições com outro limite (a validação fica em [CreditLimits]). */
+    public CreditTerms withLimit(Money newLimit) {
+        return new CreditTerms(cardId, newLimit, dueDay);
+    }
+
     public LocalDate dueDate(YearMonth month) {
         return month.atDay(dueDay);
     }

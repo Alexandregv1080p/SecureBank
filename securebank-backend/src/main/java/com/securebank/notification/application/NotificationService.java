@@ -107,6 +107,9 @@ public class NotificationService {
                             : "A fatura de " + event.text("month") + " do cartão final " + event.text("last4")
                                     + " venceu sem o mínimo pago: há multa de 2%, juros de 10% ao mês e novas compras ficam bloqueadas. Faltam R$ "
                                     + event.text("amount") + ".");
+            case "CreditLimitChanged" -> notifyOwner(event, event.text("accountId"), "CREDIT_LIMIT", "Limite alterado",
+                    "O limite do cartão final " + event.text("last4") + " agora é R$ " + event.text("limit")
+                            + ("staff".equals(event.text("by")) ? ", por decisão do banco." : "."));
             case "CardBlocked" -> notifyOwner(event, event.text("accountId"), "CARD_BLOCKED", "Cartão bloqueado",
                     "O cartão final " + event.text("last4") + " foi bloqueado. Se não foi você, cancele-o e fale com o suporte.");
             case "CardUnblocked" -> notifyOwner(event, event.text("accountId"), "CARD_UNBLOCKED", "Cartão desbloqueado",

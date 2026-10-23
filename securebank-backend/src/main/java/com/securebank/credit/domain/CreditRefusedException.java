@@ -13,6 +13,14 @@ public class CreditRefusedException extends DomainException {
         return new CreditRefusedException("CREDIT_LIMIT_EXCEEDED", "The purchase is more than the available credit limit");
     }
 
+    public static CreditRefusedException limitBelowUsed() {
+        return new CreditRefusedException("CREDIT_LIMIT_BELOW_USED", "The limit cannot be lower than what you already owe");
+    }
+
+    public static CreditRefusedException limitAboveSelfService() {
+        return new CreditRefusedException("CREDIT_LIMIT_ABOVE_MAX", "Limits above R$ 10,000.00 are decided by the bank team");
+    }
+
     public static CreditRefusedException overdue() {
         return new CreditRefusedException("CREDIT_OVERDUE", "Pay the overdue invoice before buying on credit");
     }

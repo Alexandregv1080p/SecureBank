@@ -10,6 +10,7 @@ import com.securebank.card.application.CardApplicationService;
 import com.securebank.card.domain.Card;
 import com.securebank.card.domain.CardKind;
 import com.securebank.credit.application.CreditRepository.Totals;
+import com.securebank.credit.domain.CreditLimits;
 import com.securebank.credit.domain.CreditPolicy;
 import com.securebank.credit.domain.CreditPurchase;
 import com.securebank.credit.domain.CreditTerms;
@@ -223,6 +224,60 @@ public class CreditApplicationService {
                 "month", month.toString(), "amount", money.amount().toPlainString(), "currency", currency.getCurrencyCode()));
         return invoice(terms, month, credit.totals(id, currency), today);
     }
+
+    /** O cliente muda o limite do próprio cartão: diminui à vontade, aumenta até R$ 10.000,00 se está em dia. */
+    public Summary changeLimit(CustomerId requester, CardId id, BigDecimal newLimit) {
+        customers.requireActive(requester);
+        Card card = creditCard(requester, id);
+        LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        java.util.Currency currency = terms.limit().currency();
+        Money wanted = new Money(newLimit, currency);
+        Map<YearMonth, Totals> totals = credit.totals(id, currency);
+        boolean increase = wanted.isGreaterThan(terms.limit());
+        if (increase) {
+            card.ensureCanPurchase(today); // aumentar só com o cartão ativo e dentro da validade
+        }
+        CreditLimits.checkSelfService(terms, wanted, used(totals, currency), hasOverdue(terms, totals, today));
+        applyLimit(card, terms, wanted, "customer");
+        return summary(requester, id);
+    }
+
+    /** Decisão da equipe sobre o limite de um cartão (até R$ 100.000,00, nunca abaixo da dívida). */
+    public Money changeLimitAsStaff(CardId id, BigDecimal newLimit) {
+        Card card = cards.getAny(id);
+        if (card.kind() != CardKind.CREDIT) {
+            throw ApplicationException.notFound("Credit card");
+        }
+        CreditTerms terms = billing.accrueLocked(id, time.today());
+        java.util.Currency currency = terms.limit().currency();
+        Money wanted = new Money(newLimit, currency);
+        CreditLimits.checkStaff(wanted, used(credit.totals(id, currency), currency));
+        applyLimit(card, terms, wanted, "staff");
+        return wanted;
+    }
+
+    private void applyLimit(Card card, CreditTerms terms, Money wanted, String by) {
+        Money old = terms.limit();
+        credit.saveLimit(terms.withLimit(wanted));
+        audit.record(AuditEntry.of(AuditEvent.CREDIT_LIMIT_CHANGED).account(card.accountId())
+                .detail(card.id() + " | " + old.amount().toPlainString() + " -> " + wanted.amount().toPlainString() + " | " + by));
+        outbox.record("CreditLimitChanged", "Card", card.id().toString(), Map.of(
+                "cardId", card.id().toString(), "accountId", card.accountId().toString(), "last4", card.last4(),
+                "limit", wanted.amount().toPlainString(), "currency", wanted.currency().getCurrencyCode(), "by", by));
+    }
+
+    /** Cartões de crédito de um cliente, para a equipe: limite, uso e vencimento. */
+    @Transactional(readOnly = true)
+    public List<StaffView> creditCardsOf(CustomerId customer) {
+        return cards.listOpenForStaff(customer).stream().filter(c -> c.kind() == CardKind.CREDIT).map(c -> {
+            CreditTerms terms = termsOf(c.id());
+            Money used = used(credit.totals(c.id(), terms.limit().currency()), terms.limit().currency());
+            return new StaffView(c, terms, used, CreditPolicy.available(terms, used));
+        }).toList();
+    }
+
+    public record StaffView(Card card, CreditTerms terms, Money used, Money available) {}
 
     private Card creditCard(CustomerId requester, CardId id) {
         Card card = cards.get(requester, id);

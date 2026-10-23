@@ -52,6 +52,15 @@ class CreditRepositoryAdapter implements CreditRepository {
     }
 
     @Override
+    public void saveLimit(CreditTerms terms) {
+        CreditEntities.Terms entity = em.find(CreditEntities.Terms.class, terms.cardId().value());
+        if (entity == null) {
+            throw new IllegalStateException("Credit terms of " + terms.cardId() + " do not exist");
+        }
+        entity.creditLimit = terms.limit().amount();
+    }
+
+    @Override
     public void save(CreditPurchase purchase) {
         CreditEntities.Purchase entity = new CreditEntities.Purchase();
         entity.id = purchase.id();

@@ -110,6 +110,18 @@ public class CardApplicationService {
         return cards.findOpenByCustomer(requester);
     }
 
+    /** Para a equipe: o cartão pelo id, sem checar dono (a rota já exige permissão de equipe). */
+    @Transactional(readOnly = true)
+    public Card getAny(CardId id) {
+        return cards.findById(id).orElseThrow(() -> ApplicationException.notFound("Card"));
+    }
+
+    /** Para a equipe: os cartões não cancelados de um cliente. */
+    @Transactional(readOnly = true)
+    public List<Card> listOpenForStaff(CustomerId customer) {
+        return cards.findOpenByCustomer(customer);
+    }
+
     @Transactional(readOnly = true)
     public Card get(CustomerId requester, CardId id) {
         return findOwned(requester, id);

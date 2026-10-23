@@ -55,6 +55,9 @@ public interface CreditRepository {
 
     void insert(CreditTerms terms);
 
+    /** Grava o novo limite (a trava das condições já deve estar tomada). */
+    void saveLimit(CreditTerms terms);
+
     void save(CreditPurchase purchase);
 
     /** Total devido e pago de cada fatura que tem parcela ou pagamento. */

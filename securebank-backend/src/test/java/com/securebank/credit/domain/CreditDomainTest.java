@@ -195,6 +195,50 @@ class CreditDomainTest {
     }
 
     @Test
+    void refinancingUsesAFixedInstallmentAt5PercentAMonth() {
+        Refinance.Plan p = Refinance.plan(Money.brl("1000.00"), 6);
+        assertThat(p.installment()).isEqualTo(Money.brl("197.02"));
+        assertThat(p.total()).isEqualTo(Money.brl("1182.12"));
+        assertThat(p.interest()).isEqualTo(Money.brl("182.12"));
+        assertThat(Refinance.plan(Money.brl("409.36"), 4).installment()).isEqualTo(Money.brl("115.44"));
+        assertThat(Refinance.plan(Money.brl("300.00"), 12).installment()).isEqualTo(Money.brl("33.85"));
+        assertThat(Refinance.plan(Money.brl("100.00"), 2).total()).isEqualTo(Money.brl("107.56"));
+    }
+
+    @Test
+    void refinancingOffersOnlyInstallmentsAboveTheMinimumAndBetween2And12() {
+        assertThat(Refinance.options(Money.brl("50.00")).stream().map(Refinance.Plan::installments)).containsExactly(2, 3, 4, 5); // 6x seria R$ 9,85
+        assertThat(Refinance.options(Money.brl("1000.00"))).hasSize(11); // de 2x até 12x
+        assertThatThrownBy(() -> Refinance.plan(Money.brl("1000.00"), 1)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> Refinance.plan(Money.brl("1000.00"), 13)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> Refinance.plan(Money.brl("50.00"), 6)).isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
+    void onlyAClosedInvoiceWithEnoughBalanceCanBeRefinanced() {
+        CreditTerms t = terms(10);
+        Refinance.requireRefinanceable(invoice(t, "400.00", "0", "0", LocalDate.of(2026, 11, 4))); // fechada
+        Refinance.requireRefinanceable(invoice(t, "400.00", "0", "0", LocalDate.of(2026, 11, 12))); // vencida
+        Refinance.requireRefinanceable(invoice(t, "400.00", "0", "100.00", LocalDate.of(2026, 11, 12))); // rotativo
+        assertThatThrownBy(() -> Refinance.requireRefinanceable(invoice(t, "400.00", "0", "0", LocalDate.of(2026, 11, 2)))).isInstanceOf(InvoiceNotPayableException.class); // aberta
+        assertThatThrownBy(() -> Refinance.requireRefinanceable(invoice(t, "400.00", "0", "400.00", LocalDate.of(2026, 11, 12)))).isInstanceOf(InvoiceNotPayableException.class); // paga
+        assertThatThrownBy(() -> Refinance.requireRefinanceable(invoice(t, "49.99", "0", "0", LocalDate.of(2026, 11, 4)))).isInstanceOf(InvoiceNotPayableException.class); // pouco saldo
+    }
+
+    @Test
+    void theRefinancedInstallmentsStartOnTheFirstInvoiceThatHasNotClosed() {
+        CreditTerms t = terms(10);
+        Refinance.Plan plan = Refinance.plan(Money.brl("400.00"), 3);
+        CreditPurchase p = CreditPurchase.refinance(t, plan, YearMonth.of(2026, 11), LocalDate.of(2026, 11, 12), DomainFixtures.NOW);
+        assertThat(p.kind()).isEqualTo(CreditPurchase.Kind.REFINANCE);
+        assertThat(p.merchant()).isEqualTo("Parcelamento da fatura 11/2026");
+        assertThat(p.plan()).extracting(CreditPurchase.Installment::invoiceMonth)
+                .containsExactly(YearMonth.of(2026, 12), YearMonth.of(2027, 1), YearMonth.of(2027, 2)); // dia 12/11: a de novembro já fechou
+        assertThat(p.plan().stream().map(i -> i.amount().amount().toPlainString())).containsOnly(plan.installment().amount().toPlainString());
+        assertThat(p.total()).isEqualTo(plan.total());
+    }
+
+    @Test
     void aPurchaseNeedsLimitAndNoOverdueInvoice() {
         CreditTerms t = terms(10);
         CreditPolicy.ensureCanBuy(t, Money.brl("1500.00"), Money.brl("500.00"), false); // exatamente o que sobra

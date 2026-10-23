@@ -19,6 +19,9 @@ import java.util.UUID;
  */
 public final class CreditPurchase {
 
+    /** PURCHASE: compra num estabelecimento. REFINANCE: parcelamento de uma fatura. */
+    public enum Kind { PURCHASE, REFINANCE }
+
     public static final int MAX_INSTALLMENTS = 12;
     public static final Money MIN_INSTALLMENT = Money.brl("5.00");
 
@@ -32,9 +35,10 @@ public final class CreditPurchase {
     private final int installments;
     private final Instant createdAt;
     private final List<Installment> plan;
+    private final Kind kind;
 
     private CreditPurchase(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt,
-            List<Installment> plan) {
+            List<Installment> plan, Kind kind) {
         this.id = id;
         this.cardId = cardId;
         this.merchant = merchant;
@@ -42,6 +46,7 @@ public final class CreditPurchase {
         this.installments = installments;
         this.createdAt = createdAt;
         this.plan = List.copyOf(plan);
+        this.kind = kind;
     }
 
     public static CreditPurchase create(CreditTerms terms, Money total, String merchant, int installments, LocalDate today,
@@ -65,11 +70,22 @@ public final class CreditPurchase {
         for (int i = 0; i < installments; i++) {
             plan.add(new Installment(UUID.randomUUID(), i + 1, amounts.get(i), first.plusMonths(i)));
         }
-        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, total, installments, now, plan);
+        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, total, installments, now, plan, Kind.PURCHASE);
     }
 
-    public static CreditPurchase restore(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt) {
-        return new CreditPurchase(id, cardId, merchant, total, installments, createdAt, List.of());
+    /** O parcelamento de uma fatura: as parcelas começam na primeira fatura que ainda não fechou. */
+    public static CreditPurchase refinance(CreditTerms terms, Refinance.Plan offer, YearMonth refinanced, LocalDate today, Instant now) {
+        String name = String.format("Parcelamento da fatura %02d/%d", refinanced.getMonthValue(), refinanced.getYear());
+        YearMonth first = terms.invoiceFor(today);
+        List<Installment> plan = new ArrayList<>();
+        for (int i = 0; i < offer.installments(); i++) {
+            plan.add(new Installment(UUID.randomUUID(), i + 1, offer.installment(), first.plusMonths(i)));
+        }
+        return new CreditPurchase(UUID.randomUUID(), terms.cardId(), name, offer.total(), offer.installments(), now, plan, Kind.REFINANCE);
+    }
+
+    public static CreditPurchase restore(UUID id, CardId cardId, String merchant, Money total, int installments, Instant createdAt, Kind kind) {
+        return new CreditPurchase(id, cardId, merchant, total, installments, createdAt, List.of(), kind);
     }
 
     /** Divide em parcelas iguais de centavos inteiros; o que sobra da divisão vai para a última. */
@@ -92,6 +108,7 @@ public final class CreditPurchase {
     public Money total() { return total; }
     public int installments() { return installments; }
     public Instant createdAt() { return createdAt; }
+    public Kind kind() { return kind; }
     /** As parcelas planejadas (vazio numa compra reconstituída: elas ficam no repositório). */
     public List<Installment> plan() { return plan; }
 }

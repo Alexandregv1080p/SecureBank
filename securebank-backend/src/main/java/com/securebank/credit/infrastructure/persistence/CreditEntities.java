@@ -34,6 +34,7 @@ final class CreditEntities {
         String currency;
         int installments;
         Instant createdAt;
+        String kind;
     }
 
     @Entity(name = "CreditInstallmentEntity")
@@ -56,6 +57,7 @@ final class CreditEntities {
         BigDecimal amount;
         String currency;
         UUID transactionId;
+        String kind;
         Instant createdAt;
     }
 }

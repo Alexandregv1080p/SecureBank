@@ -95,13 +95,13 @@ class SecurityConfig {
                         .requestMatchers(PATCH, "/api/v1/piggies/*").hasAuthority(Permission.MANAGE_PIGGY.name())
                         .requestMatchers(DELETE, "/api/v1/piggies/*").hasAuthority(Permission.MANAGE_PIGGY.name())
                         .requestMatchers(GET, "/api/v1/credit/cards/*", "/api/v1/credit/cards/*/invoices",
-                                "/api/v1/credit/cards/*/invoices/*", "/api/v1/credit/cards/*/purchases")
+                                "/api/v1/credit/cards/*/invoices/*", "/api/v1/credit/cards/*/invoices/*/refinance", "/api/v1/credit/cards/*/purchases")
                                 .hasAuthority(Permission.VIEW_CARD.name())
                         .requestMatchers(GET, "/api/v1/admin/customers/*/credit-cards").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(PUT, "/api/v1/admin/credit/cards/*/limit").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(PUT, "/api/v1/credit/cards/*/limit").hasAuthority(Permission.MANAGE_CARD.name())
                         .requestMatchers(POST, "/api/v1/credit/cards", "/api/v1/credit/cards/*/purchases",
-                                "/api/v1/credit/cards/*/invoices/*/payments")
+                                "/api/v1/credit/cards/*/invoices/*/payments", "/api/v1/credit/cards/*/invoices/*/refinance")
                                 .hasAuthority(Permission.MANAGE_CARD.name())
                         .requestMatchers(GET, "/api/v1/cards", "/api/v1/cards/*", "/api/v1/cards/*/purchases")
                                 .hasAuthority(Permission.VIEW_CARD.name())

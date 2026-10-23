@@ -110,6 +110,9 @@ public class NotificationService {
             case "CreditLimitChanged" -> notifyOwner(event, event.text("accountId"), "CREDIT_LIMIT", "Limite alterado",
                     "O limite do cartão final " + event.text("last4") + " agora é R$ " + event.text("limit")
                             + ("staff".equals(event.text("by")) ? ", por decisão do banco." : "."));
+            case "CreditInvoiceRefinanced" -> notifyOwner(event, event.text("accountId"), "CREDIT_REFINANCED", "Fatura parcelada",
+                    "A fatura de " + event.text("month") + " do cartão final " + event.text("last4") + " foi parcelada em "
+                            + event.text("installments") + "x de R$ " + event.text("installment") + " (total R$ " + event.text("total") + ").");
             case "CardBlocked" -> notifyOwner(event, event.text("accountId"), "CARD_BLOCKED", "Cartão bloqueado",
                     "O cartão final " + event.text("last4") + " foi bloqueado. Se não foi você, cancele-o e fale com o suporte.");
             case "CardUnblocked" -> notifyOwner(event, event.text("accountId"), "CARD_UNBLOCKED", "Cartão desbloqueado",

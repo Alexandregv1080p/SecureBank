@@ -70,6 +70,7 @@ class CreditRepositoryAdapter implements CreditRepository {
         entity.currency = purchase.total().currency().getCurrencyCode();
         entity.installments = purchase.installments();
         entity.createdAt = purchase.createdAt();
+        entity.kind = purchase.kind().name();
         em.persist(entity);
         for (CreditPurchase.Installment i : purchase.plan()) {
             CreditEntities.Installment row = new CreditEntities.Installment();
@@ -193,24 +194,25 @@ class CreditRepositoryAdapter implements CreditRepository {
 
     @Override
     public List<Payment> payments(CardId cardId, YearMonth month, Currency currency) {
-        return em.createQuery("select p.amount, p.createdAt from CreditPaymentEntity p"
+        return em.createQuery("select p.amount, p.createdAt, p.kind from CreditPaymentEntity p"
                         + " where p.cardId = :card and p.invoiceMonth = :month order by p.createdAt desc", Object[].class)
                 .setParameter("card", cardId.value())
                 .setParameter("month", month.toString())
                 .getResultList().stream()
-                .map(r -> new Payment(new Money((BigDecimal) r[0], currency), (Instant) r[1]))
+                .map(r -> new Payment(new Money((BigDecimal) r[0], currency), (Instant) r[1], (String) r[2]))
                 .toList();
     }
 
     @Override
-    public void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, Instant now) {
+    public void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, String kind, Instant now) {
         CreditEntities.Payment entity = new CreditEntities.Payment();
         entity.id = UUID.randomUUID();
         entity.cardId = cardId.value();
         entity.invoiceMonth = month.toString();
         entity.amount = amount.amount();
         entity.currency = amount.currency().getCurrencyCode();
-        entity.transactionId = transactionId.value();
+        entity.transactionId = transactionId == null ? null : transactionId.value();
+        entity.kind = kind;
         entity.createdAt = now;
         em.persist(entity);
     }
@@ -224,7 +226,8 @@ class CreditRepositoryAdapter implements CreditRepository {
                 .setMaxResults(size)
                 .getResultList().stream()
                 .map(p -> CreditPurchase.restore(p.id, new CardId(p.cardId), p.merchant,
-                        new Money(p.totalAmount, Currency.getInstance(p.currency)), p.installments, p.createdAt))
+                        new Money(p.totalAmount, Currency.getInstance(p.currency)), p.installments, p.createdAt,
+                        CreditPurchase.Kind.valueOf(p.kind)))
                 .toList();
         long total = em.createQuery("select count(p) from CreditPurchaseEntity p where p.cardId = :card", Long.class)
                 .setParameter("card", cardId.value()).getSingleResult();

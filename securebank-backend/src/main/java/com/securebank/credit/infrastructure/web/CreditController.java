@@ -79,20 +79,34 @@ class CreditController {
 
     record ItemResponse(String merchant, int number, int installments, MoneyResponse amount, LocalDate purchasedOn) {}
 
-    record PaymentResponse(MoneyResponse amount, Instant createdAt) {}
+    record PaymentResponse(MoneyResponse amount, Instant createdAt, String kind) {}
 
     record ChargeResponse(String kind, MoneyResponse amount) {}
 
     record InvoiceDetailResponse(InvoiceResponse invoice, List<ItemResponse> items, List<ChargeResponse> charges,
             List<PaymentResponse> payments) {}
 
-    record PurchaseResponse(UUID id, UUID cardId, String merchant, MoneyResponse total, int installments,
+    record RefinanceRequest(@NotNull @Min(2) @Max(12) Integer installments) {}
+
+    record PlanResponse(int installments, MoneyResponse installment, MoneyResponse total, MoneyResponse interest, String monthlyRate) {
+
+        static PlanResponse of(com.securebank.credit.domain.Refinance.Plan p) {
+            return new PlanResponse(p.installments(), MoneyResponse.of(p.installment()), MoneyResponse.of(p.total()),
+                    MoneyResponse.of(p.interest()), com.securebank.credit.domain.Refinance.MONTHLY_RATE.movePointRight(2).toPlainString());
+        }
+    }
+
+    record OfferResponse(InvoiceResponse invoice, List<PlanResponse> options) {}
+
+    record RefinancedResponse(InvoiceResponse invoice, PurchaseResponse purchase, PlanResponse plan) {}
+
+    record PurchaseResponse(UUID id, UUID cardId, String kind, String merchant, MoneyResponse total, int installments,
             MoneyResponse installmentAmount, Instant createdAt) {
 
         static PurchaseResponse of(CreditPurchase p) {
             MoneyResponse each = p.plan().isEmpty() ? MoneyResponse.of(CreditPurchase.split(p.total(), p.installments()).get(0))
                     : MoneyResponse.of(p.plan().get(0).amount());
-            return new PurchaseResponse(p.id(), p.cardId().value(), p.merchant(), MoneyResponse.of(p.total()), p.installments(),
+            return new PurchaseResponse(p.id(), p.cardId().value(), p.kind().name(), p.merchant(), MoneyResponse.of(p.total()), p.installments(),
                     each, p.createdAt());
         }
     }
@@ -139,7 +153,7 @@ class CreditController {
         return new InvoiceDetailResponse(InvoiceResponse.of(d.invoice()),
                 d.items().stream().map(CreditController::item).toList(),
                 d.charges().stream().map(c -> new ChargeResponse(c.kind(), MoneyResponse.of(c.amount()))).toList(),
-                d.payments().stream().map(p -> new PaymentResponse(MoneyResponse.of(p.amount()), p.createdAt())).toList());
+                d.payments().stream().map(p -> new PaymentResponse(MoneyResponse.of(p.amount()), p.createdAt(), p.kind())).toList());
     }
 
     @PostMapping("/{id}/purchases")
@@ -163,6 +177,20 @@ class CreditController {
         var s = credit.changeLimit(current.customerId(), CardId.of(id), request.limit());
         return new SummaryResponse(s.card().id().value(), MoneyResponse.of(s.terms().limit()), MoneyResponse.of(s.used()),
                 MoneyResponse.of(s.available()), s.terms().dueDay(), s.overdue(), InvoiceResponse.of(s.current()));
+    }
+
+    @GetMapping("/{id}/invoices/{month}/refinance")
+    OfferResponse refinanceOptions(@PathVariable String id, @PathVariable String month) {
+        var offer = credit.refinanceOptions(current.customerId(), CardId.of(id), parse(month));
+        return new OfferResponse(InvoiceResponse.of(offer.invoice()), offer.options().stream().map(PlanResponse::of).toList());
+    }
+
+    /** Parcela o que falta de uma fatura fechada em 2 a 12 vezes, com juros (`Idempotency-Key` obrigatório). */
+    @PostMapping("/{id}/invoices/{month}/refinance")
+    @ResponseStatus(HttpStatus.CREATED)
+    RefinancedResponse refinance(@PathVariable String id, @PathVariable String month, @Valid @RequestBody RefinanceRequest request) {
+        var r = credit.refinance(current.customerId(), CardId.of(id), parse(month), request.installments());
+        return new RefinancedResponse(InvoiceResponse.of(r.invoice()), PurchaseResponse.of(r.purchase()), PlanResponse.of(r.plan()));
     }
 
     @PostMapping("/{id}/invoices/{month}/payments")

@@ -16,6 +16,7 @@ import com.securebank.credit.domain.CreditPurchase;
 import com.securebank.credit.domain.CreditTerms;
 import com.securebank.credit.domain.Invoice;
 import com.securebank.credit.domain.InvoiceStatus;
+import com.securebank.credit.domain.Refinance;
 import com.securebank.customer.application.CustomerApplicationService;
 import com.securebank.outbox.application.OutboxService;
 import com.securebank.shared.application.ApplicationException;
@@ -54,6 +55,12 @@ public class CreditApplicationService {
 
     /** Visão geral: limite, uso e a fatura do mês. */
     public record Summary(Card card, CreditTerms terms, Money used, Money available, Invoice current, boolean overdue) {}
+
+    /** O parcelamento feito: a fatura já quitada e a "compra" parcelada que ficou no lugar. */
+    public record Refinanced(Invoice invoice, CreditPurchase purchase, Refinance.Plan plan) {}
+
+    /** O que o cliente pode escolher para parcelar uma fatura. */
+    public record Offer(Invoice invoice, List<Refinance.Plan> options) {}
 
     public record Detail(Invoice invoice, List<CreditRepository.Item> items, List<CreditRepository.Charge> charges,
             List<CreditRepository.Payment> payments) {}
@@ -183,6 +190,55 @@ public class CreditApplicationService {
     }
 
     /** Paga (tudo ou parte de) uma fatura com o saldo da conta do cartão. */
+    /** As opções de parcelamento de uma fatura fechada (parcela e total com juros). */
+    public Offer refinanceOptions(CustomerId requester, CardId id, YearMonth month) {
+        creditCard(requester, id);
+        LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        Invoice invoice = invoice(terms, month, credit.totals(id, terms.limit().currency()), today);
+        Refinance.requireRefinanceable(invoice);
+        return new Offer(invoice, Refinance.options(invoice.remaining()));
+    }
+
+    /** Parcela o que falta de uma fatura fechada: ela fica quitada e a dívida nova segue nas próximas faturas, com juros. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Refinanced refinance(CustomerId requester, CardId id, YearMonth month, int installments) {
+        AccountId accountId = null;
+        try {
+            accountId = cards.get(requester, id).accountId();
+            return retry.execute(() -> doRefinance(requester, id, month, installments));
+        } catch (DomainException e) {
+            failed(accountId, e.code());
+            throw e;
+        } catch (ApplicationException e) {
+            failed(accountId, e.code());
+            throw e;
+        }
+    }
+
+    private Refinanced doRefinance(CustomerId requester, CardId id, YearMonth month, int installments) {
+        customers.requireActive(requester);
+        Card card = creditCard(requester, id);
+        LocalDate today = time.today();
+        CreditTerms terms = billing.accrueLocked(id, today);
+        java.util.Currency currency = terms.limit().currency();
+        Invoice invoice = invoice(terms, month, credit.totals(id, currency), today);
+        Refinance.requireRefinanceable(invoice);
+        Refinance.Plan plan = Refinance.plan(invoice.remaining(), installments);
+        Instant now = time.now();
+        CreditPurchase purchase = CreditPurchase.refinance(terms, plan, month, today, now);
+        credit.savePayment(id, month, invoice.remaining(), null, "REFINANCE", now);
+        credit.save(purchase);
+        audit.record(AuditEntry.of(AuditEvent.CREDIT_INVOICE_REFINANCED).account(card.accountId())
+                .detail(card.id() + " | " + month + " | " + installments + "x " + plan.installment().amount().toPlainString()));
+        outbox.record("CreditInvoiceRefinanced", "Card", card.id().toString(), Map.of(
+                "cardId", card.id().toString(), "accountId", card.accountId().toString(), "last4", card.last4(),
+                "month", month.toString(), "installments", String.valueOf(installments),
+                "installment", plan.installment().amount().toPlainString(), "total", plan.total().amount().toPlainString(),
+                "currency", currency.getCurrencyCode()));
+        return new Refinanced(invoice(terms, month, credit.totals(id, currency), today), purchase, plan);
+    }
+
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Invoice payInvoice(CustomerId requester, CardId id, YearMonth month, BigDecimal amount) {
         AccountId accountId = null;
@@ -216,7 +272,7 @@ public class CreditApplicationService {
         Transaction transaction = account.payCardInvoice(money, card.id() + " | " + month, now);
         accounts.save(account);
         transactions.save(transaction);
-        credit.savePayment(id, month, money, transaction.id(), now);
+        credit.savePayment(id, month, money, transaction.id(), "CASH", now);
         audit.record(AuditEntry.of(AuditEvent.CREDIT_INVOICE_PAID).account(account.id()).transaction(transaction.id())
                 .detail(card.id() + " | " + month));
         outbox.record("CreditInvoicePaid", "Card", card.id().toString(), Map.of(

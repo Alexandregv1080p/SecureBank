@@ -30,7 +30,7 @@ public interface CreditRepository {
     record Item(String merchant, int number, int installments, Money amount, LocalDate purchasedOn) {}
 
     /** Um pagamento feito numa fatura. */
-    record Payment(Money amount, Instant createdAt) {}
+    record Payment(Money amount, Instant createdAt, String kind) {}
 
     Optional<CreditTerms> terms(CardId cardId);
 
@@ -86,7 +86,8 @@ public interface CreditRepository {
 
     void markBilled(CardId cardId, LocalDate today);
 
-    void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, Instant now);
+    /** [transactionId] é nulo no parcelamento da fatura (kind REFINANCE): não sai dinheiro da conta. */
+    void savePayment(CardId cardId, YearMonth month, Money amount, TransactionId transactionId, String kind, Instant now);
 
     PageResult<CreditPurchase> purchases(CardId cardId, int page, int size, java.util.Currency currency);
 }

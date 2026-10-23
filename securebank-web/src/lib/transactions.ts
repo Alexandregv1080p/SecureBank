@@ -33,6 +33,8 @@ export function describeTransaction(t: Pick<Transaction, 'type' | 'direction'>):
       return 'Venda de moeda'
     case 'CARD_PURCHASE':
       return 'Compra no débito'
+    case 'CARD_INVOICE_PAYMENT':
+      return 'Pagamento de fatura'
     default:
       return 'Estorno'
   }

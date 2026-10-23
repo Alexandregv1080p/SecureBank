@@ -10,6 +10,10 @@ export function useRefreshCards() {
       client.invalidateQueries({ queryKey: ['cards'] }),
       client.invalidateQueries({ queryKey: ['card'] }),
       client.invalidateQueries({ queryKey: ['card-purchases'] }),
+      client.invalidateQueries({ queryKey: ['credit-summary'] }),
+      client.invalidateQueries({ queryKey: ['credit-invoices'] }),
+      client.invalidateQueries({ queryKey: ['credit-invoice'] }),
+      client.invalidateQueries({ queryKey: ['credit-purchases'] }),
       refreshMoney(),
     ])
 }

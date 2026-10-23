@@ -2,7 +2,9 @@ import { WifiHigh } from '@phosphor-icons/react'
 import type { Card, CardDetails } from '../../services/types'
 import { formatCardNumber, formatExpiry, statusLabel } from '../../lib/card'
 
-const GRADIENT = 'linear-gradient(135deg, #5b45e0 0%, #7a5cf0 45%, #2b2170 100%)'
+const DEBIT_GRADIENT = 'linear-gradient(135deg, #5b45e0 0%, #7a5cf0 45%, #2b2170 100%)'
+/** Crédito: grafite com brilho dourado, para ninguém confundir os dois cartões numa lista. */
+const CREDIT_GRADIENT = 'linear-gradient(135deg, #1f1b3a 0%, #3b3466 48%, #12102a 100%)'
 
 /**
  * O cartão desenhado, com frente e verso. Ao passar o mouse ele vira (veja `.flip-card` em index.css); em telas de toque
@@ -12,11 +14,14 @@ const GRADIENT = 'linear-gradient(135deg, #5b45e0 0%, #7a5cf0 45%, #2b2170 100%)
  */
 export function CardVisual({ card, details, flipped = false }: { card: Card; details?: CardDetails | null; flipped?: boolean }) {
   const off = card.status !== 'ACTIVE'
+  const credit = card.kind === 'CREDIT'
+  const GRADIENT = credit ? CREDIT_GRADIENT : DEBIT_GRADIENT
+  const kindLabel = credit ? 'Crédito' : 'Débito'
   const number = details ? formatCardNumber(details.number) : `•••• •••• •••• ${card.last4}`
   return (
     <div
       role="img"
-      aria-label={`Cartão de débito final ${card.last4}, ${statusLabel[card.status].toLowerCase()}. O verso tem o CVV${details ? `: ${details.cvv}` : ', que aparece depois de mostrar os dados'}.`}
+      aria-label={`Cartão de ${credit ? 'crédito' : 'débito'} final ${card.last4}, ${statusLabel[card.status].toLowerCase()}. O verso tem o CVV${details ? `: ${details.cvv}` : ', que aparece depois de mostrar os dados'}.`}
       data-flipped={flipped}
       className={`flip-card relative aspect-[1.586/1] w-full max-w-sm ${off ? 'opacity-60 grayscale' : ''}`}
     >
@@ -30,11 +35,11 @@ export function CardVisual({ card, details, flipped = false }: { card: Card; det
               <span className="text-sm font-semibold tracking-wide">SecureBank</span>
               <span className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/80">
                 {off && <span className="rounded-full bg-black/30 px-2 py-0.5 font-medium">{statusLabel[card.status]}</span>}
-                Débito
+                {kindLabel}
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="h-7 w-9 rounded-md bg-gradient-to-br from-amber-200 to-amber-400" aria-hidden />
+              <span className={`h-7 w-9 rounded-md bg-gradient-to-br ${credit ? 'from-yellow-100 to-amber-500' : 'from-amber-200 to-amber-400'}`} aria-hidden />
               <WifiHigh size={20} className="rotate-90 text-white/80" aria-hidden />
             </div>
             <p className="num text-lg font-medium tracking-widest sm:text-xl">{number}</p>
@@ -64,7 +69,9 @@ export function CardVisual({ card, details, flipped = false }: { card: Card; det
               </div>
             </div>
             <p className="text-[10px] leading-snug text-white/80">
-              Cartão de débito virtual do SecureBank, de uso simulado e sem valor real. A compra sai direto do saldo da conta.
+              {credit
+                ? 'Cartão de crédito virtual do SecureBank, de uso simulado e sem valor real. A compra vira fatura, paga com o saldo da conta.'
+                : 'Cartão de débito virtual do SecureBank, de uso simulado e sem valor real. A compra sai direto do saldo da conta.'}
             </p>
             <div className="flex items-end justify-between text-[10px] text-white/70">
               <span>Dúvidas ou perda: pelo app, em Cartões</span>

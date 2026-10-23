@@ -46,7 +46,7 @@ export const categoryMeta: Record<string, { label: string; color: string }> = {
   SAVINGS: { label: 'Porquinhos', color: 'var(--chart-6)' },
   INVESTMENTS: { label: 'Investimentos', color: 'var(--chart-4)' },
   FX: { label: 'Câmbio', color: 'var(--chart-7)' },
-  CARDS: { label: 'Cartão de débito', color: 'var(--chart-8)' },
+  CARDS: { label: 'Cartões', color: 'var(--chart-8)' },
 }
 
 export interface Share {

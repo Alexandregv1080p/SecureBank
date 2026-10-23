@@ -32,6 +32,7 @@ export interface Transaction {
     | 'FX_BUY'
     | 'FX_SELL'
     | 'CARD_PURCHASE'
+    | 'CARD_INVOICE_PAYMENT'
   direction: 'CREDIT' | 'DEBIT'
   amount: Money
   balanceAfter: Money
@@ -183,9 +184,12 @@ export interface FxWallet {
 export type CardStatus = 'ACTIVE' | 'BLOCKED' | 'CANCELED'
 
 /** Cartão de débito virtual: a listagem só traz os 4 últimos dígitos; o número inteiro vem de /reveal. */
+export type CardKind = 'DEBIT' | 'CREDIT'
+
 export interface Card {
   id: string
   accountId: string
+  kind: CardKind
   holderName: string
   maskedNumber: string
   last4: string
@@ -211,5 +215,52 @@ export interface CardPurchase {
   amount: Money
   merchant: string
   transactionId: string
+  createdAt: string
+}
+
+export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'OVERDUE' | 'PAID'
+
+/** Fatura de um mês (AAAA-MM): vence no dia escolhido e fecha 7 dias antes. */
+export interface Invoice {
+  month: string
+  closingDate: string
+  dueDate: string
+  total: Money
+  paid: Money
+  remaining: Money
+  status: InvoiceStatus
+}
+
+export interface CreditSummary {
+  cardId: string
+  creditLimit: Money
+  used: Money
+  available: Money
+  dueDay: number
+  overdue: boolean
+  currentInvoice: Invoice
+}
+
+export interface InvoiceItem {
+  merchant: string
+  number: number
+  installments: number
+  amount: Money
+  purchasedOn: string
+}
+
+export interface InvoiceDetail {
+  invoice: Invoice
+  items: InvoiceItem[]
+  payments: { amount: Money; createdAt: string }[]
+}
+
+export interface CreditPurchase {
+  id: string
+  cardId: string
+  merchant: string
+  total: Money
+  installments: number
+  installmentAmount: Money
   createdAt: string
 }

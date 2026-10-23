@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router'
 import { ArrowsClockwise, CaretLeft, Eye, EyeSlash } from '@phosphor-icons/react'
 import { bankingApi } from '../../services/banking'
 import { cardApi } from '../../services/cards'
+import { creditApi } from '../../services/credit'
 import type { Card, CardDetails } from '../../services/types'
 import { ApiError } from '../../lib/api'
 import { createIdempotency } from '../../lib/idempotency'
@@ -17,6 +18,7 @@ import { CopyButton } from '../pix/parts'
 import { useAccounts } from '../accounts/hooks'
 import { CardActionDialog } from './CardActionDialog'
 import { CardVisual } from './CardVisual'
+import { CreditHero, CreditPurchaseForm, CreditPurchases, Invoices } from './CreditPanels'
 import { useRefreshCards } from './hooks'
 
 /** Quanto tempo o número e o CVV ficam na tela antes de se esconderem sozinhos. */
@@ -31,8 +33,9 @@ export function CardDetailPage() {
   const limits = useQuery({
     queryKey: ['limits', card.data?.accountId],
     queryFn: () => bankingApi.limits(card.data!.accountId),
-    enabled: !!card.data,
+    enabled: card.data?.kind === 'DEBIT',
   })
+  const summary = useQuery({ queryKey: ['credit-summary', id], queryFn: () => creditApi.summary(id), enabled: card.data?.kind === 'CREDIT' })
   const limit = limits.data?.find((l) => l.type === 'CARD')
   const [details, setDetails] = useState<CardDetails | null>(null)
   const [flipped, setFlipped] = useState(false)
@@ -41,6 +44,7 @@ export function CardDetailPage() {
   if (card.isError) return <ErrorState message={messageFor(card.error)} onRetry={() => card.refetch()} />
   const c = card.data
   const usable = c.status === 'ACTIVE'
+  const credit = c.kind === 'CREDIT'
 
   return (
     <>
@@ -65,7 +69,10 @@ export function CardDetailPage() {
               Motivo do {c.status === 'BLOCKED' ? 'bloqueio' : 'cancelamento'}: <span className="text-ink">{c.statusReason}</span>
             </p>
           )}
-          <dl className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
+          {credit && summary.isPending && <Skeleton className="h-20" />}
+          {credit && summary.isError && <p className="text-sm text-danger">{messageFor(summary.error)}</p>}
+          {credit && summary.data && <CreditHero summary={summary.data} />}
+          {!credit && <dl className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
             <div>
               <dt className="text-xs uppercase tracking-wider text-muted">Saldo da conta</dt>
               <dd className="num mt-1 text-2xl font-semibold tracking-tight">{account ? formatBRL(account.balance.amount) : '—'}</dd>
@@ -75,7 +82,7 @@ export function CardDetailPage() {
               <dd className="num mt-1 text-2xl font-semibold tracking-tight">{limit ? formatBRL(limit.remainingToday.amount) : '—'}</dd>
               {limit && <dd className="mt-0.5 text-xs text-muted">Até {formatBRL(limit.perOperation.amount)} por compra · {formatBRL(limit.daily.amount)} por dia</dd>}
             </div>
-          </dl>
+          </dl>}
           <p className="text-xs text-muted">Emitido em {formatDateTime(c.createdAt)}.</p>
         </div>
       </section>
@@ -91,14 +98,19 @@ export function CardDetailPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <Panel title="Comprar no débito (simulado)">
+          {credit && <Invoices card={c} balance={account?.balance.amount} currentMonth={summary.data?.currentInvoice.month} onChanged={refresh} />}
+          <Panel title={credit ? 'Comprar no crédito (simulado)' : 'Comprar no débito (simulado)'}>
             {usable ? (
-              <PurchaseForm key={c.id} card={c} balance={account?.balance.amount} limit={limit} onDone={refresh} />
+              credit ? (
+                <CreditPurchaseForm key={c.id} card={c} available={summary.data?.available.amount} onDone={refresh} />
+              ) : (
+                <PurchaseForm key={c.id} card={c} balance={account?.balance.amount} limit={limit} onDone={refresh} />
+              )
             ) : (
               <p className="text-sm text-muted">Este cartão está {statusLabel[c.status].toLowerCase()} e não aceita compras.</p>
             )}
           </Panel>
-          <Purchases cardId={c.id} />
+          {credit ? <CreditPurchases cardId={c.id} /> : <Purchases cardId={c.id} />}
         </div>
       </div>
     </>

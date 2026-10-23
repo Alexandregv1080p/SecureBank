@@ -283,12 +283,12 @@ fun MainShell(container: AppContainer) {
                 InvestmentDetailScreen(container, vm)
             }
             composable("cards") {
-                val vm: CardsViewModel = viewModel(factory = viewModelFactory { initializer { CardsViewModel(container.cards, container.banking) } })
+                val vm: CardsViewModel = viewModel(factory = viewModelFactory { initializer { CardsViewModel(container.cards, container.credit, container.banking) } })
                 CardsScreen(vm, onOpen = { nav.navigate("cards/$it") })
             }
             composable("cards/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
-                val vm: CardDetailViewModel = viewModel(factory = viewModelFactory { initializer { CardDetailViewModel(container.cards, container.banking, id) } })
+                val vm: CardDetailViewModel = viewModel(factory = viewModelFactory { initializer { CardDetailViewModel(container.cards, container.credit, container.banking, id) } })
                 CardDetailScreen(container, vm, onBack = { nav.popBackStack() })
             }
             composable("piggies") {

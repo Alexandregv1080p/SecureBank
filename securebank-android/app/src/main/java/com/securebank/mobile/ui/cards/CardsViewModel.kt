@@ -8,6 +8,7 @@ import com.securebank.mobile.core.network.messageFor
 import com.securebank.mobile.core.util.CardValidation
 import com.securebank.mobile.data.BankingRepository
 import com.securebank.mobile.data.CardRepository
+import com.securebank.mobile.data.CreditRepository
 import com.securebank.mobile.ui.Load
 import com.securebank.mobile.ui.attempt
 import com.securebank.mobile.ui.toLoad
@@ -22,6 +23,9 @@ data class CardsState(
     val cards: Load<List<Card>> = Load.Loading,
     val accounts: Load<List<Account>> = Load.Loading,
     val accountId: String? = null,
+    /** DEBIT ou CREDIT: o tipo que o cliente quer pedir. */
+    val kind: String = "DEBIT",
+    val dueDay: Int = 10,
     val issuing: Boolean = false,
     val error: String? = null,
     val accountError: String? = null,
@@ -29,7 +33,11 @@ data class CardsState(
     val issuedId: String? = null,
 )
 
-class CardsViewModel(private val repository: CardRepository, private val banking: BankingRepository) : ViewModel() {
+class CardsViewModel(
+    private val repository: CardRepository,
+    private val credit: CreditRepository,
+    private val banking: BankingRepository,
+) : ViewModel() {
     private val _state = MutableStateFlow(CardsState())
     val state: StateFlow<CardsState> = _state.asStateFlow()
 
@@ -53,10 +61,15 @@ class CardsViewModel(private val repository: CardRepository, private val banking
 
     fun onAccount(id: String) = _state.update { it.copy(accountId = id, accountError = null, error = null) }
 
+    fun onKind(kind: String) = _state.update { it.copy(kind = kind, error = null) }
+
+    fun onDueDay(day: Int) = _state.update { it.copy(dueDay = day) }
+
     fun consumeIssued() = _state.update { it.copy(issuedId = null) }
 
     /** Contas ativas onde ainda cabe um cartão (até [CardValidation.MAX_OPEN_PER_ACCOUNT] por conta). */
-    fun openOn(accountId: String): Int = (_state.value.cards as? Load.Ready)?.value?.count { it.accountId == accountId } ?: 0
+    fun openOn(accountId: String): Int =
+        (_state.value.cards as? Load.Ready)?.value?.count { it.accountId == accountId && it.kind == _state.value.kind } ?: 0
 
     fun issue() {
         val s = _state.value
@@ -68,13 +81,13 @@ class CardsViewModel(private val repository: CardRepository, private val banking
             return
         }
         if (openOn(accountId) >= CardValidation.MAX_OPEN_PER_ACCOUNT) {
-            _state.update { it.copy(error = "Esta conta já tem ${CardValidation.MAX_OPEN_PER_ACCOUNT} cartões. Cancele um para pedir outro.") }
+            _state.update { it.copy(error = "Esta conta já tem ${CardValidation.MAX_OPEN_PER_ACCOUNT} cartões desse tipo. Cancele um para pedir outro.") }
             return
         }
         _state.update { it.copy(issuing = true, error = null) }
         viewModelScope.launch {
             try {
-                val card = repository.issue(accountId)
+                val card = if (s.kind == "CREDIT") credit.issue(accountId, s.dueDay) else repository.issue(accountId)
                 _state.update { it.copy(issuedId = card.id) }
             } catch (e: CancellationException) {
                 throw e

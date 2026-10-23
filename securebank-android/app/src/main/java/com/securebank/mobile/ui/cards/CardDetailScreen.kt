@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.securebank.mobile.AppContainer
 import com.securebank.mobile.core.network.Card
 import com.securebank.mobile.core.util.CardValidation
+import com.securebank.mobile.core.util.CreditValidation
 import com.securebank.mobile.core.util.Format
 import com.securebank.mobile.core.util.Money
 import com.securebank.mobile.core.util.Validation
@@ -60,6 +61,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
             is Load.Failed -> ErrorState(card.message, onRetry = viewModel::load)
             is Load.Ready -> {
                 val c = card.value
+                val isCredit = c.kind == "CREDIT"
                 CardView(c, s.details)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
@@ -74,9 +76,13 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (isCredit) {
+                        CreditHero(s)
+                    } else {
                     Text("Saldo da conta", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     MoneyText(s.account?.let { Money.format(it.balance.amount) } ?: "—", style = MaterialTheme.typography.headlineMedium)
-                    s.limit?.let {
+                    }
+                    s.limit?.takeIf { !isCredit }?.let {
                         Text(
                             "Pode gastar hoje no cartão: ${Money.format(it.remainingToday.amount)} (até ${Money.format(it.perOperation.amount)} por compra)",
                             style = MaterialTheme.typography.bodySmall,
@@ -113,19 +119,27 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                     }
                 }
 
+                if (isCredit) InvoicesPanel(s, viewModel)
+
                 Panel {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Comprar no débito (simulado)", style = MaterialTheme.typography.titleMedium)
+                        Text(if (isCredit) "Comprar no crédito (simulado)" else "Comprar no débito (simulado)", style = MaterialTheme.typography.titleMedium)
                         if (c.status != "ACTIVE") {
                             Text("Este cartão está ${CardValidation.statusLabel(c.status).lowercase()} e não aceita compras.", style = MaterialTheme.typography.bodySmall)
                         } else {
-                            Text("Simula uma compra num estabelecimento: o valor sai do saldo da conta na hora.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (isCredit) "Simula uma compra no crédito: usa o limite agora e entra na fatura. O dinheiro só sai da conta quando você paga a fatura."
+                                else "Simula uma compra num estabelecimento: o valor sai do saldo da conta na hora.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             SbTextField("Estabelecimento", s.merchant, viewModel::onMerchant, error = s.merchantError, hint = "Ex.: Mercado Central", enabled = !s.loading)
                             SbTextField(
                                 "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = Validation::sanitizeAmount,
                                 keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, enabled = !s.loading,
                             )
-                            PrimaryButton("Comprar", onClick = { confirmPurchase { viewModel.purchase() } }, loading = s.loading)
+                            if (isCredit) InstallmentPicker(s, viewModel)
+                            PrimaryButton(if (isCredit) "Comprar no crédito" else "Comprar", onClick = { confirmPurchase { viewModel.purchase() } }, loading = s.loading)
                         }
                     }
                 }
@@ -133,17 +147,19 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                 Panel {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Compras recentes", style = MaterialTheme.typography.titleMedium)
-                        if (s.purchases.isEmpty()) {
-                            Text("As compras feitas com este cartão aparecem aqui e no extrato.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val rows = if (isCredit) s.creditPurchases.map { Triple(it.merchant, it.createdAt, it.total.amount) to (if (it.installments > 1) "${it.installments}x de ${Money.format(it.installmentAmount.amount)}" else "à vista") }
+                        else s.purchases.map { Triple(it.merchant, it.createdAt, it.amount.amount) to null }
+                        if (rows.isEmpty()) {
+                            Text("As compras feitas com este cartão aparecem aqui${if (isCredit) " e nas faturas" else " e no extrato"}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        s.purchases.forEachIndexed { i, p ->
+                        rows.forEachIndexed { i, (p, extra) ->
                             if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(p.merchant, style = MaterialTheme.typography.bodyMedium)
-                                    Text(Format.dateTime(p.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(p.first, style = MaterialTheme.typography.bodyMedium)
+                                    Text(Format.dateTime(p.second) + (extra?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                MoneyText(Money.format(p.amount.amount), style = MaterialTheme.typography.bodyMedium)
+                                MoneyText(Money.format(p.third), style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -175,6 +191,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
     }
 
     val current = (s.card as? Load.Ready)?.value
+    s.payTarget?.let { invoice -> PayInvoiceDialog(s, invoice, viewModel, onConfirm = { confirmPurchase { viewModel.payInvoice() } }) }
     val action = dialog
     if (action != null && current != null) {
         CardActionDialog(

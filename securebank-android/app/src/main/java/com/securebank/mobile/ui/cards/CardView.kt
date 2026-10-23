@@ -32,7 +32,9 @@ import com.securebank.mobile.core.network.Card
 import com.securebank.mobile.core.network.CardDetails
 import com.securebank.mobile.core.util.CardValidation
 
-private val CardGradient = Brush.linearGradient(listOf(Color(0xFF5B45E0), Color(0xFF7A5CF0), Color(0xFF2B2170)))
+private val DebitGradient = Brush.linearGradient(listOf(Color(0xFF5B45E0), Color(0xFF7A5CF0), Color(0xFF2B2170)))
+/** Crédito: grafite com brilho dourado, para ninguém confundir os dois cartões numa lista. */
+private val CreditGradient = Brush.linearGradient(listOf(Color(0xFF1F1B3A), Color(0xFF3B3466), Color(0xFF12102A)))
 
 /**
  * O cartão desenhado, igual nos dois temas (como o plástico). Sem os dados completos mostra só os 4 últimos dígitos;
@@ -41,15 +43,16 @@ private val CardGradient = Brush.linearGradient(listOf(Color(0xFF5B45E0), Color(
 @Composable
 fun CardView(card: Card, details: CardDetails? = null, modifier: Modifier = Modifier) {
     val off = card.status != "ACTIVE"
+    val credit = card.kind == "CREDIT"
     val number = details?.let { CardValidation.formatNumber(it.number) } ?: "•••• •••• •••• ${card.last4}"
-    val description = "Cartão de débito final ${card.last4}, ${CardValidation.statusLabel(card.status).lowercase()}"
+    val description = "Cartão de ${if (credit) "crédito" else "débito"} final ${card.last4}, ${CardValidation.statusLabel(card.status).lowercase()}"
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1.586f)
             .alpha(if (off) 0.6f else 1f)
             .clip(RoundedCornerShape(20.dp))
-            .background(CardGradient)
+            .background(if (credit) CreditGradient else DebitGradient)
             .semantics { contentDescription = description }
             .padding(20.dp),
     ) {
@@ -65,7 +68,7 @@ fun CardView(card: Card, details: CardDetails? = null, modifier: Modifier = Modi
                             modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f)).padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
-                    Text("DÉBITO", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, letterSpacing = 1.sp)
+                    Text(if (credit) "CRÉDITO" else "DÉBITO", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, letterSpacing = 1.sp)
                 }
             }
             Box(

@@ -13,6 +13,8 @@ import retrofit2.http.Query
 data class Card(
     val id: String,
     val accountId: String,
+    /** DEBIT ou CREDIT. */
+    val kind: String = "DEBIT",
     val holderName: String,
     val maskedNumber: String,
     val last4: String,

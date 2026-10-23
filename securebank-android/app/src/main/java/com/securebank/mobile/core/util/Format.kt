@@ -39,7 +39,7 @@ object Format {
         "SAVINGS" -> "Porquinhos"
         "INVESTMENTS" -> "Investimentos"
         "FX" -> "Câmbio"
-        "CARDS" -> "Cartão de débito"
+        "CARDS" -> "Cartões"
         else -> category
     }
 
@@ -61,6 +61,7 @@ object Format {
         "FX_BUY" -> "Compra de moeda"
         "FX_SELL" -> "Venda de moeda"
         "CARD_PURCHASE" -> "Compra no débito"
+        "CARD_INVOICE_PAYMENT" -> "Pagamento de fatura"
         else -> "Estorno"
     }
 

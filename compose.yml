@@ -118,6 +118,24 @@ services:
     ports:
       - "${WEB_PORT:-3500}:8080"
 
+  # Back-office da equipe: app à parte do internet banking, em outra porta (e, em produção, outro domínio).
+  securebank-admin:
+    restart: unless-stopped
+    build: ./securebank-admin
+    depends_on:
+      securebank-api:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    pids_limit: 64
+    ports:
+      - "${ADMIN_PORT:-3600}:8080"
+
 volumes:
   pgdata:
   kafkadata:

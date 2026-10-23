@@ -97,6 +97,7 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/credit/cards/*", "/api/v1/credit/cards/*/invoices",
                                 "/api/v1/credit/cards/*/invoices/*", "/api/v1/credit/cards/*/invoices/*/refinance", "/api/v1/credit/cards/*/purchases")
                                 .hasAuthority(Permission.VIEW_CARD.name())
+                        .requestMatchers(GET, "/api/v1/admin/overview").hasAuthority(Permission.VIEW_REPORTS.name())
                         .requestMatchers(GET, "/api/v1/admin/customers/*/credit-cards").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(PUT, "/api/v1/admin/credit/cards/*/limit").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(PUT, "/api/v1/credit/cards/*/limit").hasAuthority(Permission.MANAGE_CARD.name())

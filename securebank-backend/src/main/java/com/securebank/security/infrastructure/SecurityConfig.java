@@ -94,6 +94,11 @@ class SecurityConfig {
                                 .hasAuthority(Permission.MANAGE_PIGGY.name())
                         .requestMatchers(PATCH, "/api/v1/piggies/*").hasAuthority(Permission.MANAGE_PIGGY.name())
                         .requestMatchers(DELETE, "/api/v1/piggies/*").hasAuthority(Permission.MANAGE_PIGGY.name())
+                        .requestMatchers(GET, "/api/v1/cards", "/api/v1/cards/*", "/api/v1/cards/*/purchases")
+                                .hasAuthority(Permission.VIEW_CARD.name())
+                        .requestMatchers(POST, "/api/v1/cards", "/api/v1/cards/*/reveal", "/api/v1/cards/*/block",
+                                "/api/v1/cards/*/unblock", "/api/v1/cards/*/cancel", "/api/v1/cards/*/purchases")
+                                .hasAuthority(Permission.MANAGE_CARD.name())
                         .requestMatchers(GET, "/api/v1/investments", "/api/v1/investments/*", "/api/v1/investments/products")
                                 .hasAuthority(Permission.VIEW_INVESTMENTS.name())
                         .requestMatchers(POST, "/api/v1/investments", "/api/v1/investments/*/redeem")

@@ -131,6 +131,11 @@ public final class Account {
         return credit(TransactionType.FX_SELL, brl, reference, now);
     }
 
+    /** Compra no cartão de débito: o valor sai direto do saldo. */
+    public Transaction cardPurchase(Money amount, String reference, Instant now) {
+        return debit(TransactionType.CARD_PURCHASE, amount, reference, now);
+    }
+
     /** Pré-condições de um crédito. Públicas para que serviços de domínio validem as DUAS contas antes de mutar qualquer uma. */
     public void ensureCanCredit(Money amount) {
         ensureActive();

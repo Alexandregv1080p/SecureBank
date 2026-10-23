@@ -85,6 +85,15 @@ public class NotificationService {
                     "Você comprou " + event.text("foreignAmount") + " " + event.text("currency") + " por R$ " + event.text("brlAmount") + ".");
             case "FxSold" -> notifyOwner(event, event.text("accountId"), "FX_SOLD", "Venda de moeda realizada",
                     "Você vendeu " + event.text("foreignAmount") + " " + event.text("currency") + " e recebeu R$ " + event.text("brlAmount") + ".");
+            case "CardPurchaseCompleted" -> notifyOwner(event, event.text("accountId"), "CARD_PURCHASE", "Compra no débito",
+                    "Compra de " + event.text("amount") + " " + event.text("currency") + " em " + event.text("merchant")
+                            + " no cartão final " + event.text("last4") + ".");
+            case "CardBlocked" -> notifyOwner(event, event.text("accountId"), "CARD_BLOCKED", "Cartão bloqueado",
+                    "O cartão final " + event.text("last4") + " foi bloqueado. Se não foi você, cancele-o e fale com o suporte.");
+            case "CardUnblocked" -> notifyOwner(event, event.text("accountId"), "CARD_UNBLOCKED", "Cartão desbloqueado",
+                    "O cartão final " + event.text("last4") + " voltou a aceitar compras.");
+            case "CardCanceled" -> notifyOwner(event, event.text("accountId"), "CARD_CANCELED", "Cartão cancelado",
+                    "O cartão final " + event.text("last4") + " foi cancelado e não volta a funcionar.");
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",

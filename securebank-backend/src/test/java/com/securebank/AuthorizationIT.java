@@ -45,14 +45,16 @@ class AuthorizationIT {
         List<String> gets = List.of("/api/v1/customers/me", "/api/v1/accounts", "/api/v1/accounts/" + id,
                 "/api/v1/accounts/" + id + "/balance", "/api/v1/accounts/" + id + "/statement",
                 "/api/v1/accounts/" + id + "/limits", "/api/v1/transfers", "/api/v1/transfers/" + id, "/api/v1/payments",
-                "/api/v1/security/sessions", "/api/v1/audit", "/api/v1/admin/customers/" + id);
+                "/api/v1/security/sessions", "/api/v1/audit", "/api/v1/admin/customers/" + id, "/api/v1/cards", "/api/v1/cards/" + id,
+                "/api/v1/cards/" + id + "/purchases");
         for (String path : gets) {
             mvc.perform(get(path)).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
         }
         List<String> posts = List.of("/api/v1/accounts", "/api/v1/accounts/" + id + "/deposits",
                 "/api/v1/accounts/" + id + "/withdrawals", "/api/v1/transfers", "/api/v1/payments",
                 "/api/v1/auth/logout", "/api/v1/security/mfa", "/api/v1/security/password", "/api/v1/admin/users",
-                "/api/v1/admin/accounts/" + id + "/block");
+                "/api/v1/admin/accounts/" + id + "/block", "/api/v1/cards", "/api/v1/cards/" + id + "/reveal",
+                "/api/v1/cards/" + id + "/block", "/api/v1/cards/" + id + "/purchases");
         for (String path : posts) {
             mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
         }

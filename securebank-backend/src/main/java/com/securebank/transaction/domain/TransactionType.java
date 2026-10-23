@@ -12,7 +12,9 @@ public enum TransactionType {
     /** Aplicação em renda fixa (débito da conta) e resgate (crédito, já com o rendimento líquido). */
     INVEST_OUT(TransactionCategory.INVESTMENTS), INVEST_IN(TransactionCategory.INVESTMENTS),
     /** Compra de moeda estrangeira (débito em reais) e venda (crédito em reais). */
-    FX_BUY(TransactionCategory.FX), FX_SELL(TransactionCategory.FX);
+    FX_BUY(TransactionCategory.FX), FX_SELL(TransactionCategory.FX),
+    /** Compra no cartão de débito (débito da conta). */
+    CARD_PURCHASE(TransactionCategory.CARDS);
 
     private final TransactionCategory category;
 

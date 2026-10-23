@@ -55,7 +55,7 @@ class StaffReadApiIT {
 
         mvc.perform(TestUsers.bearer(TestUsers.adminToken(mvc), get("/api/v1/admin/accounts/" + account + "/limits")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$", hasSize(6)))
                 .andExpect(jsonPath("$[?(@.type=='PIX')].perOperation.amount").value("5000.00"))
                 .andExpect(jsonPath("$[?(@.type=='FX')].daily.amount").value("20000.00"))
                 .andExpect(jsonPath("$[?(@.type=='WITHDRAW')].usedToday.amount").value("0.00"));

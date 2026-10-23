@@ -64,6 +64,9 @@ class RateLimitFilter extends OncePerRequestFilter {
                 new Rule("invest-redeem", HttpMethod.POST, "/api/v1/investments/*/redeem", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("fx-buy", HttpMethod.POST, "/api/v1/fx/buy", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("fx-sell", HttpMethod.POST, "/api/v1/fx/sell", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                new Rule("card-purchase", HttpMethod.POST, "/api/v1/cards/*/purchases", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
+                // mostrar número e CVV: limitado para ninguém ficar consultando em laço
+                new Rule("card-reveal", HttpMethod.POST, "/api/v1/cards/*/reveal", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true),
                 new Rule("piggy-redeem", HttpMethod.POST, "/api/v1/piggies/*/withdrawals", p.moneyPerMinuteUser(), Duration.ofMinutes(1), true));
     }
 

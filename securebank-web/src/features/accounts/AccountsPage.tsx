@@ -35,7 +35,7 @@ export function AccountsPage() {
         </ul>
       )}
 
-      <div className="mt-8 max-w-md">
+      <div className="mt-8 max-w-2xl">
         <OpenAccount />
       </div>
     </>

@@ -18,6 +18,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.BorderStroke
@@ -90,17 +94,43 @@ private val typeOptions = listOf(
 
 private val limitNames = mapOf("WITHDRAW" to "Saque", "TRANSFER" to "Transferência", "PAYMENT" to "Pagamento", "PIX" to "Pix", "FX" to "Câmbio")
 
+/** Igual ao teto do servidor (AccountApplicationService.MAX_OPEN_ACCOUNTS): contas encerradas não contam. */
+const val MAX_OPEN_ACCOUNTS = 5
+
+private fun openCount(accounts: Load<List<Account>>): Int? =
+    (accounts as? Load.Ready)?.value?.count { it.status != "CLOSED" }
+
 @Composable
 private fun OpenAccountCard(state: AccountsState, viewModel: AccountsViewModel, onOpenAccount: (String) -> Unit) {
     val opened = state.opened
+    val count = openCount(state.accounts)
+    val full = (count ?: 0) >= MAX_OPEN_ACCOUNTS
     if (opened != null) {
-        OpenedAccount(opened, state.openedLimits, onSee = { onOpenAccount(opened.id) }, onAnother = viewModel::openAnother)
+        OpenedAccount(opened, state.openedLimits, count ?: 0, onSee = { onOpenAccount(opened.id) }, onAnother = viewModel::openAnother)
         return
     }
     Panel {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("Abrir nova conta", style = MaterialTheme.typography.titleMedium)
             state.openError?.let { Banner(it) }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Contas abertas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (count == null) "…" else "$count de $MAX_OPEN_ACCOUNTS", style = MaterialTheme.typography.labelMedium)
+                }
+                LinearProgressIndicator(
+                    progress = { ((count ?: 0).toFloat() / MAX_OPEN_ACCOUNTS).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (full) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+                if (full) {
+                    Text(
+                        "Você chegou ao máximo de $MAX_OPEN_ACCOUNTS contas abertas. Encerre uma sem saldo para abrir outra.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
             typeOptions.forEach { o ->
                 val selected = state.newType == o.type
                 Surface(
@@ -110,34 +140,62 @@ private fun OpenAccountCard(state: AccountsState, viewModel: AccountsViewModel, 
                     border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                     modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton; this.selected = selected },
                 ) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(o.title, style = MaterialTheme.typography.titleSmall)
-                        Text(o.text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (o.type == "CHECKING") Icons.Filled.AccountBox else Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(26.dp),
+                        )
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(o.title, style = MaterialTheme.typography.titleSmall)
+                            Text(o.text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = "Selecionado", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
                 }
             }
-            Text(
-                "Hoje as duas funcionam do mesmo jeito e começam com os mesmos limites. Para o dinheiro render, use os Investimentos. O número da conta é gerado ao abrir.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("O que acontece ao abrir", style = MaterialTheme.typography.titleSmall)
+                    listOf(
+                        "Agência 0001 e um número de conta novo, gerado agora.",
+                        "Saldo inicial de ${Money.format("0")}. Você deposita depois, na própria conta.",
+                        "Limites iniciais por operação e por dia, que você confere no resumo. Para o dinheiro render, use os Investimentos.",
+                    ).forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
+            PrimaryButton(
+                "Abrir ${Format.accountTypeLabel(state.newType).lowercase()}",
+                onClick = viewModel::open,
+                loading = state.opening,
+                enabled = !full && count != null,
             )
-            PrimaryButton("Abrir ${Format.accountTypeLabel(state.newType).lowercase()}", onClick = viewModel::open, loading = state.opening)
         }
     }
 }
 
 @Composable
-private fun OpenedAccount(account: Account, limits: Load<List<LimitUsage>>, onSee: () -> Unit, onAnother: () -> Unit) {
+private fun OpenedAccount(account: Account, limits: Load<List<LimitUsage>>, count: Int, onSee: () -> Unit, onAnother: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     Panel {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = creditColor(), modifier = Modifier.size(40.dp))
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = creditColor(), modifier = Modifier.size(44.dp))
                 Text("${Format.accountTypeLabel(account.type)} aberta", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Ativa · aberta em ${Format.dateTime(account.createdAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            ReceiptRow("Agência", account.branch)
-            ReceiptRow("Conta", account.accountNumber)
-            ReceiptRow("Saldo", Money.format(account.balance.amount))
+            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ReceiptRow("Agência", account.branch)
+                    ReceiptRow("Conta", account.accountNumber)
+                    ReceiptRow("Saldo", Money.format(account.balance.amount))
+                }
+            }
             OutlinedButton(
                 onClick = { clipboard.setText(AnnotatedString(Format.accountLabel(account.branch, account.accountNumber))) },
                 modifier = Modifier.fillMaxWidth(),
@@ -145,20 +203,38 @@ private fun OpenedAccount(account: Account, limits: Load<List<LimitUsage>>, onSe
             Text("Limites iniciais", style = MaterialTheme.typography.titleSmall)
             when (limits) {
                 Load.Loading -> Skeleton(80.dp)
-                is Load.Failed -> Text("Não foi possível carregar os limites agora.", style = MaterialTheme.typography.bodySmall)
-                is Load.Ready -> limits.value.forEach { l ->
-                    Column {
-                        Text(limitNames[l.type] ?: l.type, style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            "até ${Money.format(l.perOperation.amount)} por vez, ${Money.format(l.daily.amount)} por dia",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                is Load.Failed -> Text("Não foi possível carregar os limites agora. Eles ficam em Ver conta.", style = MaterialTheme.typography.bodySmall)
+                is Load.Ready -> {
+                    Row(Modifier.fillMaxWidth()) {
+                        Text("Operação", Modifier.weight(1.2f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Por vez", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
+                        Text("Por dia", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
+                    }
+                    limits.value.forEach { l ->
+                        HorizontalDivider()
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(limitNames[l.type] ?: l.type, Modifier.weight(1.2f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(Money.format(l.perOperation.amount), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End)
+                            Text(Money.format(l.daily.amount), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End)
+                        }
                     }
                 }
             }
-            PrimaryButton("Ver conta", onClick = onSee)
-            OutlinedButton(onClick = onAnother, modifier = Modifier.fillMaxWidth()) { Text("Abrir outra") }
+            Text("Próximo passo", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Abra a conta para depositar o primeiro saldo. Depois você pode criar uma chave Pix para receber e transferir para quem tem conta aqui.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PrimaryButton("Ver conta e depositar", onClick = onSee)
+            OutlinedButton(onClick = onAnother, enabled = count < MAX_OPEN_ACCOUNTS, modifier = Modifier.fillMaxWidth()) { Text("Abrir outra") }
+            Text(
+                "$count de $MAX_OPEN_ACCOUNTS contas abertas",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

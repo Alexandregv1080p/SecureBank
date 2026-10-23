@@ -122,8 +122,8 @@ fun SbTextField(
 }
 
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
-    Button(onClick = onClick, enabled = !loading, modifier = modifier.fillMaxWidth().height(48.dp)) {
+fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false, enabled: Boolean = true) {
+    Button(onClick = onClick, enabled = enabled && !loading, modifier = modifier.fillMaxWidth().height(48.dp)) {
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),

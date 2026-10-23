@@ -6,7 +6,7 @@ Cartão ligado a uma conta: a compra sai direto do saldo (sem fatura, sem juros)
 
 * Até **3 cartões abertos por conta** (`CARD_LIMIT_REACHED`); cancelado libera a vaga.
 * Número fictício de 16 dígitos que começa com **9** (faixa que nenhuma bandeira usa) e fecha no dígito de Luhn. Validade: 5 anos, até o fim do mês.
-* Estados: `ACTIVE` ⇄ `BLOCKED`, e `CANCELED` (definitivo). Só `ACTIVE` e dentro da validade aceita compra (`CARD_NOT_USABLE`).
+* Estados: `ACTIVE` ⇄ `BLOCKED`, e `CANCELED` (definitivo). **Bloquear e cancelar exigem o motivo** (de 3 a 140 caracteres, sem quebra de linha): ele fica no cartão (`statusReason`, mostrado na tela) e na auditoria (`CARD_BLOCKED`/`CARD_CANCELED`, no detalhe). Desbloquear limpa o motivo. Depois de cancelado, o caminho é pedir outro cartão (número, validade e CVV novos). Só `ACTIVE` e dentro da validade aceita compra (`CARD_NOT_USABLE`).
 * **Limite próprio `CARD`** por conta (R$ 3.000,00 por compra e R$ 5.000,00 por dia; o ADMIN ajusta como os outros). O dia soma os lançamentos `CARD_PURCHASE`.
 * Compra: valor positivo, estabelecimento obrigatório (até 60 caracteres, sem quebra de linha nem caracteres de controle), `Idempotency-Key` obrigatório. Sai do saldo, entra no extrato (categoria **Cartão de débito**), na auditoria e nos avisos.
 
@@ -23,7 +23,8 @@ Cartão ligado a uma conta: a compra sai direto do saldo (sem fatura, sem juros)
 | `POST /cards` `{accountId}` | Emite um cartão (só conta ativa, do próprio cliente) |
 | `GET /cards`, `GET /cards/{id}` | Lista (sem cancelados) e detalhe, só com `maskedNumber`/`last4` |
 | `POST /cards/{id}/reveal` | Número completo, validade e CVV |
-| `POST /cards/{id}/block`, `/unblock`, `/cancel` | Bloqueia, desbloqueia e cancela (definitivo) |
+| `POST /cards/{id}/block` `{reason}`, `POST /cards/{id}/cancel` `{reason}` | Bloqueia e cancela (definitivo); o motivo é obrigatório (`400` sem ele) |
+| `POST /cards/{id}/unblock` | Desbloqueia |
 | `POST /cards/{id}/purchases` `{amount, merchant}` | Compra simulada (`Idempotency-Key` obrigatório) |
 | `GET /cards/{id}/purchases` | Compras do cartão, mais recentes primeiro (paginado) |
 
@@ -33,7 +34,7 @@ Eventos de auditoria: `CARD_ISSUED`, `CARD_REVEALED`, `CARD_BLOCKED`, `CARD_UNBL
 
 ## Telas
 
-* **Web** (`/cartoes`, `/cartoes/:id`): cartão desenhado, pedir cartão, mostrar número/CVV (30 s), copiar número, bloquear/desbloquear, cancelar com confirmação, comprar no débito e compras recentes.
-* **Android** (**Mais → Cartões**): as mesmas telas, com biometria ao mostrar os dados e ao comprar.
+* **Web** (`/cartoes`, `/cartoes/:id`): cartão desenhado, pedir cartão, mostrar número/CVV (30 s), copiar número, bloquear/desbloquear, cancelar, cada um numa janela de confirmação que explica o que acontece, pede o motivo (uma opção e, em "Outro motivo", o relato) e, no cancelamento, avisa que é definitivo e que basta pedir outro cartão, comprar no débito e compras recentes.
+* **Android** (**Mais → Cartões**): as mesmas telas e a mesma confirmação com motivo, com biometria ao mostrar os dados e ao comprar.
 
 As validações de valor, saldo, limite e estabelecimento existem nos dois clientes (`lib/card.ts` e `CardValidation.kt`, com os mesmos casos de teste) e o servidor confere de novo.

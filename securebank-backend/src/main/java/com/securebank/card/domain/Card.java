@@ -5,6 +5,7 @@ import com.securebank.shared.domain.CardId;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.InvalidStateTransitionException;
 import com.securebank.shared.domain.InvalidValueException;
+import com.securebank.shared.domain.Text;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,6 +21,8 @@ public final class Card {
 
     public static final int VALID_YEARS = 5;
     public static final int HOLDER_NAME_MAX = 40;
+    public static final int REASON_MIN = 3;
+    public static final int REASON_MAX = 140;
 
     private final CardId id;
     private final CustomerId customerId;
@@ -28,11 +31,13 @@ public final class Card {
     private final String last4;
     private final YearMonth expiry;
     private CardStatus status;
+    /** Por que foi bloqueado ou cancelado, nas palavras do cliente; vazio quando o cartão está ativo. */
+    private String statusReason;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private Card(CardId id, CustomerId customerId, AccountId accountId, String holderName, String last4, YearMonth expiry,
-            CardStatus status, Instant createdAt, Instant updatedAt) {
+            CardStatus status, String statusReason, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.customerId = customerId;
         this.accountId = accountId;
@@ -40,6 +45,7 @@ public final class Card {
         this.last4 = last4;
         this.expiry = expiry;
         this.status = status;
+        this.statusReason = statusReason;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -51,13 +57,13 @@ public final class Card {
             throw new InvalidValueException("Card requires customer, account and time");
         }
         return new Card(CardId.newId(), customerId, accountId, holderName(customerName), CardNumber.last4(number),
-                YearMonth.from(today).plusYears(VALID_YEARS), CardStatus.ACTIVE, now, now);
+                YearMonth.from(today).plusYears(VALID_YEARS), CardStatus.ACTIVE, null, now, now);
     }
 
     /** Reconstitui um cartão já persistido. */
     public static Card restore(CardId id, CustomerId customerId, AccountId accountId, String holderName, String last4,
-            YearMonth expiry, CardStatus status, Instant createdAt, Instant updatedAt) {
-        return new Card(id, customerId, accountId, holderName, last4, expiry, status, createdAt, updatedAt);
+            YearMonth expiry, CardStatus status, String statusReason, Instant createdAt, Instant updatedAt) {
+        return new Card(id, customerId, accountId, holderName, last4, expiry, status, statusReason, createdAt, updatedAt);
     }
 
     /** Nome como no plástico: maiúsculas, sem acento, no máximo {@value #HOLDER_NAME_MAX} caracteres. */
@@ -87,24 +93,38 @@ public final class Card {
         }
     }
 
-    public void block(Instant now) {
-        transitionTo(CardStatus.BLOCKED, now);
+    /** Bloquear pede o motivo (de 3 a {@value #REASON_MAX} caracteres): fica no cartão e na auditoria. */
+    public void block(String reason, Instant now) {
+        transitionTo(CardStatus.BLOCKED, validReason(reason), now);
     }
 
     public void unblock(Instant now) {
-        transitionTo(CardStatus.ACTIVE, now);
+        transitionTo(CardStatus.ACTIVE, null, now);
     }
 
-    /** Cancelar é definitivo: um cartão cancelado não volta. */
-    public void cancel(Instant now) {
-        transitionTo(CardStatus.CANCELED, now);
+    /** Cancelar é definitivo (um cartão cancelado não volta) e também pede o motivo. */
+    public void cancel(String reason, Instant now) {
+        transitionTo(CardStatus.CANCELED, validReason(reason), now);
     }
 
-    private void transitionTo(CardStatus target, Instant now) {
+    /** Motivo sem quebra de linha nem caracteres de controle, de {@value #REASON_MIN} a {@value #REASON_MAX} caracteres. */
+    public static String validReason(String reason) {
+        String text = Text.optional(reason);
+        if (text == null || text.length() < REASON_MIN) {
+            throw new InvalidValueException("Tell us the reason (at least " + REASON_MIN + " characters)");
+        }
+        if (text.length() > REASON_MAX) {
+            throw new InvalidValueException("The reason must have at most " + REASON_MAX + " characters");
+        }
+        return text;
+    }
+
+    private void transitionTo(CardStatus target, String reason, Instant now) {
         if (!status.canTransitionTo(target)) {
             throw new InvalidStateTransitionException("Card", status, target);
         }
         status = target;
+        statusReason = reason;
         updatedAt = now;
     }
 
@@ -115,6 +135,7 @@ public final class Card {
     public String last4() { return last4; }
     public YearMonth expiry() { return expiry; }
     public CardStatus status() { return status; }
+    public String statusReason() { return statusReason; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
 }

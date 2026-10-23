@@ -46,4 +46,26 @@ class CardValidationTest {
         assertEquals("Bloqueado", CardValidation.statusLabel("BLOCKED"))
         assertEquals("Cancelado", CardValidation.statusLabel("CANCELED"))
     }
+
+    @Test
+    fun blockAndCancelNeedAReason() {
+        val lost = CardValidation.blockReasons.first()
+        val other = CardValidation.blockReasons.first { it.other }
+        assertEquals("Escolha o motivo", CardValidation.reasonIssue(null, ""))
+        assertNull(CardValidation.reasonIssue(lost, "")) // uma opção basta
+        assertTrue(CardValidation.reasonIssue(other, "")!!.startsWith("Conte o motivo"))
+        assertTrue(CardValidation.reasonIssue(other, "  ab ")!!.startsWith("Conte o motivo"))
+        assertNull(CardValidation.reasonIssue(other, "Roubaram na rua"))
+        assertEquals("No máximo 140 caracteres", CardValidation.reasonIssue(other, "x".repeat(141)))
+        assertEquals("No máximo 140 caracteres no total", CardValidation.reasonIssue(lost, "x".repeat(140)))
+    }
+
+    @Test
+    fun theReasonSentIsTheStoryOrTheOptionWithTheDetail() {
+        val stolen = CardValidation.cancelReasons.first()
+        val other = CardValidation.cancelReasons.first { it.other }
+        assertEquals("O cartão foi perdido ou roubado", CardValidation.composeReason(stolen, ""))
+        assertEquals("O cartão foi perdido ou roubado: deixei no táxi", CardValidation.composeReason(stolen, "  deixei no   táxi "))
+        assertEquals("troquei de banco", CardValidation.composeReason(other, "  troquei  de banco "))
+    }
 }

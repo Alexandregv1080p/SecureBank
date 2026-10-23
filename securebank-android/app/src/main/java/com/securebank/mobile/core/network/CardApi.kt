@@ -19,6 +19,8 @@ data class Card(
     val expiryMonth: Int,
     val expiryYear: Int,
     val status: String,
+    /** Por que foi bloqueado ou cancelado, nas palavras do cliente. */
+    val statusReason: String? = null,
     val createdAt: String,
 )
 
@@ -34,6 +36,10 @@ data class CardPurchasePage(val items: List<CardPurchase>, val page: Int, val si
 @Serializable
 data class IssueCardRequest(val accountId: String)
 
+/** Bloquear e cancelar pedem o motivo (de 3 a 140 caracteres): fica no cartão e na auditoria. */
+@Serializable
+data class CardReasonRequest(val reason: String)
+
 @Serializable
 data class CardPurchaseRequest(val amount: String, val merchant: String)
 
@@ -42,9 +48,9 @@ interface CardApi {
     @GET("cards/{id}") suspend fun get(@Path("id") id: String): Card
     @POST("cards") suspend fun issue(@Body body: IssueCardRequest): Card
     @POST("cards/{id}/reveal") suspend fun reveal(@Path("id") id: String): CardDetails
-    @POST("cards/{id}/block") suspend fun block(@Path("id") id: String): Card
+    @POST("cards/{id}/block") suspend fun block(@Path("id") id: String, @Body body: CardReasonRequest): Card
     @POST("cards/{id}/unblock") suspend fun unblock(@Path("id") id: String): Card
-    @POST("cards/{id}/cancel") suspend fun cancel(@Path("id") id: String): Card
+    @POST("cards/{id}/cancel") suspend fun cancel(@Path("id") id: String, @Body body: CardReasonRequest): Card
 
     @POST("cards/{id}/purchases")
     suspend fun purchase(@Path("id") id: String, @Body body: CardPurchaseRequest, @Header("Idempotency-Key") key: String): CardPurchase

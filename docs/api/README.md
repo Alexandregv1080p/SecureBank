@@ -60,7 +60,9 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /payments`                        | Pagamento de boleto (`Idempotency-Key` obrigatório)               |
 | `GET /payments`, `GET /payments/{id}`   | Pagamentos                                                        |
 | `POST /cards`, `GET /cards`, `GET /cards/{id}` | Cartão de débito virtual (até 3 abertos por conta); ver [cartoes.md](../cartoes.md) |
-| `POST /cards/{id}/reveal`, `/block`, `/unblock`, `/cancel` | Mostra número e CVV (auditado), bloqueia, desbloqueia e cancela (definitivo) |
+| `POST /cards/{id}/reveal` | Mostra número e CVV (cada consulta é auditada) |
+| `POST /cards/{id}/block`, `/cancel` | Bloqueia e cancela (definitivo); corpo `{reason}` obrigatório (3 a 140 caracteres) |
+| `POST /cards/{id}/unblock` | Desbloqueia |
 | `POST /cards/{id}/purchases`, `GET /cards/{id}/purchases` | Compra simulada no débito, com limite próprio `CARD` (`Idempotency-Key` obrigatório) e histórico |
 | `POST /piggies`, `GET /piggies`, `GET /piggies/{id}` | Porquinho: reserva com nome e meta opcional, guardada numa conta (até 20 ativos) |
 | `PATCH /piggies/{id}`                   | Renomeia e/ou muda a meta (`clearGoal: true` remove a meta)       |

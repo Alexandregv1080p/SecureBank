@@ -120,8 +120,8 @@ public class CardApplicationService {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public Card block(CustomerId requester, CardId id) {
-        return retry.execute(() -> change(requester, id, AuditEvent.CARD_BLOCKED, "CardBlocked", Card::block));
+    public Card block(CustomerId requester, CardId id, String reason) {
+        return retry.execute(() -> change(requester, id, AuditEvent.CARD_BLOCKED, "CardBlocked", (c, now) -> c.block(reason, now)));
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -130,8 +130,8 @@ public class CardApplicationService {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public Card cancel(CustomerId requester, CardId id) {
-        return retry.execute(() -> change(requester, id, AuditEvent.CARD_CANCELED, "CardCanceled", Card::cancel));
+    public Card cancel(CustomerId requester, CardId id, String reason) {
+        return retry.execute(() -> change(requester, id, AuditEvent.CARD_CANCELED, "CardCanceled", (c, now) -> c.cancel(reason, now)));
     }
 
     private Card change(CustomerId requester, CardId id, AuditEvent event, String outboxType,
@@ -140,7 +140,8 @@ public class CardApplicationService {
         Card card = findOwned(requester, id);
         action.accept(card, time.now());
         cards.save(card);
-        audit.record(AuditEntry.of(event).account(card.accountId()).detail(card.id().toString()));
+        String detail = card.statusReason() == null ? card.id().toString() : card.id() + " | " + card.statusReason();
+        audit.record(AuditEntry.of(event).account(card.accountId()).detail(detail));
         outbox.record(outboxType, "Card", card.id().toString(),
                 Map.of("cardId", card.id().toString(), "accountId", card.accountId().toString(), "last4", card.last4()));
         return card;

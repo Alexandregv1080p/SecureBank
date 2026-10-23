@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,7 +48,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
     val s = viewModel.state.collectAsStateWithLifecycle().value
     val confirmReveal = rememberIdentityConfirmation(container, "Confirme para ver o número e o CVV do cartão")
     val confirmPurchase = rememberIdentityConfirmation(container, "Confirme a compra no débito")
-    var confirmCancel by remember { mutableStateOf(false) }
+    var dialog by remember { mutableStateOf<CardAction?>(null) }
     val clipboard = LocalClipboardManager.current
 
     Column(
@@ -68,6 +67,13 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (c.status != "ACTIVE" && !c.statusReason.isNullOrBlank()) {
+                        Text(
+                            "Motivo do ${if (c.status == "BLOCKED") "bloqueio" else "cancelamento"}: ${c.statusReason}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Text("Saldo da conta", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     MoneyText(s.account?.let { Money.format(it.balance.amount) } ?: "—", style = MaterialTheme.typography.headlineMedium)
                     s.limit?.let {
@@ -149,7 +155,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                         when (c.status) {
                             "ACTIVE" -> {
                                 Text("Bloqueie se perdeu o controle do cartão. Você desbloqueia quando quiser.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                OutlinedButton(onClick = { viewModel.change(CardAction.BLOCK) }, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Bloquear cartão") }
+                                OutlinedButton(onClick = { dialog = CardAction.BLOCK }, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Bloquear cartão") }
                             }
                             "BLOCKED" -> {
                                 Text("O cartão está bloqueado: nenhuma compra passa até você desbloquear.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -159,8 +165,8 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                         }
                         if (c.status != "CANCELED") {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                            Text("Cancelar é definitivo: o cartão deixa de funcionar e não pode ser reativado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = { confirmCancel = true }, enabled = !s.loading) { Text("Cancelar cartão", color = MaterialTheme.colorScheme.error) }
+                            Text("Cancelar é definitivo: o cartão deixa de funcionar e não pode ser reativado. Para voltar a comprar, é só pedir um novo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { dialog = CardAction.CANCEL }, enabled = !s.loading) { Text("Cancelar cartão", color = MaterialTheme.colorScheme.error) }
                         }
                     }
                 }
@@ -168,13 +174,18 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
         }
     }
 
-    if (confirmCancel) {
-        AlertDialog(
-            onDismissRequest = { confirmCancel = false },
-            title = { Text("Cancelar este cartão?") },
-            text = { Text("Ele deixa de funcionar e não pode ser reativado. Você pode pedir outro quando quiser.") },
-            confirmButton = { TextButton(onClick = { confirmCancel = false; viewModel.change(CardAction.CANCEL) }) { Text("Cancelar cartão") } },
-            dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Voltar") } },
+    val current = (s.card as? Load.Ready)?.value
+    val action = dialog
+    if (action != null && current != null) {
+        CardActionDialog(
+            card = current,
+            action = action,
+            busy = s.loading,
+            onDismiss = { dialog = null },
+            onConfirm = { reason ->
+                dialog = null
+                viewModel.change(action, reason)
+            },
         )
     }
 }

@@ -143,7 +143,7 @@ class CardApiIT {
         deposit(token, account, "100.00");
         String card = issue(token, account);
 
-        mvc.perform(as(token, post("/api/v1/cards/" + card + "/block"))).andExpect(status().isOk())
+        block(token, card, "Perdi o cartao").andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("BLOCKED"));
         purchase(token, card, "10.00", "Loja", key()).andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("CARD_NOT_USABLE"));
@@ -152,7 +152,7 @@ class CardApiIT {
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
         purchase(token, card, "10.00", "Loja", key()).andExpect(status().isCreated());
 
-        mvc.perform(as(token, post("/api/v1/cards/" + card + "/cancel"))).andExpect(status().isOk())
+        cancel(token, card, "Nao preciso mais").andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELED"));
         mvc.perform(as(token, post("/api/v1/cards/" + card + "/unblock"))).andExpect(status().isUnprocessableEntity());
         mvc.perform(as(token, post("/api/v1/cards/" + card + "/reveal"))).andExpect(status().isUnprocessableEntity());
@@ -169,7 +169,7 @@ class CardApiIT {
 
         mvc.perform(as(other, get("/api/v1/cards/" + card))).andExpect(status().isNotFound());
         mvc.perform(as(other, post("/api/v1/cards/" + card + "/reveal"))).andExpect(status().isNotFound());
-        mvc.perform(as(other, post("/api/v1/cards/" + card + "/block"))).andExpect(status().isNotFound());
+        block(other, card, "Perdi o cartao").andExpect(status().isNotFound());
         purchase(other, card, "1.00", "Loja", key()).andExpect(status().isNotFound());
         mvc.perform(as(other, get("/api/v1/cards"))).andExpect(jsonPath("$", hasSize(0)));
         mvc.perform(as(other, post("/api/v1/cards")).contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +189,7 @@ class CardApiIT {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("CARD_LIMIT_REACHED"));
 
-        mvc.perform(as(token, post("/api/v1/cards/" + first + "/cancel"))).andExpect(status().isOk());
+        cancel(token, first, "Nao preciso mais").andExpect(status().isOk());
         issue(token, account);
     }
 
@@ -231,7 +231,48 @@ class CardApiIT {
         }
     }
 
+    @Test
+    void blockingAndCancelingNeedAReasonThatIsKeptOnTheCardAndInTheAudit() throws Exception {
+        String token = customer();
+        String card = issue(token, openAccount(token));
+
+        // sem motivo, curto, só espaços, com quebra de linha ou grande demais: nada muda
+        mvc.perform(as(token, post("/api/v1/cards/" + card + "/block"))).andExpect(status().isBadRequest());
+        block(token, card, "ab").andExpect(status().isBadRequest());
+        block(token, card, "   ").andExpect(status().isBadRequest());
+        block(token, card, "linha 1\\nlinha 2").andExpect(status().isBadRequest());
+        block(token, card, "x".repeat(141)).andExpect(status().isBadRequest());
+        mvc.perform(as(token, get("/api/v1/cards/" + card))).andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.statusReason").doesNotExist());
+
+        block(token, card, "  Vi uma compra que nao reconheco  ").andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BLOCKED"))
+                .andExpect(jsonPath("$.statusReason").value("Vi uma compra que nao reconheco"));
+        assertThat(jdbc.queryForObject("select count(*) from audit_logs where event = 'CARD_BLOCKED' and detail like ?",
+                Integer.class, card + " | Vi uma compra%")).isEqualTo(1);
+
+        // desbloquear limpa o motivo
+        mvc.perform(as(token, post("/api/v1/cards/" + card + "/unblock"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.statusReason").doesNotExist());
+
+        cancel(token, card, "Troquei de banco").andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELED"))
+                .andExpect(jsonPath("$.statusReason").value("Troquei de banco"));
+        assertThat(jdbc.queryForObject("select status_reason from cards where id = ?::uuid", String.class, card))
+                .isEqualTo("Troquei de banco");
+    }
+
     // ---------- helpers ----------
+
+    private ResultActions block(String token, String card, String reason) throws Exception {
+        return mvc.perform(as(token, post("/api/v1/cards/" + card + "/block")).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"reason\":\"%s\"}", reason)));
+    }
+
+    private ResultActions cancel(String token, String card, String reason) throws Exception {
+        return mvc.perform(as(token, post("/api/v1/cards/" + card + "/cancel")).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"reason\":\"%s\"}", reason)));
+    }
 
     private ResultActions purchase(String token, String card, String amount, String merchant, String key) throws Exception {
         return mvc.perform(as(token, post("/api/v1/cards/" + card + "/purchases")).header("Idempotency-Key", key)

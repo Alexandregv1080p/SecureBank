@@ -119,14 +119,15 @@ class CardDetailViewModel(
         }
     }
 
-    fun change(action: CardAction) {
+    /** [reason] é obrigatório para bloquear e cancelar (a tela já o pediu); desbloquear não precisa. */
+    fun change(action: CardAction, reason: String? = null) {
         if (_state.value.loading) return
         hide()
         runCatchingUi {
             when (action) {
-                CardAction.BLOCK -> repository.block(id)
+                CardAction.BLOCK -> repository.block(id, reason.orEmpty())
                 CardAction.UNBLOCK -> repository.unblock(id)
-                CardAction.CANCEL -> repository.cancel(id)
+                CardAction.CANCEL -> repository.cancel(id, reason.orEmpty())
             }
             _state.update { it.copy(done = when (action) { CardAction.BLOCK -> "Cartão bloqueado."; CardAction.UNBLOCK -> "Cartão desbloqueado."; CardAction.CANCEL -> "Cartão cancelado." }) }
         }

@@ -29,6 +29,7 @@ class CardEntity {
     int expiryMonth;
     int expiryYear;
     @Enumerated(EnumType.STRING) CardStatus status;
+    String statusReason;
     Instant createdAt;
     Instant updatedAt;
     /** Controle otimista: bloquear e cancelar ao mesmo tempo não se atropelam. */
@@ -43,12 +44,13 @@ class CardEntity {
         expiryMonth = card.expiry().getMonthValue();
         expiryYear = card.expiry().getYear();
         status = card.status();
+        statusReason = card.statusReason();
         createdAt = card.createdAt();
         updatedAt = card.updatedAt();
     }
 
     Card toDomain() {
         return Card.restore(new CardId(id), new CustomerId(customerId), new AccountId(accountId), holderName, last4,
-                YearMonth.of(expiryYear, expiryMonth), status, createdAt, updatedAt);
+                YearMonth.of(expiryYear, expiryMonth), status, statusReason, createdAt, updatedAt);
     }
 }

@@ -327,3 +327,23 @@ h3 {
     opacity: 1;
   }
 }
+
+/* Janelas modais (<dialog>): fundo desfocado e entrada suave; sem movimento para quem pediu menos animação. */
+dialog.app-dialog::backdrop {
+  background: rgb(8 6 28 / 0.62);
+  backdrop-filter: blur(4px);
+}
+dialog.app-dialog[open] {
+  animation: dialog-pop 0.18s ease-out;
+}
+@keyframes dialog-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.app-dialog[open] {
+    animation: none;
+  }
+}

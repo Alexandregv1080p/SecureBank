@@ -60,15 +60,37 @@ class CardTest {
     @Test
     void onlyAnActiveCardPurchasesAndCancelIsForever() {
         Card card = card();
-        card.block(NOW);
+        card.block("perdi", NOW);
         assertThat(card.status()).isEqualTo(CardStatus.BLOCKED);
         assertThatThrownBy(() -> card.ensureCanPurchase(TODAY)).isInstanceOf(CardNotUsableException.class);
         card.unblock(NOW);
         card.ensureCanPurchase(TODAY);
-        card.cancel(NOW);
+        card.cancel("nao quero", NOW);
         assertThatThrownBy(() -> card.unblock(NOW)).isInstanceOf(InvalidStateTransitionException.class);
-        assertThatThrownBy(() -> card.block(NOW)).isInstanceOf(InvalidStateTransitionException.class);
+        assertThatThrownBy(() -> card.block("perdi", NOW)).isInstanceOf(InvalidStateTransitionException.class);
         assertThatThrownBy(() -> card.ensureCanPurchase(TODAY)).isInstanceOf(CardNotUsableException.class);
+    }
+
+    @Test
+    void blockAndCancelKeepTheReasonAndUnblockClearsIt() {
+        Card card = card();
+        card.block("  Perdi o cartao  ", NOW);
+        assertThat(card.statusReason()).isEqualTo("Perdi o cartao");
+        card.unblock(NOW);
+        assertThat(card.statusReason()).isNull();
+        card.cancel("Troquei de banco", NOW);
+        assertThat(card.statusReason()).isEqualTo("Troquei de banco");
+    }
+
+    @Test
+    void theReasonIsRequiredShortAndFreeOfControlCharacters() {
+        for (String bad : new String[] {null, "", "   ", "ab", "x".repeat(141), "a" + (char) 10 + "bc"}) {
+            assertThatThrownBy(() -> card().block(bad, NOW)).isInstanceOf(InvalidValueException.class);
+            assertThatThrownBy(() -> card().cancel(bad, NOW)).isInstanceOf(InvalidValueException.class);
+        }
+        Card card = card();
+        assertThatThrownBy(() -> card.block("ab", NOW)).isInstanceOf(InvalidValueException.class);
+        assertThat(card.status()).isEqualTo(CardStatus.ACTIVE); // recusado: nada mudou
     }
 
     @Test

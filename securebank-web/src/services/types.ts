@@ -192,6 +192,8 @@ export interface Card {
   expiryMonth: number
   expiryYear: number
   status: CardStatus
+  /** Por que foi bloqueado ou cancelado, nas palavras do cliente. */
+  statusReason?: string | null
   createdAt: string
 }
 

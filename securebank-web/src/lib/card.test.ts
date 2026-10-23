@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCardNumber, formatExpiry, merchantIssue, purchaseIssues } from './card'
+import { composeReason, formatCardNumber, formatExpiry, merchantIssue, purchaseIssues, reasonIssue, reasonOptions } from './card'
 
 const limit = { perOperation: { amount: '3000.00', currency: 'BRL' }, remainingToday: { amount: '1000.00', currency: 'BRL' } }
 
@@ -27,5 +27,25 @@ describe('cartão', () => {
     expect(purchaseIssues('3.000,01', 'Padaria', '9999.00', limit).amount).toMatch(/^Acima do limite por operação/)
     expect(purchaseIssues('1.000,01', 'Padaria', '9999.00', limit).amount).toMatch(/^Acima do que resta/)
     expect(purchaseIssues('10', ' ', '100.00', limit).merchant).toBe('Informe o estabelecimento')
+  })
+
+  it('bloquear e cancelar exigem o motivo', () => {
+    const lost = reasonOptions.block[0]
+    const other = reasonOptions.block.find((o) => o.other)!
+    expect(reasonIssue(undefined, '')).toBe('Escolha o motivo')
+    expect(reasonIssue(lost, '')).toBeNull() // uma opção basta
+    expect(reasonIssue(other, '')).toMatch(/^Conte o motivo/)
+    expect(reasonIssue(other, '  ab ')).toMatch(/^Conte o motivo/)
+    expect(reasonIssue(other, 'Roubaram na rua')).toBeNull()
+    expect(reasonIssue(other, 'x'.repeat(141))).toBe('No máximo 140 caracteres')
+    expect(reasonIssue(lost, 'x'.repeat(140))).toBe('No máximo 140 caracteres no total')
+  })
+
+  it('o texto enviado é o relato, ou a opção com o detalhe', () => {
+    const [lost] = reasonOptions.cancel
+    const other = reasonOptions.cancel.find((o) => o.other)!
+    expect(composeReason(lost, '')).toBe('O cartão foi perdido ou roubado')
+    expect(composeReason(lost, '  deixei no   táxi ')).toBe('O cartão foi perdido ou roubado: deixei no táxi')
+    expect(composeReason(other, '  troquei  de banco ')).toBe('troquei de banco')
   })
 })

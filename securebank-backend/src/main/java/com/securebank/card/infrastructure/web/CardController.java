@@ -36,16 +36,19 @@ class CardController {
 
     record IssueRequest(@NotNull UUID accountId) {}
 
+    /** Bloquear e cancelar pedem o motivo, nas palavras do cliente (fica no cartão e na auditoria). */
+    record ReasonRequest(@NotBlank @Size(min = Card.REASON_MIN, max = Card.REASON_MAX) String reason) {}
+
     record PurchaseRequest(
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount,
             @NotBlank @Size(max = CardPurchase.MERCHANT_MAX) String merchant) {}
 
     record CardResponse(UUID id, UUID accountId, String holderName, String maskedNumber, String last4, int expiryMonth,
-            int expiryYear, String status, Instant createdAt) {
+            int expiryYear, String status, String statusReason, Instant createdAt) {
 
         static CardResponse of(Card c) {
             return new CardResponse(c.id().value(), c.accountId().value(), c.holderName(), CardNumber.masked(c.last4()),
-                    c.last4(), c.expiry().getMonthValue(), c.expiry().getYear(), c.status().name(), c.createdAt());
+                    c.last4(), c.expiry().getMonthValue(), c.expiry().getYear(), c.status().name(), c.statusReason(), c.createdAt());
         }
     }
 
@@ -98,8 +101,8 @@ class CardController {
     }
 
     @PostMapping("/{id}/block")
-    CardResponse block(@PathVariable String id) {
-        return CardResponse.of(cards.block(current.customerId(), CardId.of(id)));
+    CardResponse block(@PathVariable String id, @Valid @RequestBody ReasonRequest request) {
+        return CardResponse.of(cards.block(current.customerId(), CardId.of(id), request.reason()));
     }
 
     @PostMapping("/{id}/unblock")
@@ -109,8 +112,8 @@ class CardController {
 
     /** Definitivo: o cartão cancelado não volta. */
     @PostMapping("/{id}/cancel")
-    CardResponse cancel(@PathVariable String id) {
-        return CardResponse.of(cards.cancel(current.customerId(), CardId.of(id)));
+    CardResponse cancel(@PathVariable String id, @Valid @RequestBody ReasonRequest request) {
+        return CardResponse.of(cards.cancel(current.customerId(), CardId.of(id), request.reason()));
     }
 
     /** Compra simulada no débito: sai da conta, consome o limite do cartão e entra no extrato. */

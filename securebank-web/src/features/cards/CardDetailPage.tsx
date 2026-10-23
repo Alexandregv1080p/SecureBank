@@ -10,12 +10,12 @@ import { createIdempotency } from '../../lib/idempotency'
 import { messageFor } from '../../lib/errors'
 import { accountLabel, formatDateTime } from '../../lib/format'
 import { formatBRL, parseAmount } from '../../lib/money'
-import { formatCardNumber, formatExpiry, MERCHANT_MAX, purchaseIssues, statusLabel } from '../../lib/card'
+import { formatCardNumber, formatExpiry, MERCHANT_MAX, purchaseIssues, statusLabel, type ReasonAction } from '../../lib/card'
 import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
-import { ConfirmButton } from '../../components/ConfirmButton'
 import { CopyButton } from '../pix/parts'
 import { useAccounts } from '../accounts/hooks'
+import { CardActionDialog } from './CardActionDialog'
 import { CardVisual } from './CardVisual'
 import { useRefreshCards } from './hooks'
 
@@ -54,6 +54,11 @@ export function CardDetailPage() {
             <Badge tone={c.status === 'ACTIVE' ? 'ok' : 'warn'}>{statusLabel[c.status]}</Badge>
             {account ? accountLabel(account) : 'Conta'}
           </p>
+          {c.status !== 'ACTIVE' && c.statusReason && (
+            <p className="text-sm text-muted">
+              Motivo do {c.status === 'BLOCKED' ? 'bloqueio' : 'cancelamento'}: <span className="text-ink">{c.statusReason}</span>
+            </p>
+          )}
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs uppercase tracking-wider text-muted">Saldo da conta</dt>
@@ -163,39 +168,56 @@ function Reveal({ card, details, onDetails }: { card: Card; details: CardDetails
 
 function Controls({ card, onChanged }: { card: Card; onChanged: () => unknown }) {
   const [error, setError] = useState<string | null>(null)
+  const [dialog, setDialog] = useState<ReasonAction | null>(null)
   const change = useMutation({
-    mutationFn: (action: 'block' | 'unblock' | 'cancel') => cardApi[action](card.id),
+    mutationFn: ({ action, reason }: { action: 'block' | 'unblock' | 'cancel'; reason?: string }) =>
+      action === 'unblock' ? cardApi.unblock(card.id) : cardApi[action](card.id, reason ?? ''),
     onSuccess: async () => {
       setError(null)
+      setDialog(null)
       await onChanged()
     },
     onError: (e) => setError(messageFor(e)),
   })
+  const open = (action: ReasonAction) => {
+    setError(null)
+    setDialog(action)
+  }
 
-  if (card.status === 'CANCELED') return <p className="text-sm text-muted">Este cartão foi cancelado e não volta a funcionar. Peça um novo na tela de cartões.</p>
+  if (card.status === 'CANCELED') return <p className="text-sm text-muted">Este cartão foi cancelado e não volta a funcionar. Para continuar comprando, peça um novo na tela de cartões.</p>
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <Alert tone="error">{error}</Alert>}
+      {error && !dialog && <Alert tone="error">{error}</Alert>}
       {card.status === 'ACTIVE' ? (
         <div>
           <p className="mb-3 text-sm text-muted">Bloqueie se perdeu o controle do cartão. Você desbloqueia quando quiser.</p>
-          <Button variant="secondary" loading={change.isPending && change.variables === 'block'} onClick={() => change.mutate('block')}>
+          <Button variant="secondary" onClick={() => open('block')}>
             Bloquear cartão
           </Button>
         </div>
       ) : (
         <div>
           <p className="mb-3 text-sm text-muted">O cartão está bloqueado: nenhuma compra passa até você desbloquear.</p>
-          <Button loading={change.isPending && change.variables === 'unblock'} onClick={() => change.mutate('unblock')}>
+          <Button loading={change.isPending && change.variables?.action === 'unblock'} onClick={() => change.mutate({ action: 'unblock' })}>
             Desbloquear cartão
           </Button>
         </div>
       )}
       <div className="border-t border-line pt-4">
-        <p className="mb-3 text-sm text-muted">Cancelar é definitivo: o cartão deixa de funcionar e não pode ser reativado.</p>
-        <ConfirmButton label="Cancelar cartão" confirmLabel="Confirmar cancelamento" loading={change.isPending && change.variables === 'cancel'} onConfirm={() => change.mutate('cancel')} />
+        <p className="mb-3 text-sm text-muted">Cancelar é definitivo: o cartão deixa de funcionar e não pode ser reativado. Para voltar a comprar, é só pedir um novo.</p>
+        <Button variant="danger" onClick={() => open('cancel')}>
+          Cancelar cartão
+        </Button>
       </div>
+      <CardActionDialog
+        card={card}
+        action={dialog}
+        busy={change.isPending && change.variables?.action !== 'unblock'}
+        error={error}
+        onClose={() => setDialog(null)}
+        onConfirm={(action, reason) => change.mutate({ action, reason })}
+      />
     </div>
   )
 }

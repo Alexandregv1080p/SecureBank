@@ -32,7 +32,7 @@ fun MoreScreen(darkTheme: Boolean, onToggleTheme: (Boolean) -> Unit, onTransfer:
             Column {
                 MoreRow("Transferir entre contas", "Para outra conta do SecureBank por agência e número.", onTransfer)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                MoreRow("Cartões", "Cartão de débito virtual: número, CVV, bloqueio e compras.", onCards)
+                MoreRow("Cartões", "Débito e crédito: número, CVV, limite, faturas e bloqueio.", onCards)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 MoreRow("Porquinhos", "Reservas com meta, separadas do saldo da conta.", onPiggies)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)

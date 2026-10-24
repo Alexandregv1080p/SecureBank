@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { creditLimitIssue, auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
+import { reasonIssue, creditLimitIssue, auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
 
 describe('seções do painel por papel', () => {
   it('o administrador vê todas as seções', () => {
@@ -110,5 +110,14 @@ describe('limite de crédito pela equipe', () => {
     expect(creditLimitIssue('1.250,00', '0')).toMatch(/múltiplo/)
     expect(creditLimitIssue('1.000,00', '1200.00')).toMatch(/já usa/)
     expect(creditLimitIssue('', '0')).not.toBeNull()
+  })
+})
+
+describe('motivo do bloqueio', () => {
+  it('pede de 3 a 140 caracteres em uma linha', () => {
+    expect(reasonIssue('Suspeita de fraude')).toBeNull()
+    expect(reasonIssue('  ab ')).not.toBeNull()
+    expect(reasonIssue('x'.repeat(141))).not.toBeNull()
+    expect(reasonIssue('uma\noutra')).not.toBeNull()
   })
 })

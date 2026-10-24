@@ -82,7 +82,22 @@ export interface CreditCardAdmin {
   createdAt: string
 }
 
+export interface CardAdmin {
+  id: string
+  accountId: string
+  kind: 'DEBIT' | 'CREDIT'
+  holderName: string
+  maskedNumber: string
+  last4: string
+  status: 'ACTIVE' | 'BLOCKED' | 'CANCELED'
+  statusReason: string | null
+  createdAt: string
+}
+
 export const staffApi = {
+  cards: (customerId: string) => api<CardAdmin[]>(`/admin/customers/${customerId}/cards`),
+  blockCard: (cardId: string, reason: string) => api<CardAdmin>(`/admin/cards/${cardId}/block`, { method: 'POST', body: { reason } }),
+  unblockCard: (cardId: string) => api<CardAdmin>(`/admin/cards/${cardId}/unblock`, { method: 'POST' }),
   creditCards: (customerId: string) => api<CreditCardAdmin[]>(`/admin/customers/${customerId}/credit-cards`),
   setCreditLimit: (cardId: string, limit: string) => api<{ cardId: string; creditLimit: Money }>(`/admin/credit/cards/${cardId}/limit`, { method: 'PUT', body: { limit } }),
   overview: (days: number) => api<Overview>(`/admin/overview?days=${days}`),

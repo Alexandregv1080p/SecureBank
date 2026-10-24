@@ -159,16 +159,33 @@ public class CardApplicationService {
         return retry.execute(() -> change(requester, id, AuditEvent.CARD_CANCELED, "CardCanceled", (c, now) -> c.cancel(reason, now)));
     }
 
+    /** A equipe bloqueia (por fraude, por exemplo) com motivo: o cliente é avisado e a auditoria marca que foi a equipe. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Card blockAsStaff(CardId id, String reason) {
+        return retry.execute(() -> apply(getAny(id), AuditEvent.CARD_BLOCKED, "CardBlocked", (c, now) -> c.block(reason, now), true));
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Card unblockAsStaff(CardId id) {
+        return retry.execute(() -> apply(getAny(id), AuditEvent.CARD_UNBLOCKED, "CardUnblocked", Card::unblock, true));
+    }
+
     private Card change(CustomerId requester, CardId id, AuditEvent event, String outboxType,
             java.util.function.BiConsumer<Card, Instant> action) {
         customers.requireActive(requester);
-        Card card = findOwned(requester, id);
+        return apply(findOwned(requester, id), event, outboxType, action, false);
+    }
+
+    private Card apply(Card card, AuditEvent event, String outboxType, java.util.function.BiConsumer<Card, Instant> action, boolean byStaff) {
         if (event == AuditEvent.CARD_CANCELED) {
             guards.forEach(g -> g.check(card));
         }
         action.accept(card, time.now());
         cards.save(card);
         String detail = card.statusReason() == null ? card.id().toString() : card.id() + " | " + card.statusReason();
+        if (byStaff) {
+            detail += " | staff";
+        }
         audit.record(AuditEntry.of(event).account(card.accountId()).detail(detail));
         outbox.record(outboxType, "Card", card.id().toString(),
                 Map.of("cardId", card.id().toString(), "accountId", card.accountId().toString(), "last4", card.last4()));

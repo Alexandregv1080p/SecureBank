@@ -137,3 +137,12 @@ export function creditLimitIssue(input: string, used: string): string | null {
   if (cents < Math.round(Number(used) * 100)) return `Abaixo do que o cliente já usa (${formatBRL(used)})`
   return null
 }
+
+/** Motivo do bloqueio: de 3 a 140 caracteres, numa linha só (igual ao servidor). */
+export function reasonIssue(reason: string): string | null {
+  const t = reason.trim()
+  if (t.length < 3) return 'Conte o motivo, com pelo menos 3 caracteres'
+  if (t.length > 140) return 'No máximo 140 caracteres'
+  if (/[\r\n]/.test(t)) return 'Escreva o motivo em uma linha só'
+  return null
+}

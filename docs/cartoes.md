@@ -95,3 +95,7 @@ Para uma fatura fechada (`CLOSED`, `OVERDUE` ou `REVOLVING`) com pelo menos R$ 5
 ## Limitações conhecidas
 
 Não há teto para o total de juros por atraso, o agendador roda de hora em hora (não em tempo real) e não existe tela da equipe para o limite (só a API). Nada disso é dinheiro real: é uma simulação.
+
+## Pela equipe (app Admin)
+
+O app `securebank-admin` (porta 3600) mostra os cartões de um cliente sem o número (`GET /admin/customers/{id}/cards`), deixa o ADMIN **bloquear com motivo** e desbloquear (`POST /admin/cards/{id}/block|unblock`; auditoria marcada `| staff` e aviso ao cliente) e ajustar o limite de crédito. Cancelar continua sendo só do cliente.

@@ -8,12 +8,6 @@ import { NotificationsPage } from '../features/notifications/NotificationsPage'
 import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SecurityPage } from '../features/security/SecurityPage'
 import { TransferPage } from '../features/transfers/TransferPage'
-import { AccountsAdminPage } from '../features/staff/AccountsAdminPage'
-import { AuditPage } from '../features/staff/AuditPage'
-import { CustomersPage } from '../features/staff/CustomersPage'
-import { FxRatesPage } from '../features/staff/FxRatesPage'
-import { StaffHomePage } from '../features/staff/StaffHomePage'
-import { TeamPage } from '../features/staff/TeamPage'
 import { FxPage } from '../features/fx/FxPage'
 import { FxTradePage } from '../features/fx/FxTradePage'
 import { ApplyInvestmentPage } from '../features/investments/ApplyInvestmentPage'
@@ -32,7 +26,7 @@ import { PixLayout } from '../features/pix/PixLayout'
 import { PixReceivePage } from '../features/pix/PixReceivePage'
 import { PixSchedulesPage } from '../features/pix/PixSchedulesPage'
 import { PixSendPage } from '../features/pix/PixSendPage'
-import { NotFound, RequireAuth, RequireCustomer, RequireStaff } from './guards'
+import { NotFound, RequireAuth, RequireCustomer } from './guards'
 
 export const router = createBrowserRouter([
   { path: '/entrar', element: <LoginPage /> },
@@ -73,17 +67,6 @@ export const router = createBrowserRouter([
               { path: 'historico', element: <PixHistoryPage /> },
             ],
           },
-        ],
-      },
-      {
-        element: <RequireStaff />,
-        children: [
-          { path: '/equipe', element: <StaffHomePage /> },
-          { path: '/equipe/auditoria', element: <AuditPage /> },
-          { path: '/equipe/clientes', element: <CustomersPage /> },
-          { path: '/equipe/contas', element: <AccountsAdminPage /> },
-          { path: '/equipe/cambio', element: <FxRatesPage /> },
-          { path: '/equipe/usuarios', element: <TeamPage /> },
         ],
       },
     ],

@@ -6,6 +6,7 @@ A especificação completa e o roadmap estão em [`secure_bank.md`](secure_bank.
 ```text
 securebank-backend/   Core Banking — Java 21, Spring Boot 4, PostgreSQL, Flyway
 securebank-web/       Internet Banking — React, TypeScript, Vite, Tailwind, TanStack Query
+securebank-admin/     Back-office da equipe (app separado): visão gerencial, clientes, cartões e limites, auditoria, câmbio, equipe
 compose.yml           Ambiente local completo
 ```
 
@@ -19,6 +20,7 @@ docker compose up -d --build
 | Serviço    | URL                                                |
 | ---------- | -------------------------------------------------- |
 | Web        | http://localhost:3500                              |
+| Admin      | http://localhost:3600 (só equipe; login do ADMIN/SUPPORT) |
 | PostgreSQL | `127.0.0.1:5439` (db/usuário `securebank`)         |
 
 Portas configuráveis em `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`).
@@ -45,6 +47,7 @@ Testes (estratégia em [`docs/testing.md`](docs/testing.md)):
 cd securebank-backend && ./mvnw test      # unitários, sem Docker
 cd securebank-backend && ./mvnw verify    # + integração (Docker) e cobertura
 cd securebank-web && npm test
+cd securebank-admin && npm test
 ```
 
 API: contrato em [`docs/api/openapi.yaml`](docs/api/openapi.yaml) e guia em [`docs/api/README.md`](docs/api/README.md);

@@ -26,7 +26,7 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `POST /security/password` | Troca de senha (revoga as outras sessões); a nova senha segue a mesma política e precisa ser diferente da atual |
 | `POST /security/mfa`, `/mfa/confirm`, `DELETE /security/mfa` | MFA em duas etapas; desligar exige código |
 | `GET /audit` | Auditoria (SUPPORT/ADMIN) |
-| `/admin/**` | Limites, bloqueio de conta, usuários da equipe (ADMIN); consulta de cliente (SUPPORT/ADMIN) |
+| `/admin/**` | Limites, bloqueio de conta e de cartão (com motivo), limite de crédito, visão gerencial `GET /admin/overview` (só ADMIN, `VIEW_REPORTS`), usuários da equipe (ADMIN); consulta de cliente e de cartões (SUPPORT/ADMIN) |
 
 ## Endpoints
 

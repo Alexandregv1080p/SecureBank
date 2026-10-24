@@ -4,7 +4,6 @@ import { Bell } from '@phosphor-icons/react'
 import { bankingApi } from '../services/banking'
 import { useAuth } from '../stores/auth'
 import { initials, titleCase } from '../lib/dashboard'
-import { roleLabel } from '../lib/staff'
 import { ThemeToggle } from './ThemeToggle'
 
 /** Barra superior (telas largas): avisos, tema e a pessoa logada. No celular, o shell já traz tema e sair. */
@@ -20,7 +19,7 @@ export function TopBar() {
   })
 
   const name = isCustomer ? (me.data ? titleCase(me.data.name) : '') : 'Equipe do banco'
-  const subtitle = isCustomer ? (me.data?.email ?? '') : roles.map(roleLabel).join(', ')
+  const subtitle = me.data?.email ?? ''
 
   return (
     <div className="mb-6 hidden items-center justify-end gap-2 md:flex">

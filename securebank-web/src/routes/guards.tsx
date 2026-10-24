@@ -1,7 +1,6 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { Skeleton } from '../components/ui'
-import { canAccess, isStaff } from '../lib/staff'
 import { useAuth } from '../stores/auth'
 
 /** Só deixa passar quem tem sessão. A sessão é recuperada pelo cookie HttpOnly na abertura do app. */
@@ -19,19 +18,10 @@ export function RequireAuth() {
   return <AppShell />
 }
 
-/** Área da equipe: cliente nunca entra; cada seção também confere o papel (o servidor confere em toda chamada). */
-export function RequireStaff() {
-  const roles = useAuth((s) => s.claims?.roles ?? [])
-  const location = useLocation()
-  if (!isStaff(roles)) return <Navigate to="/" replace />
-  if (location.pathname !== '/equipe' && !canAccess(roles, location.pathname)) return <Navigate to="/equipe" replace />
-  return <Outlet />
-}
-
-/** Telas do cliente (Pix etc.): a equipe não tem conta nem carteira, então volta para o painel dela. */
+/** Este app é só dos clientes: a equipe usa o painel Admin (outro app). */
 export function RequireCustomer() {
   const isCustomer = useAuth((s) => s.claims?.roles.includes('CUSTOMER'))
-  return isCustomer ? <Outlet /> : <Navigate to="/equipe" replace />
+  return isCustomer ? <Outlet /> : <Navigate to="/entrar" replace />
 }
 
 export function NotFound() {

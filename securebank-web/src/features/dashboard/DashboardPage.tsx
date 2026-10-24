@@ -16,7 +16,7 @@ import { useAccounts, sumAmounts } from '../accounts/hooks'
 
 export function DashboardPage() {
   const isCustomer = useAuth((s) => s.claims?.roles.includes('CUSTOMER'))
-  if (!isCustomer) return <Navigate to="/equipe" replace />
+  if (!isCustomer) return <Navigate to="/entrar" replace />
   return <CustomerDashboard />
 }
 

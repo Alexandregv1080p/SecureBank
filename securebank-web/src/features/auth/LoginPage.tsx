@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
-import { login, verifyMfa } from '../../services/auth'
+import { login, logout, verifyMfa } from '../../services/auth'
 import { messageFor } from '../../lib/errors'
 import { useAuth } from '../../stores/auth'
 import { Alert, Button, Field, Input } from '../../components/ui'
@@ -28,12 +28,21 @@ export function LoginPage() {
 
   if (status === 'authenticated') return <Navigate to={from} replace />
 
+  /** Este app é só dos clientes: a equipe entra pelo painel Admin. */
+  async function enter() {
+    if (!useAuth.getState().claims?.roles.includes('CUSTOMER')) {
+      await logout().catch(() => undefined)
+      throw new Error('Este acesso é para clientes. A equipe do banco entra pelo painel Admin.')
+    }
+    navigate(from, { replace: true })
+  }
+
   async function submitCredentials(values: z.infer<typeof credentials>) {
     setError(null)
     try {
       const outcome = await login(values.email, values.password)
       if (outcome.kind === 'mfa') setMfaToken(outcome.mfaToken)
-      else navigate(from, { replace: true })
+      else await enter()
     } catch (e) {
       setError(messageFor(e))
     }
@@ -43,7 +52,7 @@ export function LoginPage() {
     setError(null)
     try {
       await verifyMfa(mfaToken!, values.code)
-      navigate(from, { replace: true })
+      await enter()
     } catch (e) {
       setError(messageFor(e))
       mfa.reset()

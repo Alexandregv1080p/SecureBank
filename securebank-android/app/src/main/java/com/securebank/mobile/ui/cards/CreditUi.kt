@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -216,7 +218,8 @@ internal fun SplitInvoiceDialog(s: CardDetailState, invoice: Invoice, viewModel:
         onDismissRequest = { if (!s.loading) viewModel.closeSplit() },
         title = { Text("Parcelar fatura de ${CreditValidation.monthLabel(invoice.month)}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // são até 11 opções: sem rolagem, a última ficava cortada
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     "Você paga ${Money.format(invoice.remaining.amount)} em parcelas, a partir da próxima fatura aberta. Esta fatura fica quitada, mas as parcelas levam juros e usam limite.",
                     style = MaterialTheme.typography.bodyMedium,

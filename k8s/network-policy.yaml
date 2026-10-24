@@ -1,6 +1,7 @@
 # Zero trust na rede do namespace: tudo é negado e cada fluxo necessário é liberado explicitamente.
 #
-#   internet → ingress-nginx → web:8080 → api:8080 → postgres:5432 / redis:6379 / kafka:19092
+#   internet → ingress-nginx → web:8080   → api:8080 → postgres:5432 / redis:6379 / kafka:19092
+#              (domínio à parte) → admin:8080 ↗
 #                                          └─ ← prometheus (ns monitoring) :9090
 #
 # ATENÇÃO: NetworkPolicy só vale com um CNI que a implemente (Calico, Cilium, EKS com VPC CNI + policy engine).
@@ -47,6 +48,24 @@ spec:
         - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-api}}
       ports: [{protocol: TCP, port: 8080}]
 ---
+# O admin só recebe do ingress e só fala com a API: mesmo desenho do web, e nada além disso.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: admin
+  namespace: securebank
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: securebank-admin}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+      ports: [{protocol: TCP, port: 8080}]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-api}}
+      ports: [{protocol: TCP, port: 8080}]
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -58,6 +77,9 @@ spec:
   ingress:
     - from:
         - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-web}}
+      ports: [{protocol: TCP, port: 8080}]
+    - from:                          # o back-office da equipe
+        - podSelector: {matchLabels: {app.kubernetes.io/name: securebank-admin}}
       ports: [{protocol: TCP, port: 8080}]
     - from:                          # métricas: só o Prometheus
         - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: monitoring}}

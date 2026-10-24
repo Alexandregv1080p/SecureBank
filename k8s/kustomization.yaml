@@ -16,3 +16,5 @@ images:
     newTag: latest
   - name: ghcr.io/alexandregv1080p/securebank-web
     newTag: latest
+  - name: ghcr.io/alexandregv1080p/securebank-admin
+    newTag: latest

@@ -79,6 +79,25 @@ jobs:
       # dependências de produção com vulnerabilidade conhecida de severidade alta ou crítica quebram o build
       - run: npm audit --omit=dev --audit-level=high
 
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: securebank-admin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: securebank-admin/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      # dependências de produção com vulnerabilidade conhecida de severidade alta ou crítica quebram o build
+      - run: npm audit --omit=dev --audit-level=high
+
   secrets:
     # Varredura de segredos em todo o histórico. Falso positivo conhecido: .env.example (placeholders), ver .gitleaks.toml
     runs-on: ubuntu-latest
@@ -156,7 +175,7 @@ jobs:
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          skip-dirs: node_modules,target,securebank-web/dist
+          skip-dirs: node_modules,target,securebank-web/dist,securebank-admin/dist
           exit-code: '1'
           format: sarif
           output: trivy-fs.sarif
@@ -168,7 +187,7 @@ jobs:
 
   docker:
     # Build das imagens → scan (falha com HIGH/CRITICAL corrigível) → publicação no GHCR só em main/tags
-    needs: [backend, web, secrets, dependencies, kubernetes]
+    needs: [backend, web, admin, secrets, dependencies, kubernetes]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -184,6 +203,8 @@ jobs:
             context: securebank-backend
           - name: web
             context: securebank-web
+          - name: admin
+            context: securebank-admin
     env:
       PUSH: ${{ github.event_name != 'pull_request' }}
     steps:

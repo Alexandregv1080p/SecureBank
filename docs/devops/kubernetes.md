@@ -8,9 +8,9 @@ k8s/
 ├── rbac.yaml            ServiceAccounts sem permissão e sem token; Role mínimo para o deploy
 ├── configmap.yaml       configuração não secreta da API
 ├── secret.yaml          MODELO com placeholders (fora do kustomization de propósito)
-├── deployment.yaml      api e web: 2 réplicas, rolling update, probes, securityContext
+├── deployment.yaml      api e web: 2 réplicas; admin (back-office): 1 réplica; rolling update, probes, securityContext
 ├── service.yaml         securebank-api (8080), securebank-api-management (9090, só métricas), securebank-web
-├── ingress.yaml         entrada única (TLS, HSTS, redirect) → web → /api → api
+├── ingress.yaml         entrada única (TLS, HSTS, redirect) → web → /api → api; e o domínio do admin, restrito por faixa de IP
 ├── hpa.yaml             HPA (CPU 70%, 2–6 pods na API) + PodDisruptionBudget
 ├── network-policy.yaml  nega tudo e libera só os fluxos necessários
 ├── kustomization.yaml   junta tudo e fixa a tag da imagem
@@ -47,6 +47,7 @@ Precisa de um cluster (Docker Desktop com Kubernetes ligado, kind ou minikube), 
 # 1. imagens: construir localmente e (kind) carregar no cluster
 docker build -t ghcr.io/alexandregv1080p/securebank-backend:latest securebank-backend
 docker build -t ghcr.io/alexandregv1080p/securebank-web:latest securebank-web
+docker build -t ghcr.io/alexandregv1080p/securebank-admin:latest securebank-admin
 
 # 2. namespace e segredos reais (nada disso vai para o Git)
 kubectl apply -f k8s/namespace.yaml

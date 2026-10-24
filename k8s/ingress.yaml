@@ -29,3 +29,34 @@ spec:
               service:
                 name: securebank-web
                 port: {name: http}
+---
+# Back-office em domínio próprio e com a entrada restrita. Em produção: troque o host e a faixa de IPs (VPN/escritório)
+# e deixe o TLS no mesmo cert-manager. Fora da faixa, o ingress responde 403 antes de chegar ao app.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: securebank-admin
+  namespace: securebank
+  labels: {app.kubernetes.io/part-of: securebank}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,192.168.0.0/16"   # MODELO: use a faixa real da VPN
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [admin.securebank.local]
+      secretName: securebank-admin-tls
+  rules:
+    - host: admin.securebank.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: securebank-admin
+                port: {name: http}

@@ -9,7 +9,7 @@ variable "environment" {
 
 variable "repositories" {
   type    = list(string)
-  default = ["backend", "web"]
+  default = ["backend", "web", "admin"]
 }
 
 variable "kms_key_arn" {

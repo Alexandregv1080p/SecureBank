@@ -36,3 +36,15 @@ spec:
   selector: {app.kubernetes.io/name: securebank-web}
   ports:
     - {name: http, port: 80, targetPort: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: securebank-admin
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-admin, app.kubernetes.io/part-of: securebank}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: securebank-admin}
+  ports:
+    - {name: http, port: 80, targetPort: http}

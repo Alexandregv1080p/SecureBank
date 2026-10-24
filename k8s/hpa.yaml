@@ -56,3 +56,13 @@ metadata:
 spec:
   minAvailable: 1
   selector: {matchLabels: {app.kubernetes.io/name: securebank-web}}
+---
+# O admin tem poucos usuários: uma réplica basta, e o PDB só impede que a manutenção derrube a única que existe sem aviso.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: securebank-admin
+  namespace: securebank
+spec:
+  maxUnavailable: 1
+  selector: {matchLabels: {app.kubernetes.io/name: securebank-admin}}

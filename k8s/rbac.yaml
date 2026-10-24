@@ -16,6 +16,15 @@ metadata:
   labels: {app.kubernetes.io/name: securebank-web, app.kubernetes.io/part-of: securebank}
 automountServiceAccountToken: false
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: securebank-admin
+  namespace: securebank
+  labels: {app.kubernetes.io/name: securebank-admin, app.kubernetes.io/part-of: securebank}
+automountServiceAccountToken: false
+
+---
 # Quem faz deploy (pipeline, Fase 12): só o necessário, só neste namespace. Não lê Secrets e não cria Role/RoleBinding,
 # então não consegue se dar mais poder.
 apiVersion: v1

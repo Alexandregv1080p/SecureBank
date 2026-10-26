@@ -51,6 +51,9 @@ describe('atenção', () => {
     expect(items.map((i) => i.key)).toEqual(['overdue', 'denied', 'logins', 'outbox', 'blocked'])
     expect(items[0].text).toContain('1 fatura vencida com saldo')
     expect(items[4].tone).toBe('warn')
+    // os alertas de segurança abrem a auditoria já filtrada pelo evento
+    expect(items[1].to).toBe('/auditoria?evento=ACCESS_DENIED')
+    expect(items[2].to).toBe('/auditoria?evento=LOGIN_FAILED')
   })
 
   it('poucos logins recusados e pouca fila não é alerta', () => {

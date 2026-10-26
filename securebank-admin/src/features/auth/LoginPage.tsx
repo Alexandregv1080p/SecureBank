@@ -27,13 +27,16 @@ export function LoginPage() {
   const first = useForm({ resolver: zodResolver(credentials), defaultValues: { email: '', password: '' } })
   const mfa = useForm({ resolver: zodResolver(second), defaultValues: { code: '' } })
 
-  if (status === 'authenticated') return <Navigate to={from} replace />
+  // cliente que acertou a senha fica "autenticado" por um instante até o enter() desconectá-lo: não redirecionar, senão o aviso se perde
+  const staff = useAuth((s) => isStaff(s.claims?.roles ?? []))
+  if (status === 'authenticated' && staff) return <Navigate to={from} replace />
 
   /** Este app é só da equipe: cliente que acertou a senha é desconectado na hora. */
   async function enter() {
     if (!isStaff(useAuth.getState().claims?.roles ?? [])) {
       await logout().catch(() => undefined)
-      throw new Error('Acesso restrito à equipe do banco. Clientes entram pelo internet banking.')
+      setError('Acesso restrito à equipe do banco. Clientes entram pelo internet banking.')
+      return
     }
     navigate(from, { replace: true })
   }

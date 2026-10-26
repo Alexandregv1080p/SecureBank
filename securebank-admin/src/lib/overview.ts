@@ -66,10 +66,10 @@ export function attentionItems(data: Pick<Overview, 'accounts' | 'credit' | 'sec
     items.push({ key: 'overdue', tone: 'danger', text: `${plural(data.credit.overdueInvoices, 'fatura vencida com saldo', 'faturas vencidas com saldo')}, R$ ${Number(data.credit.overdueAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em atraso`, to: '/clientes' })
   }
   if (data.security.accessDenied24h > 0) {
-    items.push({ key: 'denied', tone: 'danger', text: `${plural(data.security.accessDenied24h, 'acesso negado', 'acessos negados')} nas últimas 24 h`, to: '/auditoria' })
+    items.push({ key: 'denied', tone: 'danger', text: `${plural(data.security.accessDenied24h, 'acesso negado', 'acessos negados')} nas últimas 24 h`, to: '/auditoria?evento=ACCESS_DENIED' })
   }
   if (data.security.failedLogins24h > 20) {
-    items.push({ key: 'logins', tone: 'danger', text: `${data.security.failedLogins24h} logins recusados nas últimas 24 h (possível tentativa de invasão)`, to: '/auditoria' })
+    items.push({ key: 'logins', tone: 'danger', text: `${data.security.failedLogins24h} logins recusados nas últimas 24 h (possível tentativa de invasão)`, to: '/auditoria?evento=LOGIN_FAILED' })
   }
   if (data.security.outboxPending > 100) {
     items.push({ key: 'outbox', tone: 'danger', text: `${data.security.outboxPending} eventos parados na fila de publicação: os avisos aos clientes podem estar atrasados`, to: '/auditoria' })

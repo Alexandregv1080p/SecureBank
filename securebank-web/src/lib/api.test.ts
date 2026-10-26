@@ -121,4 +121,12 @@ describe('messageFor', () => {
     expect(messageFor(new ApiError(0, 'NETWORK', 'x', undefined, true))).toContain('Sem conexão')
     expect(messageFor(new Error('boom'))).toBe('Algo deu errado. Tente de novo.')
   })
+
+  it('explica por que o servidor recusou a senha', () => {
+    const recusa = (text: string) => messageFor(new ApiError(400, 'INVALID_VALUE', text))
+    expect(recusa('Password is too easy to guess')).toContain('fácil de adivinhar')
+    expect(recusa('Password must not contain your email')).toContain('e-mail')
+    expect(recusa('Password must have 12 to 128 characters')).toContain('12 a 128')
+    expect(recusa('Amount must be positive')).toBe('Algum dado informado é inválido.')
+  })
 })

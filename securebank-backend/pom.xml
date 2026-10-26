@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.8</version>
+		<version>4.1.2</version>
 		<relativePath/>
 	</parent>
 	<groupId>com.securebank</groupId>
@@ -22,9 +22,9 @@
 		<archunit.version>1.5.1</archunit.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<bouncycastle.version>1.86</bouncycastle.version>
-		<rest-assured.version>6.0.1</rest-assured.version>
+		<rest-assured.version>6.3.0</rest-assured.version>
 		<jacoco.version>0.8.15</jacoco.version>
-		<pitest.version>1.30.0</pitest.version>
+		<pitest.version>1.30.1</pitest.version>
 		<!-- pasta curta para o socket AF_UNIX do JDK (o TEMP do Windows em formato 8.3 quebra o Selector) -->
 		<unixdomain.tmpdir>${java.io.tmpdir}</unixdomain.tmpdir>
 	</properties>

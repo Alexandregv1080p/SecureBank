@@ -268,7 +268,8 @@ class ConsistencyIT {
         TestUsers.Login login = TestUsers.registerAndLogin(mvc); // gera UserLoggedIn
         String admin = TestUsers.adminToken(mvc);
         String account = openAccount(login.accessToken());
-        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + account + "/block"))).andExpect(status().isOk());
+        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + account + "/block")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Bloqueio de teste\"}")).andExpect(status().isOk());
 
         int pending = jdbc.queryForObject("select count(*) from outbox_events where published_at is null", Integer.class);
         assertThat(pending).isGreaterThanOrEqualTo(3);

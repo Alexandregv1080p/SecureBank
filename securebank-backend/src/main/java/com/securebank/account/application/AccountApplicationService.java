@@ -192,12 +192,16 @@ public class AccountApplicationService {
     }
 
     /** Bloqueio administrativo (permissão MANAGE_ACCOUNTS): qualquer conta, não só as do chamador. */
-    public Account block(AccountId id) {
+    public Account block(AccountId id, String reason) {
+        String why = reason == null ? "" : reason.trim();
+        if (why.length() < 3 || why.length() > 140 || why.contains("\n") || why.contains("\r")) {
+            throw new InvalidValueException("The reason must have 3 to 140 characters, in one line");
+        }
         Account account = findAny(id);
         account.block(time.now());
         accounts.save(account);
-        audit.record(AuditEntry.of(AuditEvent.ACCOUNT_BLOCKED).account(id));
-        outbox.record("AccountBlocked", "Account", id.toString(), java.util.Map.of("accountId", id.toString()));
+        audit.record(AuditEntry.of(AuditEvent.ACCOUNT_BLOCKED).account(id).detail(why + " | staff"));
+        outbox.record("AccountBlocked", "Account", id.toString(), java.util.Map.of("accountId", id.toString(), "reason", why));
         return account;
     }
 

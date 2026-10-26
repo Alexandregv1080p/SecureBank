@@ -167,7 +167,10 @@ class AuthorizationIT {
         String account = openAccount(customer.accessToken());
         String admin = TestUsers.adminToken(mvc);
 
-        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + account + "/block")))
+        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + account + "/block")).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest()); // o motivo é obrigatório
+        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + account + "/block")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Suspeita de fraude\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("BLOCKED"));
         deposit(customer.accessToken(), account, "10.00").andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_ACTIVE"));
@@ -180,7 +183,8 @@ class AuthorizationIT {
                 .andExpect(jsonPath("$.items[0].accountId").value(account));
         mvc.perform(bearer(admin, get("/api/v1/audit?event=ACCOUNT_UNBLOCKED")))
                 .andExpect(jsonPath("$.items[0].accountId").value(account));
-        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + UUID.randomUUID() + "/block")))
+        mvc.perform(bearer(admin, post("/api/v1/admin/accounts/" + UUID.randomUUID() + "/block")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Qualquer motivo\"}"))
                 .andExpect(status().isNotFound());
     }
 

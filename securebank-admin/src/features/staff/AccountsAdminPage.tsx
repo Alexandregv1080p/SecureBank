@@ -5,7 +5,7 @@ import { staffApi, type LimitAdmin } from '../../services/staff'
 import { accountLabel, accountTypeLabel } from '../../lib/format'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { messageFor } from '../../lib/errors'
-import { isUuid, limitLabels } from '../../lib/staff'
+import { isUuid, limitLabels, reasonIssue } from '../../lib/staff'
 import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { DataList, DataRow } from './parts'
@@ -19,9 +19,14 @@ export function AccountsAdminPage() {
   const account = useQuery({ queryKey: ['staff', 'account', id], queryFn: () => staffApi.account(id.trim()), enabled: valid })
   const limits = useQuery({ queryKey: ['staff', 'limits', id], queryFn: () => staffApi.limits(id.trim()), enabled: valid && account.isSuccess })
   const refresh = () => Promise.all([client.invalidateQueries({ queryKey: ['staff', 'account', id] }), client.invalidateQueries({ queryKey: ['staff', 'limits', id] })])
+  const [reason, setReason] = useState('')
+  const [reasonError, setReasonError] = useState<string | null>(null)
   const toggle = useMutation({
-    mutationFn: () => (account.data?.status === 'BLOCKED' ? staffApi.unblock(id.trim()) : staffApi.block(id.trim())),
-    onSuccess: refresh,
+    mutationFn: () => (account.data?.status === 'BLOCKED' ? staffApi.unblock(id.trim()) : staffApi.block(id.trim(), reason.trim())),
+    onSuccess: async () => {
+      setReason('')
+      await refresh()
+    },
   })
 
   const blocked = account.data?.status === 'BLOCKED'
@@ -54,14 +59,29 @@ export function AccountsAdminPage() {
               </DataList>
               {toggle.isError && <Alert tone="error">{messageFor(toggle.error)}</Alert>}
               {account.data.status !== 'CLOSED' && (
-                <div>
-                  <ConfirmButton
-                    label={blocked ? 'Desbloquear conta' : 'Bloquear conta'}
-                    confirmLabel={blocked ? 'Confirmar desbloqueio' : 'Confirmar bloqueio'}
-                    variant={blocked ? 'secondary' : 'danger'}
-                    loading={toggle.isPending}
-                    onConfirm={() => toggle.mutate()}
-                  />
+                <div className="flex flex-col gap-3">
+                  {!blocked && (
+                    <Field label="Motivo do bloqueio" htmlFor="block-reason" error={reasonError ?? undefined} hint="De 3 a 140 caracteres. Fica na auditoria e o cliente é avisado.">
+                      <Input id="block-reason" value={reason} maxLength={140} autoComplete="off" aria-invalid={!!reasonError}
+                        onChange={(e) => { setReason(e.target.value); setReasonError(null) }} />
+                    </Field>
+                  )}
+                  <div>
+                    <ConfirmButton
+                      label={blocked ? 'Desbloquear conta' : 'Bloquear conta'}
+                      confirmLabel={blocked ? 'Confirmar desbloqueio' : 'Confirmar bloqueio'}
+                      variant={blocked ? 'secondary' : 'danger'}
+                      loading={toggle.isPending}
+                      onConfirm={() => {
+                        if (!blocked) {
+                          const problem = reasonIssue(reason)
+                          setReasonError(problem)
+                          if (problem) return
+                        }
+                        toggle.mutate()
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </div>

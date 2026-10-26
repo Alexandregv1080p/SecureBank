@@ -79,6 +79,9 @@ class AdminController {
     /** Limite configurado com o uso de hoje. */
     record LimitUsageView(String type, MoneyResponse perOperation, MoneyResponse daily, MoneyResponse usedToday) {}
 
+    /** Bloquear conta pede o motivo (de 3 a 140 caracteres): vai para a auditoria e para o aviso ao cliente. */
+    record BlockRequest(@NotBlank @Size(min = 3, max = 140) String reason) {}
+
     record AccountStatusView(UUID id, String status) {
 
         static AccountStatusView of(Account a) {
@@ -157,8 +160,8 @@ class AdminController {
     }
 
     @PostMapping("/accounts/{id}/block")
-    AccountStatusView block(@PathVariable String id) {
-        return AccountStatusView.of(accounts.block(AccountId.of(id)));
+    AccountStatusView block(@PathVariable String id, @Valid @RequestBody BlockRequest request) {
+        return AccountStatusView.of(accounts.block(AccountId.of(id), request.reason()));
     }
 
     @PostMapping("/accounts/{id}/unblock")

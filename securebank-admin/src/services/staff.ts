@@ -115,7 +115,7 @@ export const staffApi = {
   limits: (accountId: string) => api<LimitAdmin[]>(`/admin/accounts/${accountId}/limits`),
   changeLimit: (accountId: string, type: string, perOperation: string, daily: string) =>
     api<unknown>(`/admin/accounts/${accountId}/limits/${type}`, { method: 'PUT', body: { perOperation, daily } }),
-  block: (accountId: string) => api<unknown>(`/admin/accounts/${accountId}/block`, { method: 'POST' }),
+  block: (accountId: string, reason: string) => api<unknown>(`/admin/accounts/${accountId}/block`, { method: 'POST', body: { reason } }),
   unblock: (accountId: string) => api<unknown>(`/admin/accounts/${accountId}/unblock`, { method: 'POST' }),
   fxRates: () => api<FxRateAdmin[]>('/admin/fx/rates'),
   changeFxRate: (currency: string, mid: string, spreadPercent: string) =>

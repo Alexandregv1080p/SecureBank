@@ -122,7 +122,7 @@ public class NotificationService {
             case "PaymentCompleted" -> notifyOwner(event, event.text("accountId"), "PAYMENT_DONE", "Pagamento realizado",
                     "Seu pagamento de " + event.text("amount") + " " + event.text("currency") + " foi concluído.");
             case "AccountBlocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_BLOCKED", "Conta bloqueada",
-                    "Sua conta foi bloqueada. Fale com o suporte.");
+                    "Sua conta foi bloqueada" + (event.text("reason") == null ? "" : " (motivo: " + event.text("reason") + ")") + ". Fale com o suporte.");
             case "AccountUnblocked" -> notifyOwner(event, event.text("accountId"), "ACCOUNT_UNBLOCKED",
                     "Conta desbloqueada", "Sua conta foi desbloqueada.");
             case "PiggyGoalReached" -> piggies.findById(PiggyId.of(event.text("piggyId")))

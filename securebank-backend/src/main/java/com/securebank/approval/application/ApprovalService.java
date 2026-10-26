@@ -41,8 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApprovalService {
 
     /** Pedido pronto para a tela: com os e-mails, a descrição do alvo e o que a pessoa que consulta pode fazer com ele. */
-    public record Row(ApprovalRequest request, String requesterEmail, String deciderEmail, String subject, UUID customerId,
-            boolean canDecide, boolean canCancel) {}
+    public record Row(ApprovalRequest request, String requesterEmail, String deciderEmail, String subject, String currentLimit,
+            UUID customerId, boolean canDecide, boolean canCancel) {}
 
     /** Ou a ação foi feita na hora ({@code applied}) ou virou um pedido ({@code pending}). */
     public record LimitOutcome(Money applied, Row pending) {}
@@ -191,12 +191,12 @@ public class ApprovalService {
         return switch (r.kind()) {
             case CREDIT_LIMIT -> {
                 CreditApplicationService.StaffView card = credit.staffViewOf(CardId.of(r.subjectId().toString()));
-                yield new Row(r, requester, decider, "Cartão final " + card.card().last4() + ", limite atual R$ "
-                        + card.terms().limit().amount().toPlainString(), card.card().customerId().value(), canDecide, canCancel);
+                yield new Row(r, requester, decider, "Cartão final " + card.card().last4(), card.terms().limit().amount().toPlainString(),
+                        card.card().customerId().value(), canDecide, canCancel);
             }
             case ACCOUNT_UNBLOCK -> {
                 Account account = accounts.getAny(AccountId.of(r.subjectId().toString()));
-                yield new Row(r, requester, decider, "Conta " + account.branch() + "/" + account.accountNumber(),
+                yield new Row(r, requester, decider, "Conta " + account.branch() + "/" + account.accountNumber(), null,
                         account.customerId().value(), canDecide, canCancel);
             }
         };

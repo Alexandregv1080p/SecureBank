@@ -31,6 +31,12 @@ public class CurrentUser {
         return parse(cid, CustomerId::of);
     }
 
+    /** Equipe do banco: qualquer papel que não seja o de cliente. */
+    public boolean isStaff() {
+        java.util.List<String> roles = jwt().getClaimAsStringList("roles");
+        return roles != null && !roles.isEmpty() && !roles.contains("CUSTOMER");
+    }
+
     public SessionId sessionId() {
         return parse(jwt().getClaimAsString("sid"), SessionId::of);
     }

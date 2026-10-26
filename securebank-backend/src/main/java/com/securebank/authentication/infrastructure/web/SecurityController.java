@@ -36,10 +36,13 @@ class SecurityController {
 
     private final SecurityApplicationService security;
     private final CurrentUser current;
+    private final boolean staffMfaRequired;
 
-    SecurityController(SecurityApplicationService security, CurrentUser current) {
+    SecurityController(SecurityApplicationService security, CurrentUser current,
+            @org.springframework.beans.factory.annotation.Value("${securebank.security.staff-mfa-required:true}") boolean staffMfaRequired) {
         this.security = security;
         this.current = current;
+        this.staffMfaRequired = staffMfaRequired;
     }
 
     @GetMapping("/sessions")
@@ -64,11 +67,12 @@ class SecurityController {
                 request.newPassword());
     }
 
-    record MfaStatusResponse(boolean enabled) {}
+    /** {@code required}: este usuário (equipe) só opera com a verificação em duas etapas. */
+    record MfaStatusResponse(boolean enabled, boolean required) {}
 
     @GetMapping("/mfa")
     MfaStatusResponse mfaStatus() {
-        return new MfaStatusResponse(security.mfaEnabled(current.userId()));
+        return new MfaStatusResponse(security.mfaEnabled(current.userId()), staffMfaRequired && current.isStaff());
     }
 
     /** Passo 1: devolve o segredo (uma única vez) para cadastrar no app autenticador. O MFA só liga no /confirm. */

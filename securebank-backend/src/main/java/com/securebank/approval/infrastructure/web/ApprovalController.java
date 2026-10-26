@@ -46,14 +46,14 @@ class ApprovalController {
 
     record DecisionRequest(@Size(max = 140) String note) {}
 
-    record ApprovalView(UUID id, String kind, String status, UUID subjectId, String subject, UUID customerId, String amount,
+    record ApprovalView(UUID id, String kind, String status, UUID subjectId, String subject, UUID customerId, String amount, String currentLimit,
             String note, String department, String requestedBy, Instant createdAt, String decidedBy, String decisionNote,
             Instant decidedAt, boolean canDecide, boolean canCancel) {
 
         static ApprovalView of(ApprovalService.Row row) {
             ApprovalRequest r = row.request();
             return new ApprovalView(r.id(), r.kind().name(), r.status().name(), r.subjectId(), row.subject(), row.customerId(),
-                    r.amount() == null ? null : r.amount().toPlainString(), r.note(), r.kind().department().name(),
+                    r.amount() == null ? null : r.amount().toPlainString(), row.currentLimit(), r.note(), r.kind().department().name(),
                     row.requesterEmail(), r.createdAt(), row.deciderEmail(), r.decisionNote(), r.decidedAt(), row.canDecide(),
                     row.canCancel());
         }

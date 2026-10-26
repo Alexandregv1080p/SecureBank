@@ -124,7 +124,7 @@ class SecurityConfig {
                         // equipe
                         .requestMatchers(GET, "/api/v1/admin/customers", "/api/v1/admin/customers/*", "/api/v1/admin/customers/*/accounts")
                                 .hasAuthority(Permission.VIEW_CUSTOMER.name())
-                        .requestMatchers(GET, "/api/v1/admin/accounts/*").hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(GET, "/api/v1/admin/accounts/*").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(GET, "/api/v1/admin/accounts/*/limits").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(GET, "/api/v1/admin/fx/rates").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(GET, "/api/v1/admin/users").hasAuthority(Permission.MANAGE_USERS.name())

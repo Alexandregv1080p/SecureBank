@@ -52,7 +52,8 @@ class StaffMfaIT {
             mvc.perform(bearer(first, get(path))).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("MFA_REQUIRED"));
         }
         // mas a segurança da própria conta e o logout ficam abertos
-        mvc.perform(bearer(first, get("/api/v1/security/mfa"))).andExpect(status().isOk()).andExpect(jsonPath("$.enabled").value(false));
+        mvc.perform(bearer(first, get("/api/v1/security/mfa"))).andExpect(status().isOk()).andExpect(jsonPath("$.enabled").value(false))
+                .andExpect(jsonPath("$.required").value(true));
         mvc.perform(bearer(first, get("/api/v1/security/sessions"))).andExpect(status().isOk());
 
         // liga o 2FA; a sessão atual continua restrita, a próxima (com o código) já opera
@@ -75,6 +76,7 @@ class StaffMfaIT {
     void customersAreNotAffected() throws Exception {
         String customer = TestUsers.registerAndLogin(mvc).accessToken();
         mvc.perform(bearer(customer, get("/api/v1/accounts"))).andExpect(status().isOk());
+        mvc.perform(bearer(customer, get("/api/v1/security/mfa"))).andExpect(jsonPath("$.required").value(false)); // exigência é só da equipe
     }
 
     /** Liga o 2FA do usuário e devolve um access token da sessão nova, aberta com o código. */

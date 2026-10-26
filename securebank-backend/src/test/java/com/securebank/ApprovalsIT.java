@@ -80,7 +80,8 @@ class ApprovalsIT {
         // o gerente vê o pedido na fila, com quem pediu e o que será feito
         mvc.perform(TestUsers.bearer(manager, get("/api/v1/admin/approvals?status=PENDING"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == '" + id + "')].canDecide", hasItem(true)))
-                .andExpect(jsonPath("$[?(@.id == '" + id + "')].subject", hasItem(containsString("limite atual R$ 15000.00"))));
+                .andExpect(jsonPath("$[?(@.id == '" + id + "')].currentLimit", hasItem("15000.00")))
+                .andExpect(jsonPath("$[?(@.id == '" + id + "')].subject", hasItem(containsString("Cartão final"))));
         mvc.perform(TestUsers.bearer(manager, post("/api/v1/admin/approvals/" + id + "/approve")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"note\":\"Renda confere\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.decisionNote").value("Renda confere"));

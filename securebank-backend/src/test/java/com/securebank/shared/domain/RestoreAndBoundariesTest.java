@@ -179,7 +179,12 @@ class RestoreAndBoundariesTest {
         assertThat(EventTopics.forEvent("AccountUnblocked")).isEqualTo(EventTopics.ACCOUNTS);
         assertThat(EventTopics.forEvent("UserLoggedIn")).isEqualTo(EventTopics.USERS);
         assertThatThrownBy(() -> EventTopics.forEvent("Whatever")).isInstanceOf(IllegalArgumentException.class);
-        assertThat(EventTopics.ALL).hasSize(4).doesNotHaveDuplicates();
+        for (String type : new String[] {"CardPurchaseCompleted", "CardBlocked", "CardUnblocked", "CardCanceled", "CreditPurchaseCompleted",
+                "CreditInvoicePaid", "CreditInvoiceRefinanced", "CreditLimitChanged", "CreditInvoiceClosed", "CreditInvoiceDueSoon",
+                "CreditInvoiceOverdue"}) {
+            assertThat(EventTopics.forEvent(type)).as(type).isEqualTo(EventTopics.CARDS);
+        }
+        assertThat(EventTopics.ALL).hasSize(5).doesNotHaveDuplicates();
     }
 
     // ---------- fronteiras da política de senha ----------

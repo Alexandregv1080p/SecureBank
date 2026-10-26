@@ -12,7 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Publica os eventos pendentes, em ordem. Cada lote roda numa transação que trava as linhas (SKIP LOCKED): várias
  * instâncias da API podem rodar o relay sem publicar o mesmo evento duas vezes ao mesmo tempo. Se a publicação falha,
- * o lote para (preserva a ordem) e o evento segue pendente. Se a JVM cai entre publicar e confirmar, o evento sai de
+ * o lote para (preserva a ordem) e o evento segue pendente. Evento sem tópico é erro de configuração e nunca
+ * sairia: é pulado (e registrado como erro) para não travar a fila inteira. Se a JVM cai entre publicar e confirmar, o evento sai de
  * novo: entrega at-least-once.
  */
 @Service
@@ -41,6 +42,11 @@ public class OutboxRelay {
         for (OutboxEvent event : batch) {
             try {
                 publisher.publish(event);
+            } catch (IllegalArgumentException e) {
+                // evento que nunca vai sair (tipo sem tópico): fica pendente e visível, mas não trava os que vêm depois
+                log.error("Outbox event {} ({}) can never be published, skipping it: {}", event.id(), event.eventType(), e.getMessage());
+                events.markFailed(event.id());
+                continue;
             } catch (RuntimeException e) {
                 log.warn("Outbox event {} ({}) not published, will retry: {}", event.id(), event.eventType(),
                         e.getMessage());

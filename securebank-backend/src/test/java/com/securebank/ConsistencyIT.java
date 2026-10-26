@@ -52,6 +52,9 @@ class ConsistencyIT {
             if (failing) {
                 throw new IllegalStateException("broker down");
             }
+            if (event.eventType().equals("TipoSemTopico")) {
+                throw new IllegalArgumentException("No topic for event type " + event.eventType());
+            }
             published.add(event);
         }
     }
@@ -77,6 +80,20 @@ class ConsistencyIT {
             // começa cada teste sem pendências de testes anteriores
         }
         publisher.published.clear();
+    }
+
+    @Test
+    void anEventThatCanNeverBePublishedDoesNotBlockTheQueue() {
+        String insert = "insert into outbox_events (event_type, aggregate_type, aggregate_id, payload, occurred_at) values (?, 'Test', 'x', '{}', now())";
+        jdbc.update(insert, "TipoSemTopico");
+        jdbc.update(insert, "UserLoggedIn");
+        try {
+            assertThat(relay.publishPending()).isEqualTo(1); // o de depois sai, mesmo com o impublicável na frente
+            assertThat(publisher.published).extracting(OutboxEvent::eventType).containsExactly("UserLoggedIn");
+            assertThat(jdbc.queryForObject("select attempts from outbox_events where event_type = 'TipoSemTopico'", Integer.class)).isGreaterThan(0);
+        } finally {
+            jdbc.update("delete from outbox_events where event_type = 'TipoSemTopico'");
+        }
     }
 
     // ---------- idempotência ----------

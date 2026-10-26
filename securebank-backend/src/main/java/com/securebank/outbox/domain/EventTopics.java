@@ -9,9 +9,10 @@ public final class EventTopics {
     public static final String PAYMENTS = "securebank.payments";
     public static final String ACCOUNTS = "securebank.accounts";
     public static final String USERS = "securebank.users";
+    public static final String CARDS = "securebank.cards";
     public static final String DLT_SUFFIX = ".DLT";
 
-    public static final List<String> ALL = List.of(TRANSFERS, PAYMENTS, ACCOUNTS, USERS);
+    public static final List<String> ALL = List.of(TRANSFERS, PAYMENTS, ACCOUNTS, USERS, CARDS);
 
     private EventTopics() {}
 
@@ -28,6 +29,9 @@ public final class EventTopics {
         }
         if (eventType.startsWith("User")) {
             return USERS;
+        }
+        if (eventType.startsWith("Card") || eventType.startsWith("Credit")) {
+            return CARDS;
         }
         throw new IllegalArgumentException("No topic for event type " + eventType);
     }

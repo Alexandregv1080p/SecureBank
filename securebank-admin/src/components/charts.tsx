@@ -36,6 +36,8 @@ export function AreaChart({ labels, series, title }: { labels: string[]; series:
   const x = (i: number) => (n === 1 ? PAD.l + innerW / 2 : PAD.l + (i * innerW) / (n - 1))
   const y = (v: number) => PAD.t + innerH * (1 - v / max)
   const ticks = [0, 1, 2, 3, 4].map((t) => (max * t) / 4)
+  // com muitos pontos (30 dias) os rótulos se encavalam: mostra um a cada `labelStep`, com ~56 px de respiro
+  const labelStep = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(innerW / 56))))
 
   function move(e: PointerEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -64,11 +66,13 @@ export function AreaChart({ labels, series, title }: { labels: string[]; series:
             </text>
           </g>
         ))}
-        {labels.map((l, i) => (
-          <text key={l + i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill={hover === i ? 'var(--text)' : 'var(--muted)'}>
-            {l}
-          </text>
-        ))}
+        {labels.map((l, i) =>
+          i % labelStep === 0 || hover === i ? (
+            <text key={l + i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill={hover === i ? 'var(--text)' : 'var(--muted)'}>
+              {l}
+            </text>
+          ) : null,
+        )}
 
         {series.map((s, si) => {
           const pts: Point[] = s.values.map((v, i) => [x(i), y(v)])

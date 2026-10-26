@@ -26,7 +26,7 @@ class NotificationConsumer {
     }
 
     @KafkaListener(id = "notifications", topics = {EventTopics.TRANSFERS, EventTopics.PAYMENTS, EventTopics.ACCOUNTS,
-            EventTopics.USERS})
+            EventTopics.USERS, EventTopics.CARDS})
     void on(ConsumerRecord<String, String> record) {
         notifications.handle(json.readValue(record.value(), EventEnvelope.class));
     }

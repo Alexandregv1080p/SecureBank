@@ -10,6 +10,6 @@ public interface AuditLogRepository {
 
     void save(AuditLog log);
 
-    /** Mais recentes primeiro; filtros nulos são ignorados. */
-    PageResult<AuditLog> search(AuditEvent event, UserId userId, int page, int size);
+    /** Mais recentes primeiro; evento e usuário nulos são ignorados; o período é [from, to) (use Instant.MIN/MAX-like para "sem limite"). */
+    PageResult<AuditLog> search(AuditEvent event, UserId userId, java.time.Instant from, java.time.Instant to, int page, int size);
 }

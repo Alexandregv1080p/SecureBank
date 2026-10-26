@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import { AreaChart, Donut, ProgressRing } from '../../components/charts'
 import { ErrorState, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { staffApi, type Overview } from '../../services/staff'
@@ -7,7 +8,7 @@ import { messageFor } from '../../lib/errors'
 import { compactBRL } from '../../lib/dashboard'
 import { formatDateTime } from '../../lib/format'
 import { formatBRL } from '../../lib/money'
-import { dayLabel, percentOf, typeLabel, typeShares } from '../../lib/overview'
+import { attentionItems, dayLabel, percentOf, typeLabel, typeShares } from '../../lib/overview'
 
 const number = new Intl.NumberFormat('pt-BR')
 
@@ -53,8 +54,28 @@ function Body({ days, data }: { days: number; data: Overview }) {
   const usedPct = percentOf(credit.used, credit.totalLimit)
   const alerts = security.failedLogins24h + security.accessDenied24h
 
+  const attention = attentionItems(data)
+
   return (
     <div className="flex flex-col gap-6">
+      <section aria-label="Atenção" className="card overflow-hidden p-5">
+        <h2 className="text-sm font-semibold">Atenção agora</h2>
+        {attention.length === 0 ? (
+          <p className="mt-2 text-sm text-ok">Tudo em ordem: nenhuma fatura vencida, acesso negado ou fila parada.</p>
+        ) : (
+          <ul className="mt-3 flex flex-col gap-2">
+            {attention.map((a) => (
+              <li key={a.key}>
+                <Link to={a.to} className={`flex items-center justify-between gap-3 rounded-ui px-3 py-2 text-sm transition hover:bg-surface-2 ${a.tone === 'danger' ? 'text-danger' : 'text-warn'}`}>
+                  <span>{a.text}</span>
+                  <span aria-hidden>→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-label="Resumo" className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(13rem,1fr))]">
         <Metric label="Clientes" value={number.format(customers.total)} hint={`${number.format(customers.active)} ativos · ${number.format(customers.newInPeriod)} novos no período`} />
         <Metric label="Contas ativas" value={number.format(accounts.active)} hint={`${number.format(accounts.blocked)} bloqueadas · ${number.format(accounts.closed)} encerradas`} />

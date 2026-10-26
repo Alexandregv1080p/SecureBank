@@ -38,8 +38,13 @@ class AuditController {
 
     @GetMapping
     AuditPage search(@RequestParam(required = false) AuditEvent event, @RequestParam(required = false) String userId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        var result = audit.search(event, userId == null ? null : UserId.of(userId), page, size);
+        // dias de calendário de São Paulo, os dois inclusivos
+        java.time.ZoneId zone = java.time.ZoneId.of("America/Sao_Paulo");
+        var result = audit.search(event, userId == null ? null : UserId.of(userId),
+                from == null ? null : from.atStartOfDay(zone).toInstant(), to == null ? null : to.plusDays(1).atStartOfDay(zone).toInstant(), page, size);
         return new AuditPage(result.items().stream().map(AuditLogResponse::of).toList(), result.page(),
                 result.size(), result.totalElements());
     }

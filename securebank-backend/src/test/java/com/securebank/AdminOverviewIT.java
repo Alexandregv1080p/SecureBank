@@ -58,6 +58,17 @@ class AdminOverviewIT {
     }
 
     @Test
+    void theAuditTrailCanBeFilteredByPeriod() throws Exception {
+        String admin = TestUsers.adminToken(mvc); // o login do admin acabou de gerar eventos
+        String today = java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")).toString();
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/audit?from=" + today + "&to=" + today))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", greaterThanOrEqualTo(1)));
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/audit?from=2000-01-01&to=2000-01-31"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/audit?from=ontem"))).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void thePeriodIsBounded() throws Exception {
         String admin = TestUsers.adminToken(mvc);
         mvc.perform(TestUsers.bearer(admin, get("/api/v1/admin/overview?days=6"))).andExpect(status().isBadRequest());

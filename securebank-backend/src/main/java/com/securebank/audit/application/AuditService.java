@@ -50,9 +50,10 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
-    public PageResult<AuditLog> search(AuditEvent event, UserId userId, int page, int size) {
+    public PageResult<AuditLog> search(AuditEvent event, UserId userId, java.time.Instant from, java.time.Instant to, int page, int size) {
         PageResult.validate(page, size);
-        return logs.search(event, userId, page, size);
+        return logs.search(event, userId, from == null ? java.time.Instant.EPOCH : from,
+                to == null ? java.time.Instant.parse("9999-01-01T00:00:00Z") : to, page, size);
     }
 
     private AuditLog toLog(AuditEntry entry) {

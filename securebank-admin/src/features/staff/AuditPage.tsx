@@ -11,13 +11,16 @@ export function AuditPage() {
   const [event, setEvent] = useState('')
   const [userInput, setUserInput] = useState('')
   const [page, setPage] = useState(0)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const rangeInvalid = !!from && !!to && from > to
   const userId = isUuid(userInput) ? userInput.trim() : ''
   const userInvalid = userInput.trim() !== '' && !userId
 
   const logs = useQuery({
-    queryKey: ['staff', 'audit', page, event, userId],
-    queryFn: () => staffApi.audit(page, event || undefined, userId || undefined),
-    enabled: !userInvalid,
+    queryKey: ['staff', 'audit', page, event, userId, from, to],
+    queryFn: () => staffApi.audit(page, event || undefined, userId || undefined, from || undefined, to || undefined),
+    enabled: !userInvalid && !rangeInvalid,
   })
   const pages = logs.data ? Math.max(1, Math.ceil(logs.data.totalElements / logs.data.size)) : 1
 
@@ -25,7 +28,7 @@ export function AuditPage() {
     <>
       <PageHeader title="Auditoria" description="Eventos de segurança e de operações críticas, do mais recente para o mais antigo. Somente leitura." />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Evento" htmlFor="event">
           <Select id="event" value={event} onChange={(e) => { setEvent(e.target.value); setPage(0) }}>
             <option value="">Todos os eventos</option>
@@ -33,6 +36,12 @@ export function AuditPage() {
               <option key={code} value={code}>{label}</option>
             ))}
           </Select>
+        </Field>
+        <Field label="De" htmlFor="from">
+          <Input id="from" type="date" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setPage(0) }} />
+        </Field>
+        <Field label="Até" htmlFor="to" error={rangeInvalid ? 'A data final vem antes da inicial.' : undefined}>
+          <Input id="to" type="date" value={to} min={from || undefined} aria-invalid={rangeInvalid} onChange={(e) => { setTo(e.target.value); setPage(0) }} />
         </Field>
         <Field label="Usuário (identificador)" htmlFor="user" error={userInvalid ? 'Informe um identificador completo (UUID).' : undefined}>
           <Input id="user" value={userInput} placeholder="Identificador do usuário" aria-invalid={userInvalid} onChange={(e) => { setUserInput(e.target.value); setPage(0) }} />

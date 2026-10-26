@@ -25,18 +25,20 @@ class AuditLogRepositoryAdapter implements AuditLogRepository {
     }
 
     @Override
-    public PageResult<AuditLog> search(AuditEvent event, UserId userId, int page, int size) {
-        String where = " where (:event is null or a.event = :event) and (:user is null or a.userId = :user)";
+    public PageResult<AuditLog> search(AuditEvent event, UserId userId, java.time.Instant from, java.time.Instant to, int page, int size) {
+        String where = " where (:event is null or a.event = :event) and (:user is null or a.userId = :user)"
+                + " and a.occurredAt >= :from and a.occurredAt < :to";
         List<AuditLog> items = bind(em.createQuery("select a from AuditLogEntity a" + where
-                + " order by a.occurredAt desc, a.id desc", AuditLogEntity.class), event, userId)
+                + " order by a.occurredAt desc, a.id desc", AuditLogEntity.class), event, userId, from, to)
                 .setFirstResult(page * size).setMaxResults(size)
                 .getResultList().stream().map(AuditLogEntity::toDomain).toList();
-        long total = bind(em.createQuery("select count(a) from AuditLogEntity a" + where, Long.class), event, userId)
+        long total = bind(em.createQuery("select count(a) from AuditLogEntity a" + where, Long.class), event, userId, from, to)
                 .getSingleResult();
         return new PageResult<>(items, page, size, total);
     }
 
-    private static <T> TypedQuery<T> bind(TypedQuery<T> query, AuditEvent event, UserId userId) {
-        return query.setParameter("event", event).setParameter("user", userId == null ? null : userId.value());
+    private static <T> TypedQuery<T> bind(TypedQuery<T> query, AuditEvent event, UserId userId, java.time.Instant from, java.time.Instant to) {
+        return query.setParameter("event", event).setParameter("user", userId == null ? null : userId.value())
+                .setParameter("from", from).setParameter("to", to);
     }
 }

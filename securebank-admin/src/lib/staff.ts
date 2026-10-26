@@ -74,6 +74,8 @@ export const auditEvents: Record<string, string> = {
   CREDIT_PURCHASE: 'Compra no crédito',
   CREDIT_PURCHASE_FAILED: 'Operação de crédito recusada',
   CREDIT_INVOICE_PAID: 'Fatura paga',
+  CREDIT_INVOICE_REFINANCED: 'Fatura parcelada',
+  CREDIT_LIMIT_CHANGED: 'Limite de crédito alterado',
   INVESTMENT_APPLIED: 'Aplicação em renda fixa',
   INVESTMENT_REDEEMED: 'Resgate de investimento',
   FX_BOUGHT: 'Compra de moeda',

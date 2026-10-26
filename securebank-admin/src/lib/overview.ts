@@ -1,4 +1,5 @@
 import type { Share } from './dashboard'
+import type { Overview } from '../services/staff'
 
 export const transactionTypeLabel: Record<string, string> = {
   DEPOSIT: 'Depósito',
@@ -49,3 +50,32 @@ export function percentOf(part: string | number, whole: string | number): number
 
 /** "2026-10-23" vira "23/10". */
 export const dayLabel = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+
+export interface AttentionItem {
+  key: string
+  tone: 'danger' | 'warn'
+  text: string
+  to: string
+}
+
+/** O que merece a atenção de quem gerencia agora, do mais grave ao menos (vazio = tudo em ordem). */
+export function attentionItems(data: Pick<Overview, 'accounts' | 'credit' | 'security'>): AttentionItem[] {
+  const items: AttentionItem[] = []
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  if (data.credit.overdueInvoices > 0) {
+    items.push({ key: 'overdue', tone: 'danger', text: `${plural(data.credit.overdueInvoices, 'fatura vencida com saldo', 'faturas vencidas com saldo')}, R$ ${Number(data.credit.overdueAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em atraso`, to: '/clientes' })
+  }
+  if (data.security.accessDenied24h > 0) {
+    items.push({ key: 'denied', tone: 'danger', text: `${plural(data.security.accessDenied24h, 'acesso negado', 'acessos negados')} nas últimas 24 h`, to: '/auditoria' })
+  }
+  if (data.security.failedLogins24h > 20) {
+    items.push({ key: 'logins', tone: 'danger', text: `${data.security.failedLogins24h} logins recusados nas últimas 24 h (possível tentativa de invasão)`, to: '/auditoria' })
+  }
+  if (data.security.outboxPending > 100) {
+    items.push({ key: 'outbox', tone: 'danger', text: `${data.security.outboxPending} eventos parados na fila de publicação: os avisos aos clientes podem estar atrasados`, to: '/auditoria' })
+  }
+  if (data.accounts.blocked > 0) {
+    items.push({ key: 'blocked', tone: 'warn', text: `${plural(data.accounts.blocked, 'conta bloqueada', 'contas bloqueadas')}`, to: '/contas' })
+  }
+  return items
+}

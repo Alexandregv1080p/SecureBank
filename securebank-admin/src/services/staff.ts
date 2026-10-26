@@ -101,8 +101,10 @@ export const staffApi = {
   creditCards: (customerId: string) => api<CreditCardAdmin[]>(`/admin/customers/${customerId}/credit-cards`),
   setCreditLimit: (cardId: string, limit: string) => api<{ cardId: string; creditLimit: Money }>(`/admin/credit/cards/${cardId}/limit`, { method: 'PUT', body: { limit } }),
   overview: (days: number) => api<Overview>(`/admin/overview?days=${days}`),
-  audit: (page: number, event?: string, userId?: string) => {
+  audit: (page: number, event?: string, userId?: string, from?: string, to?: string) => {
     const q = new URLSearchParams({ page: String(page), size: '20' })
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
     if (event) q.set('event', event)
     if (userId) q.set('userId', userId)
     return api<Page<AuditLog>>(`/audit?${q}`)

@@ -355,6 +355,25 @@ public class CreditApplicationService {
 
     public record StaffView(Card card, CreditTerms terms, Money used, Money available) {}
 
+    /** Um cartão de crédito titular, para a equipe (404 se não existe ou não é titular de crédito). */
+    @Transactional(readOnly = true)
+    public StaffView staffViewOf(CardId id) {
+        Card card = cards.getAny(id);
+        if (card.kind() != CardKind.CREDIT || credit.mainOf(id).isPresent()) {
+            throw ApplicationException.notFound("Credit card");
+        }
+        CreditTerms terms = termsOf(id);
+        Money used = used(credit.totals(id, terms.limit().currency()), terms.limit().currency());
+        return new StaffView(card, terms, used, CreditPolicy.available(terms, used));
+    }
+
+    /** Confere um novo limite decidido pela equipe sem aplicá-lo (para recusar logo um pedido que nunca seria válido). */
+    @Transactional(readOnly = true)
+    public void checkStaffLimit(CardId id, BigDecimal newLimit) {
+        StaffView view = staffViewOf(id);
+        CreditLimits.checkStaff(new Money(newLimit, view.terms().limit().currency()), view.used());
+    }
+
     private Card creditCard(CustomerId requester, CardId id) {
         Card card = cards.get(requester, id);
         if (card.kind() != CardKind.CREDIT) {

@@ -131,6 +131,10 @@ class SecurityConfig {
                         .requestMatchers(PUT, "/api/v1/admin/fx/rates/*").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(POST, "/api/v1/admin/accounts/*/block", "/api/v1/admin/accounts/*/unblock")
                                 .hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(GET, "/api/v1/admin/approvals", "/api/v1/admin/approvals/pending-count")
+                                .hasAuthority(Permission.DECIDE_APPROVALS.name())
+                        .requestMatchers(POST, "/api/v1/admin/approvals/*/approve", "/api/v1/admin/approvals/*/reject",
+                                "/api/v1/admin/approvals/*/cancel").hasAuthority(Permission.DECIDE_APPROVALS.name())
                         .requestMatchers(PUT, "/api/v1/admin/users/*/assignment").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(POST, "/api/v1/admin/users", "/api/v1/admin/users/*/disable",
                                 "/api/v1/admin/users/*/enable").hasAuthority(Permission.MANAGE_USERS.name())

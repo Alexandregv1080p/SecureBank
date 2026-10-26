@@ -168,11 +168,6 @@ class AdminController {
         return AccountStatusView.of(accounts.block(AccountId.of(id), request.reason()));
     }
 
-    @PostMapping("/accounts/{id}/unblock")
-    AccountStatusView unblock(@PathVariable String id) {
-        return AccountStatusView.of(accounts.unblock(AccountId.of(id)));
-    }
-
     @PostMapping("/users")
     @ResponseStatus(HttpStatus.CREATED)
     UserView createUser(@Valid @RequestBody CreateUserRequest request) {

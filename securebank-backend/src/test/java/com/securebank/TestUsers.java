@@ -68,13 +68,37 @@ public final class TestUsers {
         return read(login(mvc, ADMIN_EMAIL, ADMIN_PASSWORD), "$.accessToken");
     }
 
-    /** Admin cria um usuário da equipe e devolve o access token dele. */
+    /** Corpo de "criar usuário da equipe" para um papel (SUPPORT, RISK, CREDIT, FINANCE, AUDITOR, ADMIN) e nível. */
+    public static String staffBody(String email, String password, String role, String level) {
+        String department = switch (role) {
+            case "SUPPORT" -> "ATENDIMENTO";
+            case "RISK" -> "RISCO";
+            case "CREDIT" -> "CREDITO";
+            case "FINANCE" -> "FINANCEIRO";
+            case "AUDITOR" -> "AUDITORIA";
+            case "ADMIN" -> "DIRETORIA";
+            default -> throw new IllegalArgumentException(role);
+        };
+        return String.format("{\"email\":\"%s\",\"password\":\"%s\",\"department\":\"%s\",\"level\":\"%s\"}",
+                email, password, department, level);
+    }
+
+    /** Admin cria um analista da equipe e devolve o access token dele. */
     public static String staffToken(MockMvc mvc, String role) throws Exception {
+        return staffToken(mvc, role, role.equals("ADMIN") ? "MANAGER" : "ANALYST");
+    }
+
+    public static String staffToken(MockMvc mvc, String role, String level) throws Exception {
+        return read(staffLogin(mvc, role, level), "$.accessToken");
+    }
+
+    /** Cria o usuário da equipe e faz o login dele. */
+    public static MvcResult staffLogin(MockMvc mvc, String role, String level) throws Exception {
         String email = newEmail();
         mvc.perform(bearer(adminToken(mvc), post("/api/v1/admin/users")).contentType(MediaType.APPLICATION_JSON)
-                        .content(String.format("{\"email\":\"%s\",\"password\":\"%s\",\"role\":\"%s\"}", email, PASSWORD, role)))
+                        .content(staffBody(email, PASSWORD, role, level)))
                 .andExpect(status().isCreated());
-        return read(login(mvc, email, PASSWORD), "$.accessToken");
+        return login(mvc, email, PASSWORD);
     }
 
     /** Payload (claims) de um JWT, como JSON — para conferir o que o token carrega. */

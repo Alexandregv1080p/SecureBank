@@ -5,7 +5,7 @@ import { staffApi, type CustomerView } from '../../services/staff'
 import { useAuth } from '../../stores/auth'
 import { accountLabel, accountTypeLabel, formatDate } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
-import { accountStatusLabel, isUuid, searchError } from '../../lib/staff'
+import { accountStatusLabel, canAccess, isUuid, searchError } from '../../lib/staff'
 import { Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { CardsPanel } from './CardsPanel'
 import { CreditCardsPanel } from './CreditCardsPanel'
@@ -107,7 +107,7 @@ export function CustomersPage() {
 }
 
 function CustomerDetail({ id }: { id: string }) {
-  const isAdmin = useAuth((s) => s.claims?.roles.includes('ADMIN'))
+  const isAdmin = useAuth((s) => canAccess(s.claims?.roles ?? [], '/contas'))
   const customer = useQuery({ queryKey: ['staff', 'customer', id], queryFn: () => staffApi.customer(id) })
   const accounts = useQuery({ queryKey: ['staff', 'customer-accounts', id], queryFn: () => staffApi.customerAccounts(id) })
 

@@ -86,11 +86,15 @@ class StaffReadApiIT {
         String account = openAccount(customer.accessToken());
         String support = TestUsers.staffToken(mvc, "SUPPORT");
 
-        for (String path : new String[] {"/api/v1/admin/accounts/" + account, "/api/v1/admin/accounts/" + account + "/limits",
-                "/api/v1/admin/fx/rates", "/api/v1/admin/users"}) {
+        for (String path : new String[] {"/api/v1/admin/accounts/" + account + "/limits", "/api/v1/admin/fx/rates", "/api/v1/admin/users"}) {
             mvc.perform(TestUsers.bearer(support, get(path))).andExpect(status().isForbidden());
             mvc.perform(TestUsers.bearer(customer.accessToken(), get(path))).andExpect(status().isForbidden());
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
         }
+        // o cadastro da conta (sem saldo nem limites) é leitura de quem pode ver clientes: o Atendimento vê, o cliente e o anônimo não
+        String basics = "/api/v1/admin/accounts/" + account;
+        mvc.perform(TestUsers.bearer(support, get(basics))).andExpect(status().isOk());
+        mvc.perform(TestUsers.bearer(customer.accessToken(), get(basics))).andExpect(status().isForbidden());
+        mvc.perform(get(basics)).andExpect(status().isUnauthorized());
     }
 }

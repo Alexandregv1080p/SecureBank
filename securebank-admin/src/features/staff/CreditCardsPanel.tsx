@@ -4,11 +4,11 @@ import { staffApi, type CreditCardAdmin } from '../../services/staff'
 import { useAuth } from '../../stores/auth'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { messageFor } from '../../lib/errors'
-import { cardStatusLabel, creditLimitIssue } from '../../lib/staff'
+import { can, cardStatusLabel, creditLimitIssue } from '../../lib/staff'
 import { sanitizeAmount } from '../../lib/validation'
 import { Alert, Badge, Button, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 
-/** Cartões de crédito do cliente: limite, uso e vencimento. O ADMIN decide o limite (até R$ 100.000,00, nunca abaixo da dívida). */
+/** Cartões de crédito do cliente: limite, uso e vencimento. Quem tem a alçada de Crédito decide o limite (até R$ 100.000,00, nunca abaixo da dívida); acima da alçada do analista, um gerente aprova. */
 export function CreditCardsPanel({ customerId }: { customerId: string }) {
   const cards = useQuery({ queryKey: ['staff', 'credit-cards', customerId], queryFn: () => staffApi.creditCards(customerId) })
   return (
@@ -28,16 +28,20 @@ export function CreditCardsPanel({ customerId }: { customerId: string }) {
 }
 
 function CardRow({ card, customerId }: { card: CreditCardAdmin; customerId: string }) {
-  const isAdmin = useAuth((s) => s.claims?.roles.includes('ADMIN'))
+  const isAdmin = useAuth((s) => can(s.claims?.roles ?? [], 'MANAGE_LIMITS'))
   const client = useQueryClient()
   const [value, setValue] = useState('')
   const [issue, setIssue] = useState<string | null>(null)
+  const [note, setNote] = useState('')
   const [done, setDone] = useState<string | null>(null)
   const change = useMutation({
-    mutationFn: (limit: string) => staffApi.setCreditLimit(card.id, limit),
+    mutationFn: (limit: string) => staffApi.setCreditLimit(card.id, limit, note.trim() || undefined),
     onSuccess: async (r) => {
-      setDone(`Novo limite: ${formatBRL(r.creditLimit.amount)}. O cliente foi avisado.`)
+      setDone('creditLimit' in r
+        ? `Novo limite: ${formatBRL(r.creditLimit.amount)}. O cliente foi avisado.`
+        : `Acima da sua alçada: o pedido de ${formatBRL(r.amount ?? '0')} foi para a aprovação de um gerente de Crédito. O limite só muda quando ele aprovar.`)
       setValue('')
+      setNote('')
       await client.invalidateQueries({ queryKey: ['staff', 'credit-cards', customerId] })
     },
   })
@@ -69,6 +73,11 @@ function CardRow({ card, customerId }: { card: CreditCardAdmin; customerId: stri
             <Field label="Novo limite (R$)" htmlFor={`limit-${card.id}`} error={issue ?? undefined} hint="Múltiplos de R$ 100,00, até R$ 100.000,00">
               <Input id={`limit-${card.id}`} inputMode="decimal" className="num" placeholder="0,00" autoComplete="off" value={value} aria-invalid={!!issue}
                 onChange={(e) => { setValue(sanitizeAmount(e.target.value)); setIssue(null) }} />
+            </Field>
+          </div>
+          <div className="flex-1">
+            <Field label="Motivo (opcional)" htmlFor={`note-${card.id}`} hint="Vai para o gerente se o pedido precisar de aprovação.">
+              <Input id={`note-${card.id}`} maxLength={140} autoComplete="off" value={note} onChange={(e) => setNote(e.target.value)} />
             </Field>
           </div>
           <Button type="submit" loading={change.isPending} className="sm:mt-7">Alterar limite</Button>

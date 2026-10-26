@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.securebank.authorization.domain.Permission;
+import com.securebank.authorization.domain.Department;
 import com.securebank.authorization.domain.Role;
+import com.securebank.authorization.domain.StaffLevel;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.Email;
 import com.securebank.shared.domain.InvalidStateTransitionException;
@@ -21,6 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class AuthenticationDomainTest {
 
     private static final Instant NOW = Instant.parse("2026-10-01T12:00:00Z");
+    private static final Instant LATER = NOW.plusSeconds(60);
     private static final Email EMAIL = new Email("ana.souza@example.com");
 
     // ---------- política de senha ----------
@@ -71,7 +74,15 @@ class AuthenticationDomainTest {
         assertThat(Role.ADMIN.permissions()).contains(Permission.MANAGE_USERS, Permission.MANAGE_LIMITS,
                 Permission.MANAGE_ACCOUNTS, Permission.VIEW_AUDIT);
         // equipe não opera contas de clientes: nada de permissões de cliente
-        for (Role staff : new Role[] {Role.SUPPORT, Role.ADMIN}) {
+        // cada departamento recebe só o papel dele
+        assertThat(Role.RISK.permissions()).contains(Permission.MANAGE_ACCOUNTS, Permission.DECIDE_APPROVALS)
+                .doesNotContain(Permission.MANAGE_LIMITS, Permission.MANAGE_FX_RATES, Permission.MANAGE_USERS);
+        assertThat(Role.CREDIT.permissions()).contains(Permission.MANAGE_LIMITS, Permission.DECIDE_APPROVALS)
+                .doesNotContain(Permission.MANAGE_ACCOUNTS, Permission.MANAGE_FX_RATES, Permission.VIEW_AUDIT);
+        assertThat(Role.FINANCE.permissions()).containsExactlyInAnyOrder(Permission.VIEW_REPORTS, Permission.MANAGE_FX_RATES);
+        // o auditor lê tudo e não altera nada
+        assertThat(Role.AUDITOR.permissions()).containsExactlyInAnyOrder(Permission.VIEW_CUSTOMER, Permission.VIEW_AUDIT, Permission.VIEW_REPORTS);
+        for (Role staff : new Role[] {Role.SUPPORT, Role.RISK, Role.CREDIT, Role.FINANCE, Role.AUDITOR, Role.ADMIN}) {
             assertThat(staff.permissions()).doesNotContain(Permission.VIEW_ACCOUNT, Permission.CREATE_TRANSFER,
                     Permission.DEPOSIT, Permission.WITHDRAW, Permission.CREATE_PAYMENT);
             assertThat(staff.isStaff()).isTrue();
@@ -87,17 +98,36 @@ class AuthenticationDomainTest {
         assertThat(customer.role()).isEqualTo(Role.CUSTOMER);
         assertThat(customer.customerId()).isNotNull();
 
-        User staff = User.staff(EMAIL, "hash", Role.SUPPORT, NOW);
+        User staff = User.staff(EMAIL, "hash", Department.ATENDIMENTO, StaffLevel.ANALYST, NOW);
         assertThat(staff.customerId()).isNull();
 
         assertThatThrownBy(() -> User.forCustomer(EMAIL, "hash", null, NOW)).isInstanceOf(InvalidValueException.class);
-        assertThatThrownBy(() -> User.staff(EMAIL, "hash", Role.CUSTOMER, NOW)).isInstanceOf(InvalidValueException.class);
-        assertThatThrownBy(() -> User.staff(EMAIL, " ", Role.ADMIN, NOW)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> User.staff(EMAIL, "hash", null, StaffLevel.ANALYST, NOW)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> User.staff(EMAIL, " ", Department.DIRETORIA, StaffLevel.MANAGER, NOW)).isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
+    void thePositionComesFromTheDepartmentAndTheBoardOnlyHasManagers() {
+        User analyst = User.staff(EMAIL, "hash", Department.RISCO, StaffLevel.ANALYST, NOW);
+        assertThat(analyst.role()).isEqualTo(Role.RISK);
+        assertThat(analyst.isManager()).isFalse();
+
+        analyst.assign(Department.CREDITO, StaffLevel.MANAGER, LATER);
+        assertThat(analyst.role()).isEqualTo(Role.CREDIT);
+        assertThat(analyst.isManager()).isTrue();
+        assertThat(analyst.updatedAt()).isEqualTo(LATER);
+
+        assertThatThrownBy(() -> User.staff(EMAIL, "hash", Department.DIRETORIA, StaffLevel.ANALYST, NOW))
+                .isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> analyst.assign(Department.DIRETORIA, StaffLevel.ANALYST, LATER)).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> analyst.assign(null, StaffLevel.MANAGER, LATER)).isInstanceOf(InvalidValueException.class);
+        User customer = User.forCustomer(EMAIL, "hash", CustomerId.newId(), NOW);
+        assertThatThrownBy(() -> customer.assign(Department.RISCO, StaffLevel.ANALYST, LATER)).isInstanceOf(InvalidValueException.class);
     }
 
     @Test
     void disableAndEnableAreExplicitTransitions() {
-        User user = User.staff(EMAIL, "hash", Role.SUPPORT, NOW);
+        User user = User.staff(EMAIL, "hash", Department.ATENDIMENTO, StaffLevel.ANALYST, NOW);
 
         user.disable(NOW);
         assertThat(user.isActive()).isFalse();

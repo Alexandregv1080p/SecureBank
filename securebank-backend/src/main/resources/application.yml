@@ -59,6 +59,7 @@ securebank:
     audience: securebank-api
   security:
     mfa-encryption-key: ${MFA_ENCRYPTION_KEY:}   # obrigatória: AES-256 em Base64 (openssl rand -base64 32)
+    staff-mfa-required: ${STAFF_MFA_REQUIRED:true}   # equipe só opera com a verificação em duas etapas
     jwt:
       private-key: ${JWT_PRIVATE_KEY:}           # PEM PKCS#8; vazio = par efêmero (só dev)
       public-key: ${JWT_PUBLIC_KEY:}

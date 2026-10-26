@@ -23,6 +23,7 @@ export function LoginPage() {
   const [mfaToken, setMfaToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const from = (location.state as { from?: string } | null)?.from ?? '/'
+  const notice = (location.state as { notice?: string } | null)?.notice
 
   const first = useForm({ resolver: zodResolver(credentials), defaultValues: { email: '', password: '' } })
   const mfa = useForm({ resolver: zodResolver(second), defaultValues: { code: '' } })
@@ -101,6 +102,7 @@ export function LoginPage() {
   return (
     <AuthLayout title="Acesso da equipe" subtitle="Entre com o e-mail e a senha de funcionário.">
       <form onSubmit={first.handleSubmit(submitCredentials)} noValidate className="flex flex-col gap-5">
+        {notice && !error && <Alert tone="success">{notice}</Alert>}
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="E-mail" htmlFor="email" error={first.formState.errors.email?.message}>
           <Input id="email" type="email" autoComplete="username" autoFocus maxLength={254} aria-invalid={!!first.formState.errors.email} {...first.register('email')} />

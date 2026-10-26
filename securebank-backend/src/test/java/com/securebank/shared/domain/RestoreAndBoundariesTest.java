@@ -18,7 +18,9 @@ import com.securebank.authentication.domain.Session;
 import com.securebank.authentication.domain.SessionRevocation;
 import com.securebank.authentication.domain.User;
 import com.securebank.authentication.domain.UserStatus;
+import com.securebank.authorization.domain.Department;
 import com.securebank.authorization.domain.Role;
+import com.securebank.authorization.domain.StaffLevel;
 import com.securebank.customer.domain.Customer;
 import com.securebank.limit.domain.Limit;
 import com.securebank.limit.domain.LimitType;
@@ -124,9 +126,9 @@ class RestoreAndBoundariesTest {
 
     @Test
     void authenticationAggregatesSurviveARoundTrip() {
-        User user = User.staff(EMAIL, "hash", Role.ADMIN, NOW);
+        User user = User.staff(EMAIL, "hash", Department.DIRETORIA, StaffLevel.MANAGER, NOW);
         user.disable(LATER);
-        User restoredUser = User.restore(user.id(), user.email(), user.passwordHash(), user.role(), user.customerId(),
+        User restoredUser = User.restore(user.id(), user.email(), user.passwordHash(), user.role(), user.department(), user.level(), user.customerId(),
                 user.status(), user.createdAt(), user.updatedAt());
         assertThat(restoredUser).usingRecursiveComparison().isEqualTo(user);
         assertThat(restoredUser.status()).isEqualTo(UserStatus.DISABLED);

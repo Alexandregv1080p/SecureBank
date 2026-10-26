@@ -1,4 +1,5 @@
 import { api } from '../lib/api'
+import type { Department, StaffLevel, StaffRole } from '../lib/staff'
 import type { Money, Page } from './types'
 
 export interface AuditLog {
@@ -51,9 +52,37 @@ export interface FxRateAdmin {
 export interface StaffUser {
   id: string
   email: string
-  role: 'ADMIN' | 'SUPPORT'
+  role: StaffRole
+  department: Department
+  level: StaffLevel
   status: string
+  mfaEnabled: boolean
 }
+
+export interface Approval {
+  id: string
+  kind: 'CREDIT_LIMIT' | 'ACCOUNT_UNBLOCK'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED'
+  subjectId: string
+  subject: string
+  customerId: string
+  amount: string | null
+  /** Limite do cartão antes do pedido (só no pedido de limite). */
+  currentLimit: string | null
+  note: string | null
+  department: Department
+  requestedBy: string
+  createdAt: string
+  decidedBy: string | null
+  decisionNote: string | null
+  decidedAt: string | null
+  canDecide: boolean
+  canCancel: boolean
+}
+
+/** O que volta de uma ação com alçada: feita na hora (formato antigo) ou virou pedido (um Approval). */
+export type LimitResult = { cardId: string; creditLimit: Money } | Approval
+export type UnblockResult = { id: string; status: string } | Approval
 
 export interface Overview {
   generatedAt: string
@@ -99,7 +128,7 @@ export const staffApi = {
   blockCard: (cardId: string, reason: string) => api<CardAdmin>(`/admin/cards/${cardId}/block`, { method: 'POST', body: { reason } }),
   unblockCard: (cardId: string) => api<CardAdmin>(`/admin/cards/${cardId}/unblock`, { method: 'POST' }),
   creditCards: (customerId: string) => api<CreditCardAdmin[]>(`/admin/customers/${customerId}/credit-cards`),
-  setCreditLimit: (cardId: string, limit: string) => api<{ cardId: string; creditLimit: Money }>(`/admin/credit/cards/${cardId}/limit`, { method: 'PUT', body: { limit } }),
+  setCreditLimit: (cardId: string, limit: string, note?: string) => api<LimitResult>(`/admin/credit/cards/${cardId}/limit`, { method: 'PUT', body: { limit, note } }),
   overview: (days: number) => api<Overview>(`/admin/overview?days=${days}`),
   audit: (page: number, event?: string, userId?: string, from?: string, to?: string) => {
     const q = new URLSearchParams({ page: String(page), size: '20' })
@@ -118,13 +147,20 @@ export const staffApi = {
   changeLimit: (accountId: string, type: string, perOperation: string, daily: string) =>
     api<unknown>(`/admin/accounts/${accountId}/limits/${type}`, { method: 'PUT', body: { perOperation, daily } }),
   block: (accountId: string, reason: string) => api<unknown>(`/admin/accounts/${accountId}/block`, { method: 'POST', body: { reason } }),
-  unblock: (accountId: string) => api<unknown>(`/admin/accounts/${accountId}/unblock`, { method: 'POST' }),
+  unblock: (accountId: string, note?: string) => api<UnblockResult>(`/admin/accounts/${accountId}/unblock`, { method: 'POST', body: { note } }),
   fxRates: () => api<FxRateAdmin[]>('/admin/fx/rates'),
   changeFxRate: (currency: string, mid: string, spreadPercent: string) =>
     api<FxRateAdmin>(`/admin/fx/rates/${currency}`, { method: 'PUT', body: { mid, spreadPercent } }),
   users: () => api<StaffUser[]>('/admin/users'),
-  createUser: (email: string, password: string, role: 'ADMIN' | 'SUPPORT') =>
-    api<StaffUser>('/admin/users', { method: 'POST', body: { email, password, role } }),
+  createUser: (email: string, password: string, department: Department, level: StaffLevel) =>
+    api<StaffUser>('/admin/users', { method: 'POST', body: { email, password, department, level } }),
+  assignUser: (id: string, department: Department, level: StaffLevel) =>
+    api<StaffUser>(`/admin/users/${id}/assignment`, { method: 'PUT', body: { department, level } }),
+  approvals: (status?: Approval['status']) => api<Approval[]>(`/admin/approvals${status ? `?status=${status}` : ''}`),
+  pendingApprovals: () => api<{ pending: number }>('/admin/approvals/pending-count'),
+  approve: (id: string, note?: string) => api<Approval>(`/admin/approvals/${id}/approve`, { method: 'POST', body: { note } }),
+  reject: (id: string, note: string) => api<Approval>(`/admin/approvals/${id}/reject`, { method: 'POST', body: { note } }),
+  cancelApproval: (id: string) => api<Approval>(`/admin/approvals/${id}/cancel`, { method: 'POST' }),
   disableUser: (id: string) => api<void>(`/admin/users/${id}/disable`, { method: 'POST' }),
   enableUser: (id: string) => api<void>(`/admin/users/${id}/enable`, { method: 'POST' }),
 }

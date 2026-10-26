@@ -122,7 +122,7 @@ class AuthorizationIT {
                 .andExpect(status().isForbidden());
         mvc.perform(bearer(support, post("/api/v1/admin/accounts/" + account + "/block"))).andExpect(status().isForbidden());
         mvc.perform(bearer(support, post("/api/v1/admin/users")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"y@example.com\",\"password\":\"" + TestUsers.PASSWORD + "\",\"role\":\"ADMIN\"}"))
+                .content(TestUsers.staffBody("y@example.com", TestUsers.PASSWORD, "ADMIN", "MANAGER")))
                 .andExpect(status().isForbidden());
     }
 
@@ -195,7 +195,9 @@ class AuthorizationIT {
 
         // senha fraca, papel inválido para staff e duplicidade
         createUser(admin, email, "short", "SUPPORT").andExpect(status().isBadRequest());
-        createUser(admin, email, TestUsers.PASSWORD, "CUSTOMER").andExpect(status().isBadRequest());
+        mvc.perform(bearer(admin, post("/api/v1/admin/users")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"" + TestUsers.PASSWORD + "\",\"department\":\"CUSTOMER\",\"level\":\"ANALYST\"}"))
+                .andExpect(status().isBadRequest());
         MvcResult created = createUser(admin, email, TestUsers.PASSWORD, "SUPPORT").andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("SUPPORT")).andReturn();
         createUser(admin, email, TestUsers.PASSWORD, "SUPPORT").andExpect(status().isConflict());
@@ -285,7 +287,7 @@ class AuthorizationIT {
 
     private ResultActions createUser(String adminToken, String email, String password, String role) throws Exception {
         return mvc.perform(bearer(adminToken, post("/api/v1/admin/users")).contentType(MediaType.APPLICATION_JSON)
-                .content(String.format("{\"email\":\"%s\",\"password\":\"%s\",\"role\":\"%s\"}", email, password, role)));
+                .content(TestUsers.staffBody(email, password, role, role.equals("ADMIN") ? "MANAGER" : "ANALYST")));
     }
 
     private MvcResult openAccountResult(String token) throws Exception {

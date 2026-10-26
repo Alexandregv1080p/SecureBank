@@ -23,7 +23,7 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.stereotype.Component;
 
-/** Claims do access token (seção 16): sub, iss, aud, iat, exp, roles — mais jti, sid (sessão), cid e amr. Nada sensível. */
+/** Claims do access token (seção 16): sub, iss, aud, iat, exp, roles — mais jti, sid (sessão), cid, amr e, na equipe, dept e lvl. Nada sensível. */
 @Component
 class JwtTokenIssuer implements TokenIssuer {
 
@@ -57,6 +57,9 @@ class JwtTokenIssuer implements TokenIssuer {
                 .claim("amr", session.mfaVerified() ? List.of("pwd", "otp") : List.of("pwd"));
         if (user.customerId() != null) {
             claims.claim("cid", user.customerId().toString());
+        }
+        if (user.department() != null) { // só a equipe: departamento e nível servem de rótulo na tela; o servidor decide pelo papel
+            claims.claim("dept", user.department().name()).claim("lvl", user.level().name());
         }
         return new AccessToken(sign(claims.build()), settings.accessTokenTtl().toSeconds());
     }

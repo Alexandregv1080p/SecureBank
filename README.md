@@ -20,7 +20,7 @@ docker compose up -d --build
 | Serviço    | URL                                                |
 | ---------- | -------------------------------------------------- |
 | Web        | http://localhost:3500                              |
-| Admin      | http://localhost:3600 (só equipe; login do ADMIN/SUPPORT) |
+| Admin      | http://localhost:3600 (só equipe; departamentos, aprovações e 2FA obrigatório) |
 | PostgreSQL | `127.0.0.1:5439` (db/usuário `securebank`)         |
 
 Portas configuráveis em `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`).

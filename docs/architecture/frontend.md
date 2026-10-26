@@ -55,21 +55,26 @@ o limite é a carteira), a estimativa em reais na hora e o **comprovante** (impr
 baixo), e o servidor é quem vale. O site manda a cotação que a pessoa **viu**: se a equipe a mudou no meio do caminho, a operação é recusada (`FX_RATE_CHANGED`), nada acontece, a tela recarrega a cotação nova e a pessoa
 decide de novo. Para cotações o front evita `toFixed` (erra metades como 5,56525) e usa inteiros.
 
-## Painel da equipe (`/equipe`)
+## Admin da equipe (`securebank-admin`, porta 3600)
 
-Quem tem papel ADMIN ou SUPPORT cai em `/equipe` ao entrar (cliente nunca entra: `RequireStaff`). O menu e as rotas mostram só o que o papel permite
-(`lib/staff.ts`), mas **quem decide é sempre o servidor**: cada chamada confere a permissão (`VIEW_AUDIT`, `VIEW_CUSTOMER`, `MANAGE_ACCOUNTS`,
-`MANAGE_LIMITS`, `MANAGE_FX_RATES`, `MANAGE_USERS`). Seções:
+App separado do internet banking, com identidade visual própria (grafite e ciano). Só a equipe entra (cliente é recusado no login e
+a sessão de cliente nunca é adotada). O menu e as rotas mostram só o que as **permissões do papel** permitem (`lib/staff.ts`,
+espelho de `Role.java`), mas **quem decide é sempre o servidor**: cada chamada confere a permissão. Quem é de qual departamento e
+nível: [Equipe, alçadas e 2FA](../security/equipe.md).
 
-| Seção | Quem | O que faz |
+| Seção | Quem vê | O que faz |
 | --- | --- | --- |
-| Auditoria | ADMIN, SUPPORT | Trilha paginada com filtro por evento e usuário; o id da conta leva direto a Contas e limites |
-| Clientes | ADMIN, SUPPORT | Busca por nome, e-mail, telefone ou CPF completo (CPF mascarado), com paginação, e as contas do cliente; cada busca é auditada |
-| Contas e limites | ADMIN | Bloquear/desbloquear (confirmação em dois passos) e ajustar limites por tipo, com uso de hoje |
-| Câmbio | ADMIN | Cotação comercial e spread por moeda, com prévia de compra/venda e trava de 20% (confirmada pelo servidor) |
-| Equipe | ADMIN | Listar, criar, desativar e reativar usuários da equipe (não desativa a si mesmo) |
+| Visão geral | Financeiro, Auditoria, Diretoria | Painel gerencial e o bloco "Atenção agora" |
+| Aprovações | Risco, Crédito, Diretoria | Fila de pedidos acima da alçada (aprovar, recusar com motivo, cancelar o próprio); selo com os pendentes |
+| Auditoria | Atendimento, Risco, Auditoria, Diretoria | Trilha paginada com filtro por evento, período e usuário |
+| Clientes | Atendimento, Risco, Crédito, Auditoria, Diretoria | Busca (CPF mascarado), contas e cartões; bloquear cartão (Risco) e limite de crédito (Crédito); cada busca é auditada |
+| Contas e limites | Risco, Crédito, Diretoria | Bloquear/desbloquear (Risco; desbloqueio do analista vira pedido) e limites por tipo (Crédito) |
+| Câmbio | Financeiro, Diretoria | Cotação comercial e spread, com prévia e trava de 20% (confirmada pelo servidor) |
+| Equipe | Diretoria | Departamentos com gerentes e analistas, criar, mudar de posição, desativar e reativar |
+| Minha segurança | Toda a equipe | 2FA (QR), troca de senha e dispositivos conectados |
 
-Ações sensíveis (bloquear, desativar) pedem um segundo clique. Toda alteração entra na auditoria. No celular, a auditoria vira lista de cartões (a tabela fica para telas largas) e o menu rola de lado levando a aba ativa para a vista.
+A equipe só opera com a verificação em duas etapas: a sessão sem ela é levada a **Minha segurança** e o resto responde `MFA_REQUIRED`.
+Ações sensíveis (bloquear, desativar, aprovar) pedem um segundo clique. Toda alteração entra na auditoria. No celular, a auditoria vira lista de cartões (a tabela fica para telas largas) e o menu rola de lado levando a aba ativa para a vista.
 
 ## Dinheiro e idempotência no front
 

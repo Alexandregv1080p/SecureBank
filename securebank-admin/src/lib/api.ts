@@ -81,6 +81,7 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const text = await res.text()
   const json = text ? JSON.parse(text) : null
   if (!res.ok) {
+    if (res.status === 403 && json?.code === 'MFA_REQUIRED') useAuth.getState().setMfaRequired(true)
     throw new ApiError(res.status, json?.code ?? 'ERROR', json?.message ?? 'Erro', json?.traceId)
   }
   return json as T

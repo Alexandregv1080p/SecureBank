@@ -4,7 +4,8 @@ import com.securebank.account.application.AccountApplicationService;
 import com.securebank.account.domain.Account;
 import com.securebank.authentication.application.UserAdminApplicationService;
 import com.securebank.authentication.domain.User;
-import com.securebank.authorization.domain.Role;
+import com.securebank.authorization.domain.Department;
+import com.securebank.authorization.domain.StaffLevel;
 import com.securebank.customer.application.CustomerApplicationService;
 import com.securebank.customer.application.CustomerSearchService;
 import com.securebank.customer.domain.Customer;
@@ -90,12 +91,15 @@ class AdminController {
     }
 
     record CreateUserRequest(@NotBlank @Size(max = 254) String email, @NotBlank @Size(max = 128) String password,
-            @NotNull Role role) {}
+            @NotNull Department department, @NotNull StaffLevel level) {}
 
-    record UserView(UUID id, String email, String role, String status) {
+    record AssignRequest(@NotNull Department department, @NotNull StaffLevel level) {}
 
-        static UserView of(User u) {
-            return new UserView(u.id().value(), u.email().value(), u.role().name(), u.status().name());
+    record UserView(UUID id, String email, String role, String department, String level, String status, boolean mfaEnabled) {
+
+        static UserView of(User u, boolean mfaEnabled) {
+            return new UserView(u.id().value(), u.email().value(), u.role().name(), u.department().name(), u.level().name(),
+                    u.status().name(), mfaEnabled);
         }
     }
 
@@ -149,7 +153,7 @@ class AdminController {
 
     @GetMapping("/users")
     List<UserView> staff() {
-        return users.listStaff().stream().map(UserView::of).toList();
+        return users.listStaff().stream().map(m -> UserView.of(m.user(), m.mfaEnabled())).toList();
     }
 
     @PutMapping("/accounts/{accountId}/limits/{type}")
@@ -164,15 +168,16 @@ class AdminController {
         return AccountStatusView.of(accounts.block(AccountId.of(id), request.reason()));
     }
 
-    @PostMapping("/accounts/{id}/unblock")
-    AccountStatusView unblock(@PathVariable String id) {
-        return AccountStatusView.of(accounts.unblock(AccountId.of(id)));
-    }
-
     @PostMapping("/users")
     @ResponseStatus(HttpStatus.CREATED)
     UserView createUser(@Valid @RequestBody CreateUserRequest request) {
-        return UserView.of(users.createStaff(request.email(), request.password(), request.role()));
+        return UserView.of(users.createStaff(request.email(), request.password(), request.department(), request.level()), false);
+    }
+
+    /** Muda departamento e nível (o papel acompanha o departamento); as sessões da pessoa caem. */
+    @PutMapping("/users/{id}/assignment")
+    UserView assignUser(@PathVariable String id, @Valid @RequestBody AssignRequest request) {
+        return UserView.of(users.assign(UserId.of(id), request.department(), request.level()), false);
     }
 
     @PostMapping("/users/{id}/disable")

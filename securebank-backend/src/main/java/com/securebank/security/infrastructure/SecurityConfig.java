@@ -40,7 +40,8 @@ class SecurityConfig {
     SecurityFilterChain apiSecurity(HttpSecurity http, JwtDecoder accessTokenDecoder,
             JwtAuthenticationConverter jwtAuthenticationConverter, SecurityHandlers handlers, RateLimiter limiter,
             RateLimitProperties rateLimit, ErrorWriter errors, IdempotencyStore idempotency,
-            BankTime time) throws Exception {
+            BankTime time, @org.springframework.beans.factory.annotation.Value("${securebank.security.staff-mfa-required:true}") boolean staffMfaRequired)
+            throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -123,7 +124,7 @@ class SecurityConfig {
                         // equipe
                         .requestMatchers(GET, "/api/v1/admin/customers", "/api/v1/admin/customers/*", "/api/v1/admin/customers/*/accounts")
                                 .hasAuthority(Permission.VIEW_CUSTOMER.name())
-                        .requestMatchers(GET, "/api/v1/admin/accounts/*").hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(GET, "/api/v1/admin/accounts/*").hasAuthority(Permission.VIEW_CUSTOMER.name())
                         .requestMatchers(GET, "/api/v1/admin/accounts/*/limits").hasAuthority(Permission.MANAGE_LIMITS.name())
                         .requestMatchers(GET, "/api/v1/admin/fx/rates").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(GET, "/api/v1/admin/users").hasAuthority(Permission.MANAGE_USERS.name())
@@ -131,6 +132,11 @@ class SecurityConfig {
                         .requestMatchers(PUT, "/api/v1/admin/fx/rates/*").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(POST, "/api/v1/admin/accounts/*/block", "/api/v1/admin/accounts/*/unblock")
                                 .hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(GET, "/api/v1/admin/approvals", "/api/v1/admin/approvals/pending-count")
+                                .hasAuthority(Permission.DECIDE_APPROVALS.name())
+                        .requestMatchers(POST, "/api/v1/admin/approvals/*/approve", "/api/v1/admin/approvals/*/reject",
+                                "/api/v1/admin/approvals/*/cancel").hasAuthority(Permission.DECIDE_APPROVALS.name())
+                        .requestMatchers(PUT, "/api/v1/admin/users/*/assignment").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(POST, "/api/v1/admin/users", "/api/v1/admin/users/*/disable",
                                 "/api/v1/admin/users/*/enable").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(GET, "/api/v1/audit").hasAuthority(Permission.VIEW_AUDIT.name())
@@ -142,6 +148,9 @@ class SecurityConfig {
                         .accessDeniedHandler(handlers))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(handlers).accessDeniedHandler(handlers));
 
+        if (staffMfaRequired) {
+            http.addFilterAfter(new StaffMfaFilter(errors), BearerTokenAuthenticationFilter.class);
+        }
         if (rateLimit.enabled()) {
             http.addFilterAfter(new RateLimitFilter(RateLimitFilter.rulesFrom(rateLimit), limiter, errors),
                     BearerTokenAuthenticationFilter.class);

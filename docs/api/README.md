@@ -25,8 +25,12 @@ Fluxos, tokens e MFA em [`docs/security/authentication.md`](../security/authenti
 | `GET /security/sessions`, `DELETE /security/sessions/{id}` | Sessões ativas |
 | `POST /security/password` | Troca de senha (revoga as outras sessões); a nova senha segue a mesma política e precisa ser diferente da atual |
 | `POST /security/mfa`, `/mfa/confirm`, `DELETE /security/mfa` | MFA em duas etapas; desligar exige código |
-| `GET /audit` | Auditoria (SUPPORT/ADMIN) |
-| `/admin/**` | Limites, bloqueio de conta e de cartão (com motivo), limite de crédito, visão gerencial `GET /admin/overview` (só ADMIN, `VIEW_REPORTS`), usuários da equipe (ADMIN); consulta de cliente e de cartões (SUPPORT/ADMIN) |
+| `GET /audit` | Auditoria (`VIEW_AUDIT`: Atendimento, Risco, Auditoria e Diretoria) |
+| `/admin/**` | Limites, bloqueio de conta e de cartão (com motivo), limite de crédito, visão gerencial `GET /admin/overview` (`VIEW_REPORTS`), usuários da equipe (ADMIN); consulta de cliente e de cartões (`VIEW_CUSTOMER`). Cada rota exige a permissão do departamento (veja [equipe](../security/equipe.md)) |
+| `PUT /admin/credit/cards/{id}/limit`, `POST /admin/accounts/{id}/unblock` | **Alçadas**: `200` quando quem chama pode decidir sozinho; `202` com o pedido (`kind`, `status: PENDING`) quando precisa de um gerente |
+| `GET /admin/approvals?status=`, `GET /admin/approvals/pending-count`, `POST /admin/approvals/{id}/approve\|reject\|cancel` | Fila de aprovações (`DECIDE_APPROVALS`): analista vê os próprios, gerente os do departamento, Diretoria todos. Recusar exige motivo; quem pediu nunca decide o próprio pedido |
+| `PUT /admin/users/{id}/assignment` | Muda departamento e nível (ADMIN); as sessões da pessoa caem. Criar usuário recebe `department` e `level` |
+| `GET /security/mfa` | `{enabled, required}`: `required` é verdadeiro para a equipe quando a verificação em duas etapas é exigida |
 
 ## Endpoints
 

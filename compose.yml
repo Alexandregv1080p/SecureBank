@@ -81,6 +81,7 @@ services:
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?defina MFA_ENCRYPTION_KEY no .env}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      STAFF_MFA_REQUIRED: ${STAFF_MFA_REQUIRED:-true}   # a equipe só opera com a verificação em duas etapas
       API_DOCS_ENABLED: "true"
       LOGGING_STRUCTURED_FORMAT_CONSOLE: logstash
     # hardening: sistema de arquivos somente leitura, sem capabilities, sem escalar privilégio, com teto de recursos

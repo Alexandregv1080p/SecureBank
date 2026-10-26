@@ -11,7 +11,7 @@ export function TopBar() {
         <ThemeToggle className="p-2" />
       </span>
       <span className="flex items-center gap-3 rounded-2xl border border-line bg-surface py-1.5 pl-1.5 pr-4">
-        <span className="grid size-9 place-items-center rounded-xl bg-accent text-sm font-semibold text-accent-fg">EQ</span>
+        <span className="grid size-9 place-items-center rounded-lg bg-accent text-sm font-semibold text-accent-fg">EQ</span>
         <span className="leading-tight">
           <span className="block text-sm font-medium">Equipe do banco</span>
           <span className="block max-w-44 truncate text-xs text-muted">{roles.map(roleLabel).join(', ')}</span>

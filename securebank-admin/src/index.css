@@ -3,85 +3,85 @@
 @import '@fontsource-variable/geist-mono';
 
 /*
- * Tokens de design. O padrão é um escuro índigo com cartões de vidro; o claro é uma alternativa escolhida pelo
- * usuário (data-theme no <html>, definido por /theme.js antes da primeira pintura). Um acento de interface (violeta);
- * as demais cores existem para distinguir séries nos gráficos e estados (ok, aviso, erro). Contraste AA nos dois temas.
+ * Identidade do Admin: grafite azulado com acento ciano e cantos mais retos, de propósito diferente do internet banking
+ * (índigo e violeta) para ninguém confundir os dois apps. Ok, aviso e erro seguem os mesmos significados.
+ * O padrão é escuro; o claro é escolha da pessoa (data-theme no <html>, definido por /theme.js antes da primeira pintura).
  */
 :root {
-  --bg: #0f0b2e;
-  --surface: rgba(255, 255, 255, 0.055);
-  --surface-2: rgba(255, 255, 255, 0.085);
-  --border: rgba(255, 255, 255, 0.11);
-  --text: #f1efff;
-  --muted: #a7a3d6;
-  --accent: #a191ff;
-  --accent-hover: #b9adff;
-  --accent-fg: #130e3a;
-  --accent-soft: rgba(161, 145, 255, 0.2);
+  --bg: #0b1119;
+  --surface: rgba(148, 170, 200, 0.07);
+  --surface-2: rgba(148, 170, 200, 0.12);
+  --border: rgba(148, 170, 200, 0.18);
+  --text: #e8eef6;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-fg: #04202f;
+  --accent-soft: rgba(56, 189, 248, 0.16);
   --danger: #ff8fa3;
   --danger-soft: rgba(255, 111, 140, 0.16);
   --ok: #5fe3ad;
   --ok-soft: rgba(95, 227, 173, 0.14);
   --warn: #ffc562;
   --warn-soft: rgba(255, 197, 98, 0.15);
-  --chart-1: #a191ff;
-  --chart-2: #38d9c7;
-  --chart-3: #ffb454;
-  --chart-4: #ff7a96;
-  --chart-5: #62b8ff;
-  --chart-6: #7fe3a9;
-  --chart-7: #d58cf5;
-  --chart-8: #a7a3d6;
-  --glow-a: rgba(122, 92, 255, 0.5);
-  --glow-b: rgba(56, 217, 199, 0.13);
-  --page: linear-gradient(165deg, #0f0b2e 0%, #1b1253 55%, #140e3d 100%);
-  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -28px rgba(5, 2, 30, 0.9);
-  --panel-solid: #1d1558;
-  --radius: 12px;
+  --chart-1: #38bdf8;
+  --chart-2: #2dd4bf;
+  --chart-3: #fbbf24;
+  --chart-4: #fb7185;
+  --chart-5: #818cf8;
+  --chart-6: #86efac;
+  --chart-7: #e879f9;
+  --chart-8: #94a3b8;
+  --glow-a: rgba(56, 189, 248, 0.22);
+  --glow-b: rgba(45, 212, 191, 0.08);
+  --page: linear-gradient(170deg, #0b1119 0%, #101a27 60%, #0d1520 100%);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -28px rgba(0, 0, 0, 0.8);
+  --panel-solid: #131d2b;
+  --radius: 8px;
   /* Campos de formulário: fundo próprio e borda com contraste de não-texto (>= 3:1) sobre o fundo e sobre os cartões. */
-  --field-bg: rgba(255, 255, 255, 0.07);
-  --field-bg-disabled: rgba(255, 255, 255, 0.03);
-  --field-border: rgba(255, 255, 255, 0.42);
-  --field-border-hover: rgba(255, 255, 255, 0.62);
-  --field-placeholder: #9b97c7;
+  --field-bg: rgba(148, 170, 200, 0.09);
+  --field-bg-disabled: rgba(148, 170, 200, 0.04);
+  --field-border: rgba(170, 190, 215, 0.5);
+  --field-border-hover: rgba(190, 208, 228, 0.72);
+  --field-placeholder: #8393a8;
   color-scheme: dark;
 }
 
 :root[data-theme='light'] {
-  --bg: #f1f0fb;
-  --surface: rgba(255, 255, 255, 0.92);
-  --surface-2: #f4f3fd;
-  --border: #e1def3;
-  --text: #17123d;
-  --muted: #5f5b88;
-  --accent: #5b4bd6;
-  --accent-hover: #4a3bc0;
+  --bg: #eef2f7;
+  --surface: rgba(255, 255, 255, 0.94);
+  --surface-2: #f1f5f9;
+  --border: #d5dde8;
+  --text: #0e1a2b;
+  --muted: #526179;
+  --accent: #0369a1;
+  --accent-hover: #075985;
   --accent-fg: #ffffff;
-  --accent-soft: #e8e5fc;
+  --accent-soft: #dbeefb;
   --danger: #b42318;
   --danger-soft: #fdecea;
   --ok: #17663a;
   --ok-soft: #e4f4ea;
   --warn: #8a5a00;
   --warn-soft: #fff4dc;
-  --chart-1: #6a58e8;
+  --chart-1: #0284c7;
   --chart-2: #0f9d8f;
   --chart-3: #d98a1e;
   --chart-4: #e5506f;
-  --chart-5: #3b8fd9;
+  --chart-5: #5b63e0;
   --chart-6: #3fae78;
-  --chart-7: #a15fd8;
-  --chart-8: #7c78a8;
-  --glow-a: rgba(122, 92, 255, 0.16);
-  --glow-b: rgba(15, 157, 143, 0.08);
-  --page: linear-gradient(165deg, #f4f2ff 0%, #ecebfa 100%);
-  --card-shadow: 0 1px 2px rgba(23, 18, 61, 0.05), 0 18px 36px -24px rgba(60, 40, 160, 0.3);
+  --chart-7: #b94fd1;
+  --chart-8: #64748b;
+  --glow-a: rgba(2, 132, 199, 0.12);
+  --glow-b: rgba(15, 157, 143, 0.07);
+  --page: linear-gradient(170deg, #f3f6fa 0%, #e8eef5 100%);
+  --card-shadow: 0 1px 2px rgba(14, 26, 43, 0.06), 0 16px 32px -24px rgba(14, 40, 80, 0.3);
   --panel-solid: #ffffff;
   --field-bg: #ffffff;
-  --field-bg-disabled: #eceaf7;
-  --field-border: #837fae;
-  --field-border-hover: #5f5b88;
-  --field-placeholder: #6e6996;
+  --field-bg-disabled: #e6ebf2;
+  --field-border: #75869d;
+  --field-border-hover: #526179;
+  --field-placeholder: #66768c;
   color-scheme: light;
 }
 
@@ -137,7 +137,7 @@ h3 {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 12px;
   box-shadow: var(--card-shadow);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -149,7 +149,7 @@ h3 {
     radial-gradient(420px 240px at 100% 0%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%),
     var(--surface);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-  border-radius: 20px;
+  border-radius: 12px;
   box-shadow: var(--card-shadow);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);

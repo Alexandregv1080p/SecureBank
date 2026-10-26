@@ -19,12 +19,12 @@ const icons: Record<string, typeof House> = {
 function Logo() {
   return (
     <span className="flex items-center gap-3">
-      <span className="grid size-9 place-items-center rounded-xl bg-accent text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)]">
+      <span className="grid size-9 place-items-center rounded-lg bg-accent text-accent-fg">
         <ShieldCheck size={20} weight="fill" />
       </span>
       <span className="leading-tight">
         <span className="block text-lg font-semibold tracking-tight">SecureBank</span>
-        <span className="block text-[11px] font-medium uppercase tracking-wider text-muted">Admin</span>
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Back-office</span>
       </span>
     </span>
   )
@@ -48,7 +48,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr]">
+    <div className="min-h-dvh border-t-[3px] border-accent md:grid md:grid-cols-[16rem_1fr]">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-ui focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg">
         Ir para o conteúdo
       </a>

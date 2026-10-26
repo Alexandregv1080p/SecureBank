@@ -12,6 +12,30 @@ servers:
 security:
 - bearerAuth: []
 paths:
+  /api/v1/credit/cards/{id}/limit:
+    put:
+      tags:
+      - credit-controller
+      operationId: changeLimit
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LimitRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
   /api/v1/admin/fx/rates/{currency}:
     put:
       tags:
@@ -36,11 +60,35 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/RateResponse"
+  /api/v1/admin/credit/cards/{id}/limit:
+    put:
+      tags:
+      - credit-admin-controller
+      operationId: changeLimit_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LimitRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LimitView"
   /api/v1/admin/accounts/{accountId}/limits/{type}:
     put:
       tags:
       - admin-controller
-      operationId: changeLimit
+      operationId: changeLimit_2
       parameters:
       - name: accountId
         in: path
@@ -644,6 +692,353 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/OperationResponse"
+  /api/v1/credit/cards:
+    post:
+      tags:
+      - credit-controller
+      operationId: issue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IssuedResponse"
+  /api/v1/credit/cards/{id}/purchases:
+    get:
+      tags:
+      - credit-controller
+      operationId: purchases
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PurchasePage"
+    post:
+      tags:
+      - credit-controller
+      operationId: purchase
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PurchaseResponse"
+  /api/v1/credit/cards/{id}/invoices/{month}/refinance:
+    get:
+      tags:
+      - credit-controller
+      operationId: refinanceOptions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OfferResponse"
+    post:
+      tags:
+      - credit-controller
+      operationId: refinance
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefinanceRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RefinancedResponse"
+  /api/v1/credit/cards/{id}/invoices/{month}/payments:
+    post:
+      tags:
+      - credit-controller
+      operationId: pay_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvoiceResponse"
+  /api/v1/credit/cards/{id}/additional:
+    post:
+      tags:
+      - credit-controller
+      operationId: additional
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdditionalRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IssuedResponse"
+  /api/v1/cards:
+    get:
+      tags:
+      - card-controller
+      operationId: list_6
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CardResponse"
+    post:
+      tags:
+      - card-controller
+      operationId: issue_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+  /api/v1/cards/{id}/unblock:
+    post:
+      tags:
+      - card-controller
+      operationId: unblock
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+  /api/v1/cards/{id}/reveal:
+    post:
+      tags:
+      - card-controller
+      operationId: reveal
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DetailsResponse"
+  /api/v1/cards/{id}/purchases:
+    get:
+      tags:
+      - card-controller
+      operationId: purchases_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PurchasePage"
+    post:
+      tags:
+      - card-controller
+      operationId: purchase_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PurchaseResponse"
+  /api/v1/cards/{id}/cancel:
+    post:
+      tags:
+      - card-controller
+      operationId: cancel
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+  /api/v1/cards/{id}/block:
+    post:
+      tags:
+      - card-controller
+      operationId: block
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardResponse"
   /api/v1/auth/register:
     post:
       tags:
@@ -782,11 +1177,53 @@ paths:
       responses:
         "204":
           description: No Content
+  /api/v1/admin/cards/{id}/unblock:
+    post:
+      tags:
+      - card-admin-controller
+      operationId: unblock_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardView"
+  /api/v1/admin/cards/{id}/block:
+    post:
+      tags:
+      - card-admin-controller
+      operationId: block_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReasonRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardView"
   /api/v1/admin/accounts/{id}/unblock:
     post:
       tags:
       - admin-controller
-      operationId: unblock
+      operationId: unblock_2
       parameters:
       - name: id
         in: path
@@ -804,13 +1241,19 @@ paths:
     post:
       tags:
       - admin-controller
-      operationId: block
+      operationId: block_2
       parameters:
       - name: id
         in: path
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockRequest"
+        required: true
       responses:
         "200":
           description: OK
@@ -822,7 +1265,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: list_6
+      operationId: list_7
       responses:
         "200":
           description: OK
@@ -1008,6 +1451,33 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TransferResponse"
+  /api/v1/transfers/destination:
+    get:
+      tags:
+      - transfer-controller
+      operationId: destination
+      parameters:
+      - name: branch
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 4
+          minLength: 0
+      - name: number
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 14
+          minLength: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DestinationResponse"
   /api/v1/security/sessions:
     get:
       tags:
@@ -1081,7 +1551,7 @@ paths:
     delete:
       tags:
       - pix-charge-controller
-      operationId: cancel
+      operationId: cancel_1
       parameters:
       - name: txid
         in: path
@@ -1113,7 +1583,7 @@ paths:
     get:
       tags:
       - notification-controller
-      operationId: list_7
+      operationId: list_8
       parameters:
       - name: page
         in: query
@@ -1223,6 +1693,85 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/HistoryResponse"
+  /api/v1/credit/cards/{id}:
+    get:
+      tags:
+      - credit-controller
+      operationId: summary
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+  /api/v1/credit/cards/{id}/invoices:
+    get:
+      tags:
+      - credit-controller
+      operationId: invoices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceResponse"
+  /api/v1/credit/cards/{id}/invoices/{month}:
+    get:
+      tags:
+      - credit-controller
+      operationId: invoice
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InvoiceDetailResponse"
+  /api/v1/cards/{id}:
+    get:
+      tags:
+      - card-controller
+      operationId: get_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardResponse"
   /api/v1/audit:
     get:
       tags:
@@ -1266,6 +1815,18 @@ paths:
           - PIGGY_DEPOSIT
           - PIGGY_WITHDRAW
           - PIGGY_CLOSED
+          - CARD_ISSUED
+          - CARD_REVEALED
+          - CARD_BLOCKED
+          - CARD_UNBLOCKED
+          - CARD_CANCELED
+          - CARD_PURCHASE
+          - CARD_PURCHASE_FAILED
+          - CREDIT_PURCHASE
+          - CREDIT_PURCHASE_FAILED
+          - CREDIT_INVOICE_PAID
+          - CREDIT_LIMIT_CHANGED
+          - CREDIT_INVOICE_REFINANCED
           - INVESTMENT_APPLIED
           - INVESTMENT_REDEEMED
           - FX_BOUGHT
@@ -1281,6 +1842,18 @@ paths:
         required: false
         schema:
           type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
       - name: page
         in: query
         required: false
@@ -1302,6 +1875,26 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/AuditPage"
+  /api/v1/admin/overview:
+    get:
+      tags:
+      - overview-controller
+      operationId: overview
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Overview"
   /api/v1/admin/fx/rates:
     get:
       tags:
@@ -1366,6 +1959,46 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CustomerView"
+  /api/v1/admin/customers/{id}/credit-cards:
+    get:
+      tags:
+      - credit-admin-controller
+      operationId: creditCards
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditCardView"
+  /api/v1/admin/customers/{id}/cards:
+    get:
+      tags:
+      - card-admin-controller
+      operationId: cardsOf
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CardView"
   /api/v1/admin/customers/{id}/accounts:
     get:
       tags:
@@ -1428,7 +2061,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: get_5
+      operationId: get_6
       parameters:
       - name: id
         in: path
@@ -1478,6 +2111,7 @@ paths:
           - SAVINGS
           - INVESTMENTS
           - FX
+          - CARDS
       - name: direction
         in: query
         required: false
@@ -1511,7 +2145,7 @@ paths:
     get:
       tags:
       - account-controller
-      operationId: summary
+      operationId: summary_1
       parameters:
       - name: id
         in: path
@@ -1566,6 +2200,7 @@ paths:
           - SAVINGS
           - INVESTMENTS
           - FX
+          - CARDS
       - name: direction
         in: query
         required: false
@@ -1650,7 +2285,7 @@ paths:
     delete:
       tags:
       - pix-schedule-controller
-      operationId: cancel_1
+      operationId: cancel_2
       parameters:
       - name: id
         in: path
@@ -1676,6 +2311,68 @@ paths:
           description: No Content
 components:
   schemas:
+    LimitRequest:
+      type: object
+      properties:
+        limit:
+          type: number
+          minimum: 100.00
+      required:
+      - limit
+    InvoiceResponse:
+      type: object
+      properties:
+        month:
+          type: string
+        closingDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        principal:
+          $ref: "#/components/schemas/MoneyResponse"
+        charges:
+          $ref: "#/components/schemas/MoneyResponse"
+        total:
+          $ref: "#/components/schemas/MoneyResponse"
+        paid:
+          $ref: "#/components/schemas/MoneyResponse"
+        remaining:
+          $ref: "#/components/schemas/MoneyResponse"
+        minimumDue:
+          $ref: "#/components/schemas/MoneyResponse"
+        status:
+          type: string
+    MoneyResponse:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+    SummaryResponse:
+      type: object
+      properties:
+        cardId:
+          type: string
+          format: uuid
+        creditLimit:
+          $ref: "#/components/schemas/MoneyResponse"
+        used:
+          $ref: "#/components/schemas/MoneyResponse"
+        available:
+          $ref: "#/components/schemas/MoneyResponse"
+        dueDay:
+          type: integer
+          format: int32
+        overdue:
+          type: boolean
+        currentInvoice:
+          $ref: "#/components/schemas/InvoiceResponse"
+        mainCardId:
+          type: string
+          format: uuid
     RateRequest:
       type: object
       properties:
@@ -1704,34 +2401,14 @@ components:
         updatedAt:
           type: string
           format: date-time
-    LimitRequest:
-      type: object
-      properties:
-        perOperation:
-          type: number
-          minimum: 0.01
-        daily:
-          type: number
-          minimum: 0.01
-      required:
-      - daily
-      - perOperation
     LimitView:
       type: object
       properties:
-        type:
+        cardId:
           type: string
-        perOperation:
+          format: uuid
+        creditLimit:
           $ref: "#/components/schemas/MoneyResponse"
-        daily:
-          $ref: "#/components/schemas/MoneyResponse"
-    MoneyResponse:
-      type: object
-      properties:
-        amount:
-          type: string
-        currency:
-          type: string
     TransferRequest:
       type: object
       properties:
@@ -2182,6 +2859,193 @@ components:
         createdAt:
           type: string
           format: date-time
+    IssueRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        dueDay:
+          type: integer
+          format: int32
+          maximum: 28
+          minimum: 1
+      required:
+      - accountId
+      - dueDay
+    IssuedResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        holderName:
+          type: string
+        maskedNumber:
+          type: string
+        last4:
+          type: string
+        expiryMonth:
+          type: integer
+          format: int32
+        expiryYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        dueDay:
+          type: integer
+          format: int32
+        creditLimit:
+          $ref: "#/components/schemas/MoneyResponse"
+        createdAt:
+          type: string
+          format: date-time
+    PurchaseRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        merchant:
+          type: string
+          maxLength: 60
+          minLength: 0
+        installments:
+          type: integer
+          format: int32
+          maximum: 12
+          minimum: 1
+      required:
+      - amount
+      - merchant
+    PurchaseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cardId:
+          type: string
+          format: uuid
+        madeWith:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        merchant:
+          type: string
+        total:
+          $ref: "#/components/schemas/MoneyResponse"
+        installments:
+          type: integer
+          format: int32
+        installmentAmount:
+          $ref: "#/components/schemas/MoneyResponse"
+        createdAt:
+          type: string
+          format: date-time
+    RefinanceRequest:
+      type: object
+      properties:
+        installments:
+          type: integer
+          format: int32
+          maximum: 12
+          minimum: 2
+      required:
+      - installments
+    PlanResponse:
+      type: object
+      properties:
+        installments:
+          type: integer
+          format: int32
+        installment:
+          $ref: "#/components/schemas/MoneyResponse"
+        total:
+          $ref: "#/components/schemas/MoneyResponse"
+        interest:
+          $ref: "#/components/schemas/MoneyResponse"
+        monthlyRate:
+          type: string
+    RefinancedResponse:
+      type: object
+      properties:
+        invoice:
+          $ref: "#/components/schemas/InvoiceResponse"
+        purchase:
+          $ref: "#/components/schemas/PurchaseResponse"
+        plan:
+          $ref: "#/components/schemas/PlanResponse"
+    AdditionalRequest:
+      type: object
+      properties:
+        holderName:
+          type: string
+          maxLength: 40
+          minLength: 2
+      required:
+      - holderName
+    CardResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        holderName:
+          type: string
+        maskedNumber:
+          type: string
+        last4:
+          type: string
+        expiryMonth:
+          type: integer
+          format: int32
+        expiryYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        statusReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DetailsResponse:
+      type: object
+      properties:
+        number:
+          type: string
+        expiryMonth:
+          type: integer
+          format: int32
+        expiryYear:
+          type: integer
+          format: int32
+        cvv:
+          type: string
+        holderName:
+          type: string
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 140
+          minLength: 3
+      required:
+      - reason
     RegisterRequest:
       type: object
       properties:
@@ -2306,6 +3170,30 @@ components:
           type: string
         status:
           type: string
+    CardView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        holderName:
+          type: string
+        maskedNumber:
+          type: string
+        last4:
+          type: string
+        status:
+          type: string
+        statusReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     AccountStatusView:
       type: object
       properties:
@@ -2314,6 +3202,15 @@ components:
           format: uuid
         status:
           type: string
+    BlockRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 140
+          minLength: 3
+      required:
+      - reason
     OpenAccountRequest:
       type: object
       properties:
@@ -2414,6 +3311,25 @@ components:
         totalElements:
           type: integer
           format: int64
+    DestinationResponse:
+      type: object
+      properties:
+        branch:
+          type: string
+        accountNumber:
+          type: string
+        accountType:
+          type: string
+        status:
+          type: string
+        name:
+          type: string
+        document:
+          type: string
+        bank:
+          type: string
+        ownAccount:
+          type: boolean
     SessionResponse:
       type: object
       properties:
@@ -2615,6 +3531,64 @@ components:
         totalElements:
           type: integer
           format: int64
+    PurchasePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+    InvoiceDetailResponse:
+      type: object
+      properties:
+        invoice:
+          $ref: "#/components/schemas/InvoiceResponse"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemResponse"
+        charges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChargeResponse"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentResponse"
+    ItemResponse:
+      type: object
+      properties:
+        merchant:
+          type: string
+        number:
+          type: integer
+          format: int32
+        installments:
+          type: integer
+          format: int32
+        amount:
+          $ref: "#/components/schemas/MoneyResponse"
+        purchasedOn:
+          type: string
+          format: date
+    OfferResponse:
+      type: object
+      properties:
+        invoice:
+          $ref: "#/components/schemas/InvoiceResponse"
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanResponse"
     AuditLogResponse:
       type: object
       properties:
@@ -2657,6 +3631,117 @@ components:
         totalElements:
           type: integer
           format: int64
+    Accounts:
+      type: object
+      properties:
+        active:
+          type: integer
+          format: int64
+        blocked:
+          type: integer
+          format: int64
+        closed:
+          type: integer
+          format: int64
+        totalBalance:
+          type: number
+    Activity:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/Day"
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/ByType"
+        totalCount:
+          type: integer
+          format: int64
+        totalVolume:
+          type: number
+    ByType:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
+          format: int64
+        volume:
+          type: number
+    Credit:
+      type: object
+      properties:
+        cards:
+          type: integer
+          format: int64
+        totalLimit:
+          type: number
+        used:
+          type: number
+        overdueInvoices:
+          type: integer
+          format: int64
+        overdueAmount:
+          type: number
+        lateCharges:
+          type: number
+    Customers:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+        active:
+          type: integer
+          format: int64
+        newInPeriod:
+          type: integer
+          format: int64
+    Day:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        count:
+          type: integer
+          format: int64
+        volume:
+          type: number
+    Overview:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        days:
+          type: integer
+          format: int32
+        customers:
+          $ref: "#/components/schemas/Customers"
+        accounts:
+          $ref: "#/components/schemas/Accounts"
+        activity:
+          $ref: "#/components/schemas/Activity"
+        credit:
+          $ref: "#/components/schemas/Credit"
+        security:
+          $ref: "#/components/schemas/Security"
+    Security:
+      type: object
+      properties:
+        failedLogins24h:
+          type: integer
+          format: int64
+        accessDenied24h:
+          type: integer
+          format: int64
+        outboxPending:
+          type: integer
+          format: int64
     CustomerPage:
       type: object
       properties:
@@ -2689,6 +3774,31 @@ components:
           type: string
         status:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+    CreditCardView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        last4:
+          type: string
+        status:
+          type: string
+        dueDay:
+          type: integer
+          format: int32
+        creditLimit:
+          $ref: "#/components/schemas/MoneyResponse"
+        used:
+          $ref: "#/components/schemas/MoneyResponse"
+        available:
+          $ref: "#/components/schemas/MoneyResponse"
         createdAt:
           type: string
           format: date-time
@@ -2736,30 +3846,6 @@ components:
         totalElements:
           type: integer
           format: int64
-    CategoryResponse:
-      type: object
-      properties:
-        category:
-          type: string
-        income:
-          $ref: "#/components/schemas/MoneyResponse"
-        expenses:
-          $ref: "#/components/schemas/MoneyResponse"
-    SummaryResponse:
-      type: object
-      properties:
-        month:
-          type: string
-        income:
-          $ref: "#/components/schemas/MoneyResponse"
-        expenses:
-          $ref: "#/components/schemas/MoneyResponse"
-        net:
-          $ref: "#/components/schemas/MoneyResponse"
-        byCategory:
-          type: array
-          items:
-            $ref: "#/components/schemas/CategoryResponse"
     LimitResponse:
       type: object
       properties:

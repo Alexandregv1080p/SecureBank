@@ -40,7 +40,8 @@ class SecurityConfig {
     SecurityFilterChain apiSecurity(HttpSecurity http, JwtDecoder accessTokenDecoder,
             JwtAuthenticationConverter jwtAuthenticationConverter, SecurityHandlers handlers, RateLimiter limiter,
             RateLimitProperties rateLimit, ErrorWriter errors, IdempotencyStore idempotency,
-            BankTime time) throws Exception {
+            BankTime time, @org.springframework.beans.factory.annotation.Value("${securebank.security.staff-mfa-required:true}") boolean staffMfaRequired)
+            throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -147,6 +148,9 @@ class SecurityConfig {
                         .accessDeniedHandler(handlers))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(handlers).accessDeniedHandler(handlers));
 
+        if (staffMfaRequired) {
+            http.addFilterAfter(new StaffMfaFilter(errors), BearerTokenAuthenticationFilter.class);
+        }
         if (rateLimit.enabled()) {
             http.addFilterAfter(new RateLimitFilter(RateLimitFilter.rulesFrom(rateLimit), limiter, errors),
                     BearerTokenAuthenticationFilter.class);

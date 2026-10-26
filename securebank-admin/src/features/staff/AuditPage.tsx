@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { staffApi } from '../../services/staff'
 import { formatDateTime } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
@@ -8,7 +8,12 @@ import { auditEventLabel, auditEvents, isAlertEvent, isUuid, shortId } from '../
 import { Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Select, Skeleton } from '../../components/ui'
 
 export function AuditPage() {
-  const [event, setEvent] = useState('')
+  // o painel "Atenção agora" abre a auditoria já filtrada (?evento=ACCESS_DENIED)
+  const [params] = useSearchParams()
+  const [event, setEvent] = useState(() => {
+    const wanted = params.get('evento') ?? ''
+    return wanted in auditEvents ? wanted : ''
+  })
   const [userInput, setUserInput] = useState('')
   const [page, setPage] = useState(0)
   const [from, setFrom] = useState('')

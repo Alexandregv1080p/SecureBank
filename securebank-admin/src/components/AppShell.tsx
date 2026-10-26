@@ -41,6 +41,11 @@ export function AppShell() {
 
   const roles = useAuth((s) => s.claims?.roles ?? [])
   const items = sectionsFor(roles)
+  // título da aba por tela: quem usa leitor de tela ou várias abas sabe onde está
+  const section = items.find((s) => s.to === location.pathname)
+  useEffect(() => {
+    document.title = section ? `${section.label} · SecureBank Admin` : 'SecureBank Admin'
+  }, [section])
 
   async function signOut() {
     await logout().catch(() => undefined)

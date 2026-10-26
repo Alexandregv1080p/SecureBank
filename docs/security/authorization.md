@@ -16,8 +16,14 @@ vale sem novo login.
 | Papel    | Permissões                                                                                               |
 | -------- | -------------------------------------------------------------------------------------------------------- |
 | CUSTOMER | `MANAGE_PROFILE`, `VIEW_ACCOUNT`, `VIEW_STATEMENT`, `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `CREATE_TRANSFER`, `VIEW_TRANSFER`, `CREATE_PAYMENT`, `VIEW_PAYMENT`, `VIEW_NOTIFICATIONS`, `VIEW_PIGGY`, `MANAGE_PIGGY`, `VIEW_PIX`, `MANAGE_PIX`, `SEND_PIX` |
-| SUPPORT  | `VIEW_CUSTOMER`, `VIEW_AUDIT`                                                                            |
-| ADMIN    | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `MANAGE_USERS`, `MANAGE_LIMITS`, `MANAGE_ACCOUNTS`, `MANAGE_FX_RATES`            |
+| SUPPORT (Atendimento) | `VIEW_CUSTOMER`, `VIEW_AUDIT`                                                              |
+| RISK (Risco e fraude) | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `MANAGE_ACCOUNTS`, `DECIDE_APPROVALS`                       |
+| CREDIT (Crédito)      | `VIEW_CUSTOMER`, `MANAGE_LIMITS`, `DECIDE_APPROVALS`                                       |
+| FINANCE (Financeiro)  | `VIEW_REPORTS`, `MANAGE_FX_RATES`                                                          |
+| AUDITOR (Auditoria)   | `VIEW_CUSTOMER`, `VIEW_AUDIT`, `VIEW_REPORTS` (só leitura)                                 |
+| ADMIN (Diretoria)     | tudo da equipe: `VIEW_*`, `MANAGE_USERS`, `MANAGE_LIMITS`, `MANAGE_ACCOUNTS`, `MANAGE_FX_RATES`, `DECIDE_APPROVALS` |
+
+Na equipe o papel vem do **departamento** e o nível (analista/gerente) decide alçadas e aprovações: veja [Equipe, alçadas e 2FA](equipe.md).
 
 A equipe **não** opera contas de clientes (não tem permissões de cliente nem `cid`). `MANAGE_ACCOUNTS` é uma extensão da spec
 (bloqueio/desbloqueio de conta). Qualquer usuário autenticado gerencia a própria sessão, senha e MFA (`/security/**`).

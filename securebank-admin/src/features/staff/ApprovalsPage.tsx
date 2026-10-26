@@ -69,7 +69,7 @@ export function ApprovalsPage() {
                   </p>
                   <p className="text-sm text-muted">
                     {a.subject}
-                    {a.currentLimit && <>, limite atual <span className="num">{formatBRL(a.currentLimit)}</span></>}
+                    {a.currentLimit && a.status === 'PENDING' && <>, limite atual <span className="num">{formatBRL(a.currentLimit)}</span></>}
                   </p>
                 </div>
                 <Badge tone={statusTone(a.status)}>{approvalStatusLabel(a.status)}</Badge>

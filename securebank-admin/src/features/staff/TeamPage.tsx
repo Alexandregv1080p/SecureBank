@@ -9,6 +9,7 @@ import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Sele
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { Dialog } from '../../components/Dialog'
 
+const activeCount = (list: StaffUser[]) => list.filter((u) => u.status === 'ACTIVE').length
 const byName = (a: StaffUser, b: StaffUser) => Number(b.status === 'ACTIVE') - Number(a.status === 'ACTIVE') || a.email.localeCompare(b.email)
 
 /** Equipe organizada em departamentos, cada um com seus gerentes e analistas. O papel (permissões) vem do departamento. */
@@ -48,7 +49,7 @@ export function TeamPage() {
               const managers = members.filter((u) => u.level === 'MANAGER').sort(byName)
               const analysts = members.filter((u) => u.level === 'ANALYST').sort(byName)
               return (
-                <Panel key={d.code} title={d.label} action={<Badge>{members.filter((u) => u.status === 'ACTIVE').length} ativos</Badge>}>
+                <Panel key={d.code} title={d.label} action={<Badge>{activeCount(members)} {activeCount(members) === 1 ? 'ativo' : 'ativos'}</Badge>}>
                   <p className="text-sm">{d.summary}</p>
                   <p className="mt-1 text-xs text-muted">{d.hierarchy}</p>
                   <div className="mt-4 flex flex-col gap-4">

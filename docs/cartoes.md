@@ -52,7 +52,7 @@ O mesmo cartão (número cifrado, CVV derivado, bloquear e cancelar com motivo, 
 * **Fatura** (calculada das parcelas, dos encargos e dos pagamentos, nada gravado como estado): `OPEN` (ainda recebe compras), `CLOSED` (fechou, aguarda o pagamento), `OVERDUE` (passou do vencimento sem o mínimo pago), `REVOLVING` (venceu com o mínimo pago e o resto rende juros) e `PAID`. Meses futuros aparecem como "Futura" na tela.
 * **Pagar a fatura** sai do saldo da conta do cartão (lançamento `CARD_INVOICE_PAYMENT`, categoria Cartões), pode ser **total ou parcial** e também **antecipada** (fatura futura). Mais que o que falta, ou fatura já paga, é recusado (`INVOICE_NOT_PAYABLE`). O pagamento libera limite na hora.
 * **Pagamento mínimo**: o maior entre 15% da fatura e R$ 20,00 (nunca mais que a própria fatura). A resposta traz `minimumDue`, o que ainda falta para cumpri-lo.
-* **Encargos por atraso**, lançados em `credit_charges` (um por tipo e dia, então rodar de novo não duplica): **multa de 2%** uma vez, se o mínimo não foi pago até o vencimento, e **juros de 10% ao mês** (10/30 por dia, compostos) sobre o que continua devendo. Encargos entram na fatura e contam como dívida e uso de limite. Não há teto para o total de juros.
+* **Encargos por atraso**, lançados em `credit_charges` (um por tipo e dia, então rodar de novo não duplica): **multa de 2%** uma vez, se o mínimo não foi pago até o vencimento, e **juros de 10% ao mês** (10/30 por dia, compostos) sobre o que continua devendo. Encargos entram na fatura e contam como dívida e uso de limite. **Teto:** multa e juros somados nunca passam de 100% do valor original da fatura (o principal), como no rotativo real.
 * **Só a fatura `OVERDUE` bloqueia novas compras** (`CREDIT_OVERDUE`): pagou o mínimo, volta a comprar (a fatura fica `REVOLVING`).
 * **Avisos**: um agendador (de hora em hora, idempotente por cartão e dia) lança os encargos e avisa o cliente (notificações pelo outbox) quando a fatura **fecha**, está **perto de vencer** e **venceu**. Cada aviso sai uma vez só (`credit_notices`).
 * **Cancelar** um cartão de crédito com dívida é recusado (`CARD_HAS_DEBT`): pague tudo antes.
@@ -94,7 +94,7 @@ Para uma fatura fechada (`CLOSED`, `OVERDUE` ou `REVOLVING`) com pelo menos R$ 5
 
 ## Limitações conhecidas
 
-Não há teto para o total de juros por atraso, o agendador roda de hora em hora (não em tempo real) e não existe tela da equipe para o limite (só a API). Nada disso é dinheiro real: é uma simulação.
+O agendador roda de hora em hora (não em tempo real) e não existe tela da equipe para o limite (só a API). Nada disso é dinheiro real: é uma simulação.
 
 ## Pela equipe (app Admin)
 

@@ -136,6 +136,17 @@ class CreditDomainTest {
     }
 
     @Test
+    void chargesAreCappedAtTheOriginalInvoice() {
+        Money principal = Money.brl("400.00");
+        assertThat(CreditCharges.room(principal, Money.brl("0.00"))).isEqualTo(Money.brl("400.00"));
+        assertThat(CreditCharges.room(principal, Money.brl("399.50"))).isEqualTo(Money.brl("0.50"));
+        assertThat(CreditCharges.room(principal, Money.brl("400.00"))).isEqualTo(Money.brl("0.00"));
+        assertThat(CreditCharges.room(principal, Money.brl("450.00"))).isEqualTo(Money.brl("0.00"));
+        assertThat(CreditCharges.capped(Money.brl("1.36"), Money.brl("0.50"))).isEqualTo(Money.brl("0.50"));
+        assertThat(CreditCharges.capped(Money.brl("1.36"), Money.brl("5.00"))).isEqualTo(Money.brl("1.36"));
+    }
+
+    @Test
     void lateFeeIs2PercentAndInterestIs10PercentAMonthPerDay() {
         assertThat(CreditCharges.lateFee(Money.brl("200.00"))).isEqualTo(Money.brl("4.00"));
         assertThat(CreditCharges.lateFee(Money.brl("170.00"))).isEqualTo(Money.brl("3.40"));

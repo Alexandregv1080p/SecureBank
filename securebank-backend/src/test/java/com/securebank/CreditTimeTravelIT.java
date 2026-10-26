@@ -174,6 +174,26 @@ class CreditTimeTravelIT {
 
     // ---------- helpers ----------
 
+    @Test
+    void feeAndInterestTogetherNeverPassTheOriginalInvoice() throws Exception {
+        String token = customer();
+        String account = openAccount(token);
+        deposit(token, account, "1000.00");
+        String card = issueCredit(token, account);
+        purchase(token, card, "400.00", 1).andExpect(status().isCreated());
+
+        at("2027-09-10"); // seis meses de atraso: ainda abaixo do teto (os juros compostos passam de 100% só depois)
+        invoice(token, card, "2027-03").andExpect(jsonPath("$.invoice.status").value("OVERDUE"));
+
+        at("2029-03-10"); // dois anos depois: o teto é o próprio valor da fatura (400,00 de encargos, dívida de 800,00)
+        invoice(token, card, "2027-03").andExpect(jsonPath("$.invoice.charges.amount").value("400.00"))
+                .andExpect(jsonPath("$.invoice.remaining.amount").value("800.00"));
+
+        at("2030-03-10"); // um ano a mais: nada muda
+        invoice(token, card, "2027-03").andExpect(jsonPath("$.invoice.charges.amount").value("400.00"))
+                .andExpect(jsonPath("$.invoice.remaining.amount").value("800.00"));
+    }
+
     private static void at(String day) {
         CLOCK.set(Instant.parse(day + "T15:00:00Z"));
     }

@@ -84,18 +84,24 @@ public class CreditBillingService {
             if (!remaining.isPositive()) {
                 continue;
             }
+            Money room = CreditCharges.room(t.principal(), t.charges()); // teto: encargos até 100% do principal
             if (!credit.hasCharge(id, month, LATE_FEE) && t.paid().isLessThan(Invoice.minimumOf(t.principal()))) {
                 Money unpaid = t.principal().minus(t.paid().isGreaterThan(t.principal()) ? t.principal() : t.paid());
-                Money fee = CreditCharges.lateFee(unpaid);
+                Money fee = CreditCharges.capped(CreditCharges.lateFee(unpaid), room);
                 if (fee.isPositive() && credit.saveCharge(id, month, LATE_FEE, fee, due.plusDays(1), now)) {
                     remaining = remaining.plus(fee);
+                    room = room.minus(fee);
                 }
             }
             LocalDate from = credit.lastInterestDate(id, month).orElse(due);
             for (LocalDate day = from.plusDays(1); !day.isAfter(today); day = day.plusDays(1)) {
-                Money interest = CreditCharges.dailyInterest(remaining);
+                if (!room.isPositive()) {
+                    break;
+                }
+                Money interest = CreditCharges.capped(CreditCharges.dailyInterest(remaining), room);
                 if (interest.isPositive() && credit.saveCharge(id, month, INTEREST, interest, day, now)) {
                     remaining = remaining.plus(interest);
+                    room = room.minus(interest);
                 }
             }
         }

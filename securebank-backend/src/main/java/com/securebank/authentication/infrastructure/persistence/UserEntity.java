@@ -2,7 +2,9 @@ package com.securebank.authentication.infrastructure.persistence;
 
 import com.securebank.authentication.domain.User;
 import com.securebank.authentication.domain.UserStatus;
+import com.securebank.authorization.domain.Department;
 import com.securebank.authorization.domain.Role;
+import com.securebank.authorization.domain.StaffLevel;
 import com.securebank.shared.domain.CustomerId;
 import com.securebank.shared.domain.Email;
 import com.securebank.shared.domain.UserId;
@@ -23,6 +25,8 @@ class UserEntity {
     String email;
     String passwordHash;
     @Enumerated(EnumType.STRING) Role role;
+    @Enumerated(EnumType.STRING) Department department;
+    @Enumerated(EnumType.STRING) StaffLevel level;
     UUID customerId;
     @Enumerated(EnumType.STRING) UserStatus status;
     Instant createdAt;
@@ -34,6 +38,8 @@ class UserEntity {
         email = user.email().value();
         passwordHash = user.passwordHash();
         role = user.role();
+        department = user.department();
+        level = user.level();
         customerId = user.customerId() == null ? null : user.customerId().value();
         status = user.status();
         createdAt = user.createdAt();
@@ -41,7 +47,7 @@ class UserEntity {
     }
 
     User toDomain() {
-        return User.restore(new UserId(id), new Email(email), passwordHash, role,
+        return User.restore(new UserId(id), new Email(email), passwordHash, role, department, level,
                 customerId == null ? null : new CustomerId(customerId), status, createdAt, updatedAt);
     }
 }

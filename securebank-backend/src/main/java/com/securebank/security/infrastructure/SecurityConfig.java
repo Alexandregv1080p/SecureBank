@@ -131,6 +131,7 @@ class SecurityConfig {
                         .requestMatchers(PUT, "/api/v1/admin/fx/rates/*").hasAuthority(Permission.MANAGE_FX_RATES.name())
                         .requestMatchers(POST, "/api/v1/admin/accounts/*/block", "/api/v1/admin/accounts/*/unblock")
                                 .hasAuthority(Permission.MANAGE_ACCOUNTS.name())
+                        .requestMatchers(PUT, "/api/v1/admin/users/*/assignment").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(POST, "/api/v1/admin/users", "/api/v1/admin/users/*/disable",
                                 "/api/v1/admin/users/*/enable").hasAuthority(Permission.MANAGE_USERS.name())
                         .requestMatchers(GET, "/api/v1/audit").hasAuthority(Permission.VIEW_AUDIT.name())

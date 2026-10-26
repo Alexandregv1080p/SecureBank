@@ -55,9 +55,17 @@ const messages: Record<string, string> = {
   WEAK_PASSWORD: 'A senha não atende à política de segurança.',
 }
 
+/** O servidor recusa a senha com INVALID_VALUE e um texto em inglês: aqui vira o motivo, em português. */
+function passwordMessage(text: string): string {
+  if (text.includes('too easy')) return 'Essa senha é fácil de adivinhar. Escolha outra, mais longa e menos comum.'
+  if (text.includes('email')) return 'A senha não pode conter o e-mail.'
+  return 'A senha precisa ter de 12 a 128 caracteres.'
+}
+
 export function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.network) return 'Sem conexão com o servidor. Tente de novo.'
+    if (error.code === 'INVALID_VALUE' && error.message.startsWith('Password')) return passwordMessage(error.message)
     return messages[error.code] ?? (error.status >= 500 ? 'Erro no servidor. Tente de novo em instantes.' : error.message)
   }
   return 'Algo deu errado. Tente de novo.'

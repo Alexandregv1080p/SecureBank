@@ -3,8 +3,8 @@ import { api, ApiError } from './api'
 import { messageFor } from './errors'
 import { useAuth } from '../stores/auth'
 
-function jwt(sub = 'user-1') {
-  const payload = btoa(JSON.stringify({ sub, roles: ['CUSTOMER'], sid: 's1', exp: 9999999999 }))
+function jwt(sub = 'user-1', roles = ['ADMIN']) {
+  const payload = btoa(JSON.stringify({ sub, roles, sid: 's1', exp: 9999999999 }))
   return `x.${payload}.y`
 }
 
@@ -33,6 +33,15 @@ describe('api', () => {
     expect(url).toBe('/api/v1/accounts')
     expect(init.headers.Authorization).toBe('Bearer old-token')
     expect(init.headers['X-Client']).toBe('web')
+  })
+
+  it('não adota uma sessão de cliente (o cookie pode ser do outro app)', async () => {
+    useAuth.setState({ accessToken: null, claims: null, status: 'loading' })
+    fetchMock.mockResolvedValueOnce(json(200, { accessToken: jwt('c-1', ['CUSTOMER']) }))
+
+    const { refreshSession } = await import('./api')
+    await expect(refreshSession()).resolves.toBe(false)
+    expect(useAuth.getState().accessToken).toBeNull()
   })
 
   it('em 401 renova a sessão uma vez e repete a requisição', async () => {

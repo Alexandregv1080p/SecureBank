@@ -38,7 +38,10 @@ export function refreshSession(): Promise<boolean> {
       const res = await fetch('/api/v1/auth/refresh', { method: 'POST', headers: { 'X-Client': 'web' } })
       if (!res.ok) return false
       const data = (await res.json()) as { accessToken: string }
-      useAuth.getState().setSession(data.accessToken, decodeClaims(data.accessToken))
+      const claims = decodeClaims(data.accessToken)
+      // o cookie de sessão pode ser de outro app no mesmo host (dev): este app é só dos clientes e não adota sessão da equipe
+      if (!claims.roles.includes('CUSTOMER')) return false
+      useAuth.getState().setSession(data.accessToken, claims)
       return true
     } catch {
       return false

@@ -1,5 +1,6 @@
 import { decodeClaims } from './jwt'
 import { useAuth } from '../stores/auth'
+import { isStaff } from './staff'
 
 export class ApiError extends Error {
   readonly status: number
@@ -38,7 +39,10 @@ export function refreshSession(): Promise<boolean> {
       const res = await fetch('/api/v1/auth/refresh', { method: 'POST', headers: { 'X-Client': 'web' } })
       if (!res.ok) return false
       const data = (await res.json()) as { accessToken: string }
-      useAuth.getState().setSession(data.accessToken, decodeClaims(data.accessToken))
+      const claims = decodeClaims(data.accessToken)
+      // o cookie de sessão pode ser de outro app no mesmo host (dev): este app é só da equipe e não adota sessão de cliente
+      if (!isStaff(claims.roles)) return false
+      useAuth.getState().setSession(data.accessToken, claims)
       return true
     } catch {
       return false

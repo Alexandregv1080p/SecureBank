@@ -78,6 +78,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 const tones = {
   error: { cls: 'bg-danger-soft text-danger', icon: WarningCircle },
   success: { cls: 'bg-ok-soft text-ok', icon: CheckCircle },
+  warn: { cls: 'bg-warn-soft text-warn', icon: WarningCircle },
   info: { cls: 'bg-accent-soft text-ink', icon: Info },
 }
 

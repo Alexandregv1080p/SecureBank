@@ -9,3 +9,14 @@ export interface Page<T> {
   size: number
   totalElements: number
 }
+
+export interface SessionInfo {
+  id: string
+  createdAt: string
+  lastUsedAt: string
+  expiresAt: string
+  ip: string | null
+  userAgent: string | null
+  mfaVerified: boolean
+  current: boolean
+}

@@ -22,8 +22,10 @@ export function RequireAuth() {
 /** Este app é só da equipe: quem não é da equipe sai. Cada seção também confere o papel (o servidor confere em toda chamada). */
 export function RequireStaff() {
   const roles = useAuth((s) => s.claims?.roles ?? [])
+  const mfaRequired = useAuth((s) => s.mfaRequired)
   const location = useLocation()
   if (!isStaff(roles)) return <Navigate to="/entrar" replace />
+  if (mfaRequired && location.pathname !== '/seguranca') return <Navigate to="/seguranca" replace />
   if (location.pathname !== '/' && !canAccess(roles, location.pathname)) return <Navigate to="/" replace />
   return <Outlet />
 }

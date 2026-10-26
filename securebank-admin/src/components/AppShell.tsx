@@ -1,19 +1,24 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
-import { Bank, ChartLineUp, ClipboardText, CurrencyCircleDollar, House, ShieldCheck, SignOut, UserGear, Users } from '@phosphor-icons/react'
+import { Bank, ChartLineUp, ClipboardText, CurrencyCircleDollar, House, LockKey, SealCheck, ShieldCheck, SignOut, UserGear, Users } from '@phosphor-icons/react'
+import { useQuery } from '@tanstack/react-query'
 import { logout } from '../services/auth'
 import { useAuth } from '../stores/auth'
-import { sectionsFor } from '../lib/staff'
+import { can, sectionsFor } from '../lib/staff'
+import { staffApi } from '../services/staff'
+import { securityApi } from '../services/security'
 import { ThemeToggle } from './ThemeToggle'
 import { TopBar } from './TopBar'
 
 const icons: Record<string, typeof House> = {
   '/': ChartLineUp,
+  '/aprovacoes': SealCheck,
   '/auditoria': ClipboardText,
   '/clientes': Users,
   '/contas': Bank,
   '/cambio': CurrencyCircleDollar,
   '/usuarios': UserGear,
+  '/seguranca': LockKey,
 }
 
 function Logo() {
@@ -40,7 +45,22 @@ export function AppShell() {
   }, [location.pathname])
 
   const roles = useAuth((s) => s.claims?.roles ?? [])
-  const items = sectionsFor(roles)
+  const mfaRequired = useAuth((s) => s.mfaRequired)
+  const hasOtp = useAuth((s) => !!s.claims?.amr?.includes('otp'))
+  const mfa = useQuery({ queryKey: ['mfa'], queryFn: securityApi.mfaStatus })
+  const needsMfa = mfaRequired || (!!mfa.data?.required && !hasOtp)
+  const flagMfa = useAuth((s) => s.setMfaRequired)
+  useEffect(() => {
+    if (mfa.data?.required && !hasOtp) flagMfa(true) // a rota passa a levar só à segurança da conta
+  }, [mfa.data?.required, hasOtp, flagMfa])
+  const items = sectionsFor(roles).filter((s) => !needsMfa || s.to === '/seguranca')
+  // quantos pedidos esperam esta pessoa decidir (só quem decide pergunta; o selo se atualiza sozinho)
+  const pending = useQuery({
+    queryKey: ['staff', 'approvals', 'pending-count'],
+    queryFn: staffApi.pendingApprovals,
+    enabled: can(roles, 'DECIDE_APPROVALS') && !needsMfa,
+    refetchInterval: 30_000,
+  })
   // título da aba por tela: quem usa leitor de tela ou várias abas sabe onde está
   const section = items.find((s) => s.to === location.pathname)
   useEffect(() => {
@@ -88,6 +108,11 @@ export function AppShell() {
                     {isActive && <span aria-hidden className="absolute left-0 top-1/2 hidden h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent md:block" />}
                     <Icon size={20} weight={isActive ? 'fill' : 'regular'} className={isActive ? 'text-accent' : ''} />
                     {s.label}
+                    {s.to === '/aprovacoes' && !!pending.data?.pending && (
+                      <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-fg" aria-label={`${pending.data.pending} pendentes`}>
+                        {pending.data.pending}
+                      </span>
+                    )}
                   </>
                 )}
               </NavLink>

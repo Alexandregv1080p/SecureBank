@@ -1,35 +1,99 @@
 import { formatBRL, parseAmount } from './money'
 import { amountIssue } from './validation'
 
-export type StaffRole = 'ADMIN' | 'SUPPORT'
+export type StaffRole = 'ADMIN' | 'SUPPORT' | 'RISK' | 'CREDIT' | 'FINANCE' | 'AUDITOR'
+export type Department = 'ATENDIMENTO' | 'RISCO' | 'CREDITO' | 'FINANCEIRO' | 'AUDITORIA' | 'DIRETORIA'
+export type StaffLevel = 'ANALYST' | 'MANAGER'
+export type Permission =
+  | 'VIEW_CUSTOMER'
+  | 'VIEW_AUDIT'
+  | 'MANAGE_USERS'
+  | 'MANAGE_LIMITS'
+  | 'MANAGE_ACCOUNTS'
+  | 'MANAGE_FX_RATES'
+  | 'VIEW_REPORTS'
+  | 'DECIDE_APPROVALS'
+
+/** Espelho do que cada papel pode no servidor (Role.java). A tela só decide o que mostrar: o servidor confere em toda chamada. */
+const rolePermissions: Record<StaffRole, Permission[]> = {
+  SUPPORT: ['VIEW_CUSTOMER', 'VIEW_AUDIT'],
+  RISK: ['VIEW_CUSTOMER', 'VIEW_AUDIT', 'MANAGE_ACCOUNTS', 'DECIDE_APPROVALS'],
+  CREDIT: ['VIEW_CUSTOMER', 'MANAGE_LIMITS', 'DECIDE_APPROVALS'],
+  FINANCE: ['VIEW_REPORTS', 'MANAGE_FX_RATES'],
+  AUDITOR: ['VIEW_CUSTOMER', 'VIEW_AUDIT', 'VIEW_REPORTS'],
+  ADMIN: ['VIEW_CUSTOMER', 'VIEW_AUDIT', 'MANAGE_USERS', 'MANAGE_LIMITS', 'MANAGE_ACCOUNTS', 'MANAGE_FX_RATES', 'VIEW_REPORTS', 'DECIDE_APPROVALS'],
+}
+
+export const can = (roles: string[], permission: Permission) => roles.some((r) => rolePermissions[r as StaffRole]?.includes(permission))
+
+export interface DepartmentInfo {
+  code: Department
+  label: string
+  role: StaffRole
+  /** O que o departamento faz, em uma frase. */
+  summary: string
+  /** O que muda entre analista e gerente. */
+  hierarchy: string
+}
+
+/** Departamentos da equipe: o papel (e as permissões) vem do departamento; o nível separa quem pede de quem decide. */
+export const departments: DepartmentInfo[] = [
+  { code: 'ATENDIMENTO', label: 'Atendimento', role: 'SUPPORT', summary: 'Consulta clientes e a auditoria, sem alterar nada.', hierarchy: 'Sem ações que precisem de alçada: analista e gerente consultam.' },
+  { code: 'RISCO', label: 'Risco e fraude', role: 'RISK', summary: 'Bloqueia contas e cartões e vê a auditoria.', hierarchy: 'Analista bloqueia na hora; desbloquear conta precisa de um gerente de Risco.' },
+  { code: 'CREDITO', label: 'Crédito', role: 'CREDIT', summary: 'Decide limites de cartão e de operação.', hierarchy: 'Analista decide limite de cartão até R$ 20.000,00 (e sempre pode reduzir); acima disso um gerente de Crédito aprova.' },
+  { code: 'FINANCEIRO', label: 'Financeiro', role: 'FINANCE', summary: 'Ajusta cotação e spread do câmbio e acompanha o painel gerencial.', hierarchy: 'Analista e gerente têm o mesmo acesso.' },
+  { code: 'AUDITORIA', label: 'Auditoria', role: 'AUDITOR', summary: 'Só leitura: clientes, auditoria e painel gerencial.', hierarchy: 'Ninguém altera nada neste departamento.' },
+  { code: 'DIRETORIA', label: 'Diretoria', role: 'ADMIN', summary: 'Administra tudo, inclusive a equipe.', hierarchy: 'Só gerentes. Age sem pedir e aprova qualquer pedido, menos os próprios.' },
+]
+
+export const departmentLabel = (code: string) => departments.find((d) => d.code === code)?.label ?? code
+export const levelLabel = (level: string) => ({ ANALYST: 'Analista', MANAGER: 'Gerente' })[level] ?? level
+
+/** "Gerente de Crédito", "Analista de Risco e fraude" ou, na Diretoria, só "Diretoria". */
+export function positionLabel(department: string | undefined, level: string | undefined): string | null {
+  if (!department || !level) return null
+  if (department === 'DIRETORIA') return 'Diretoria'
+  return `${levelLabel(level)} · ${departmentLabel(department)}`
+}
 
 export interface StaffSection {
   to: string
   label: string
   description: string
-  /** Papéis da equipe que veem a seção (o servidor confere de novo em cada chamada). */
-  roles: StaffRole[]
+  /** Quem tem pelo menos uma destas permissões vê a seção (o servidor confere de novo em cada chamada). */
+  permissions: Permission[]
+  /** Toda a equipe vê (segurança da própria conta). */
+  everyone?: boolean
 }
 
 export const staffSections: StaffSection[] = [
-  { to: '/', label: 'Visão geral', description: 'Clientes, saldos, movimento, crédito e sinais de segurança do banco.', roles: ['ADMIN'] },
-  { to: '/auditoria', label: 'Auditoria', description: 'Trilha de eventos de segurança e de operações críticas.', roles: ['ADMIN', 'SUPPORT'] },
-  { to: '/clientes', label: 'Clientes', description: 'Busca por nome, e-mail, telefone ou CPF, com as contas de cada cliente.', roles: ['ADMIN', 'SUPPORT'] },
-  { to: '/contas', label: 'Contas e limites', description: 'Bloquear ou desbloquear uma conta e ajustar limites.', roles: ['ADMIN'] },
-  { to: '/cambio', label: 'Câmbio', description: 'Cotação comercial e spread de cada moeda.', roles: ['ADMIN'] },
-  { to: '/usuarios', label: 'Equipe', description: 'Criar, desativar e reativar usuários da equipe.', roles: ['ADMIN'] },
+  { to: '/', label: 'Visão geral', description: 'Clientes, saldos, movimento, crédito e sinais de segurança do banco.', permissions: ['VIEW_REPORTS'] },
+  { to: '/aprovacoes', label: 'Aprovações', description: 'Pedidos que passaram da alçada de quem pediu e esperam um gerente.', permissions: ['DECIDE_APPROVALS'] },
+  { to: '/auditoria', label: 'Auditoria', description: 'Trilha de eventos de segurança e de operações críticas.', permissions: ['VIEW_AUDIT'] },
+  { to: '/clientes', label: 'Clientes', description: 'Busca por nome, e-mail, telefone ou CPF, com as contas de cada cliente.', permissions: ['VIEW_CUSTOMER'] },
+  { to: '/contas', label: 'Contas e limites', description: 'Bloquear ou desbloquear uma conta e ajustar limites.', permissions: ['MANAGE_ACCOUNTS', 'MANAGE_LIMITS'] },
+  { to: '/cambio', label: 'Câmbio', description: 'Cotação comercial e spread de cada moeda.', permissions: ['MANAGE_FX_RATES'] },
+  { to: '/usuarios', label: 'Equipe', description: 'Departamentos, níveis e acesso de cada pessoa da equipe.', permissions: ['MANAGE_USERS'] },
+  { to: '/seguranca', label: 'Minha segurança', description: 'Verificação em duas etapas, senha e dispositivos conectados.', permissions: [], everyone: true },
 ]
 
 export const isStaff = (roles: string[]) => roles.length > 0 && !roles.includes('CUSTOMER')
 
-/** Seções que a pessoa vê, pelo papel dela. */
+/** Seções que a pessoa vê, pelas permissões do papel dela. */
 export function sectionsFor(roles: string[]): StaffSection[] {
-  return staffSections.filter((s) => s.roles.some((r) => roles.includes(r)))
+  if (!isStaff(roles)) return []
+  return staffSections.filter((s) => s.everyone || s.permissions.some((p) => can(roles, p)))
 }
 
 export const canAccess = (roles: string[], path: string) => sectionsFor(roles).some((s) => s.to === path)
 
-export const roleLabel = (role: string) => ({ ADMIN: 'Administrador', SUPPORT: 'Suporte', CUSTOMER: 'Cliente' })[role] ?? role
+export const roleLabel = (role: string) =>
+  ({ ADMIN: 'Administrador', SUPPORT: 'Atendimento', RISK: 'Risco e fraude', CREDIT: 'Crédito', FINANCE: 'Financeiro', AUDITOR: 'Auditoria', CUSTOMER: 'Cliente' })[role] ?? role
+
+/** Pedidos que esperam um gerente. */
+export const approvalKindLabel = (kind: string) => ({ CREDIT_LIMIT: 'Limite de cartão', ACCOUNT_UNBLOCK: 'Desbloqueio de conta' })[kind] ?? kind
+export const approvalStatusLabel = (status: string) =>
+  ({ PENDING: 'Aguardando', APPROVED: 'Aprovado', REJECTED: 'Recusado', CANCELED: 'Cancelado' })[status] ?? status
 
 /** Eventos da trilha de auditoria, com o nome em português (a lista segue o AuditEvent do servidor). */
 export const auditEvents: Record<string, string> = {
@@ -84,6 +148,11 @@ export const auditEvents: Record<string, string> = {
   USER_CREATED: 'Usuário da equipe criado',
   USER_DISABLED: 'Usuário desativado',
   USER_ENABLED: 'Usuário reativado',
+  USER_ASSIGNED: 'Posição na equipe alterada',
+  APPROVAL_REQUESTED: 'Pedido de aprovação',
+  APPROVAL_APPROVED: 'Pedido aprovado',
+  APPROVAL_REJECTED: 'Pedido recusado',
+  APPROVAL_CANCELED: 'Pedido cancelado',
   CUSTOMER_SEARCHED: 'Busca de cliente',
   ACCESS_DENIED: 'Acesso negado',
 }

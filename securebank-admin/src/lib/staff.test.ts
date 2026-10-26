@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { reasonIssue, creditLimitIssue, auditEventLabel, canAccess, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections } from './staff'
+import { reasonIssue, creditLimitIssue, auditEventLabel, can, canAccess, departmentLabel, departments, isAlertEvent, isStaff, isUuid, parseRate, parseSpread, positionLabel, roleLabel, searchError, accountStatusLabel, sectionsFor, shortId, staffSections, approvalKindLabel, approvalStatusLabel } from './staff'
 
 describe('seções do painel por papel', () => {
-  it('o administrador vê todas as seções', () => {
+  const paths = (role: string) => sectionsFor([role]).map((s) => s.to)
+
+  it('a Diretoria vê todas as seções', () => {
     expect(sectionsFor(['ADMIN'])).toHaveLength(staffSections.length)
   })
 
-  it('o suporte vê só auditoria e clientes', () => {
-    expect(sectionsFor(['SUPPORT']).map((s) => s.to)).toEqual(['/auditoria', '/clientes'])
+  it('cada departamento vê só as telas do que faz, e todos veem a própria segurança', () => {
+    expect(paths('SUPPORT')).toEqual(['/auditoria', '/clientes', '/seguranca'])
+    expect(paths('RISK')).toEqual(['/aprovacoes', '/auditoria', '/clientes', '/contas', '/seguranca'])
+    expect(paths('CREDIT')).toEqual(['/aprovacoes', '/clientes', '/contas', '/seguranca'])
+    expect(paths('FINANCE')).toEqual(['/', '/cambio', '/seguranca'])
+    expect(paths('AUDITOR')).toEqual(['/', '/auditoria', '/clientes', '/seguranca'])
     expect(canAccess(['SUPPORT'], '/cambio')).toBe(false)
-    expect(canAccess(['SUPPORT'], '/auditoria')).toBe(true)
+    expect(canAccess(['CREDIT'], '/auditoria')).toBe(false)
+    expect(canAccess(['AUDITOR'], '/usuarios')).toBe(false)
+  })
+
+  it('só o Risco bloqueia e só o Crédito mexe em limite', () => {
+    expect(can(['RISK'], 'MANAGE_ACCOUNTS')).toBe(true)
+    expect(can(['RISK'], 'MANAGE_LIMITS')).toBe(false)
+    expect(can(['CREDIT'], 'MANAGE_LIMITS')).toBe(true)
+    expect(can(['CREDIT'], 'MANAGE_ACCOUNTS')).toBe(false)
+    expect(can(['AUDITOR'], 'VIEW_AUDIT')).toBe(true)
+    expect(can(['AUDITOR'], 'MANAGE_ACCOUNTS')).toBe(false)
+    expect(can(['CUSTOMER'], 'VIEW_CUSTOMER')).toBe(false)
   })
 
   it('cliente não vê nada e não é equipe', () => {
@@ -17,13 +34,37 @@ describe('seções do painel por papel', () => {
     expect(isStaff(['CUSTOMER'])).toBe(false)
     expect(isStaff([])).toBe(false)
     expect(isStaff(['SUPPORT'])).toBe(true)
-    expect(isStaff(['ADMIN'])).toBe(true)
+    expect(isStaff(['CREDIT'])).toBe(true)
   })
 
   it('toda seção tem caminho único na raiz do app', () => {
-    const paths = staffSections.map((s) => s.to)
-    expect(new Set(paths).size).toBe(paths.length)
-    expect(paths.every((p) => p.startsWith('/'))).toBe(true)
+    const all = staffSections.map((s) => s.to)
+    expect(new Set(all).size).toBe(all.length)
+    expect(all.every((p) => p.startsWith('/'))).toBe(true)
+  })
+})
+
+describe('departamentos e posições', () => {
+  it('cada departamento aponta para um papel diferente', () => {
+    expect(new Set(departments.map((d) => d.role)).size).toBe(departments.length)
+    expect(departments.find((d) => d.code === 'DIRETORIA')?.role).toBe('ADMIN')
+  })
+
+  it('escreve o cargo como a pessoa o conhece', () => {
+    expect(positionLabel('CREDITO', 'MANAGER')).toBe('Gerente · Crédito')
+    expect(positionLabel('RISCO', 'ANALYST')).toBe('Analista · Risco e fraude')
+    expect(positionLabel('DIRETORIA', 'MANAGER')).toBe('Diretoria')
+    expect(positionLabel(undefined, undefined)).toBeNull()
+    expect(departmentLabel('FINANCEIRO')).toBe('Financeiro')
+  })
+
+  it('traduz os pedidos de aprovação', () => {
+    expect(approvalKindLabel('CREDIT_LIMIT')).toBe('Limite de cartão')
+    expect(approvalKindLabel('ACCOUNT_UNBLOCK')).toBe('Desbloqueio de conta')
+    expect(approvalStatusLabel('PENDING')).toBe('Aguardando')
+    expect(approvalStatusLabel('REJECTED')).toBe('Recusado')
+    expect(auditEventLabel('APPROVAL_APPROVED')).toBe('Pedido aprovado')
+    expect(auditEventLabel('USER_ASSIGNED')).toBe('Posição na equipe alterada')
   })
 })
 
@@ -45,7 +86,8 @@ describe('textos da auditoria', () => {
 
   it('formata papéis e ids', () => {
     expect(roleLabel('ADMIN')).toBe('Administrador')
-    expect(roleLabel('SUPPORT')).toBe('Suporte')
+    expect(roleLabel('SUPPORT')).toBe('Atendimento')
+    expect(roleLabel('RISK')).toBe('Risco e fraude')
     expect(roleLabel('X')).toBe('X')
     expect(shortId('0e9b9c1a-1111-2222-3333-444455556666')).toBe('0e9b9c1a')
     expect(shortId(null)).toBe('—')

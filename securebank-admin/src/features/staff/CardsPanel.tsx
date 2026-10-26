@@ -5,13 +5,13 @@ import { staffApi, type CardAdmin } from '../../services/staff'
 import { useAuth } from '../../stores/auth'
 import { formatDate } from '../../lib/format'
 import { messageFor } from '../../lib/errors'
-import { cardStatusLabel, reasonIssue } from '../../lib/staff'
+import { can, cardStatusLabel, reasonIssue } from '../../lib/staff'
 import { Alert, Badge, Button, ErrorState, Field, Input, Panel, Skeleton } from '../../components/ui'
 import { Dialog } from '../../components/Dialog'
 
-/** Todos os cartões do cliente (sem número). O ADMIN bloqueia, com motivo, e desbloqueia; o cliente é avisado. */
+/** Todos os cartões do cliente (sem número). Quem tem a alçada de Risco bloqueia, com motivo, e desbloqueia; o cliente é avisado. */
 export function CardsPanel({ customerId }: { customerId: string }) {
-  const isAdmin = useAuth((s) => s.claims?.roles.includes('ADMIN'))
+  const isAdmin = useAuth((s) => can(s.claims?.roles ?? [], 'MANAGE_ACCOUNTS'))
   const client = useQueryClient()
   const cards = useQuery({ queryKey: ['staff', 'cards', customerId], queryFn: () => staffApi.cards(customerId) })
   const [blocking, setBlocking] = useState<CardAdmin | null>(null)

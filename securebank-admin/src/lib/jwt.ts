@@ -2,6 +2,11 @@ export interface Claims {
   sub: string
   cid?: string
   roles: string[]
+  /** Só na equipe: departamento e nível (rótulos; quem decide é o papel, no servidor). */
+  dept?: string
+  lvl?: string
+  /** Fatores usados no login: "otp" = passou pela verificação em duas etapas. */
+  amr?: string[]
   sid: string
   exp: number
 }

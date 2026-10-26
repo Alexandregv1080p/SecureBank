@@ -5,7 +5,8 @@ import { staffApi, type LimitAdmin } from '../../services/staff'
 import { accountLabel, accountTypeLabel } from '../../lib/format'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { messageFor } from '../../lib/errors'
-import { isUuid, limitLabels, reasonIssue } from '../../lib/staff'
+import { can, isUuid, limitLabels, reasonIssue } from '../../lib/staff'
+import { useAuth } from '../../stores/auth'
 import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { DataList, DataRow } from './parts'
@@ -13,18 +14,23 @@ import { useIdParam } from './useIdParam'
 
 export function AccountsAdminPage() {
   const [id, setId] = useIdParam()
+  const roles = useAuth((s) => s.claims?.roles ?? [])
+  const canBlock = can(roles, 'MANAGE_ACCOUNTS')
+  const canLimits = can(roles, 'MANAGE_LIMITS')
+  const [sentForApproval, setSentForApproval] = useState(false)
   const [input, setInput] = useState(id)
   const valid = isUuid(id)
   const client = useQueryClient()
   const account = useQuery({ queryKey: ['staff', 'account', id], queryFn: () => staffApi.account(id.trim()), enabled: valid })
-  const limits = useQuery({ queryKey: ['staff', 'limits', id], queryFn: () => staffApi.limits(id.trim()), enabled: valid && account.isSuccess })
+  const limits = useQuery({ queryKey: ['staff', 'limits', id], queryFn: () => staffApi.limits(id.trim()), enabled: valid && account.isSuccess && canLimits })
   const refresh = () => Promise.all([client.invalidateQueries({ queryKey: ['staff', 'account', id] }), client.invalidateQueries({ queryKey: ['staff', 'limits', id] })])
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string | null>(null)
   const toggle = useMutation({
     mutationFn: () => (account.data?.status === 'BLOCKED' ? staffApi.unblock(id.trim()) : staffApi.block(id.trim(), reason.trim())),
-    onSuccess: async () => {
+    onSuccess: async (r) => {
       setReason('')
+      setSentForApproval(!!r && typeof r === 'object' && 'kind' in r)
       await refresh()
     },
   })
@@ -32,7 +38,7 @@ export function AccountsAdminPage() {
   const blocked = account.data?.status === 'BLOCKED'
   return (
     <>
-      <PageHeader title="Contas e limites" description="Bloqueie ou desbloqueie uma conta e ajuste os limites. O cliente é avisado do bloqueio." />
+      <PageHeader title="Contas e limites" description={canBlock && canLimits ? 'Bloqueie ou desbloqueie uma conta e ajuste os limites. O cliente é avisado do bloqueio.' : canBlock ? 'Bloqueie ou desbloqueie uma conta. O cliente é avisado do bloqueio. Desbloquear pede a aprovação de um gerente de Risco.' : 'Veja a conta e ajuste os limites de operação.'} />
       <form className="mb-6 flex max-w-xl items-end gap-3" onSubmit={(e) => { e.preventDefault(); setId(input.trim()) }}>
         <div className="flex-1">
           <Field label="Identificador da conta" htmlFor="account" error={id && !valid ? 'Informe um identificador completo (UUID).' : undefined}>
@@ -58,7 +64,8 @@ export function AccountsAdminPage() {
                 </DataRow>
               </DataList>
               {toggle.isError && <Alert tone="error">{messageFor(toggle.error)}</Alert>}
-              {account.data.status !== 'CLOSED' && (
+              {sentForApproval && <Alert tone="success">Pedido enviado para a aprovação de um gerente de Risco. A conta só volta quando ele aprovar.</Alert>}
+              {canBlock && account.data.status !== 'CLOSED' && (
                 <div className="flex flex-col gap-3">
                   {!blocked && (
                     <Field label="Motivo do bloqueio" htmlFor="block-reason" error={reasonError ?? undefined} hint="De 3 a 140 caracteres. Fica na auditoria e o cliente é avisado.">
@@ -87,7 +94,7 @@ export function AccountsAdminPage() {
             </div>
           </Panel>
 
-          <Panel title="Limites">
+          {canLimits && <Panel title="Limites">
             {limits.isPending && <Skeleton className="h-32" />}
             {limits.isError && <ErrorState message={messageFor(limits.error)} onRetry={() => limits.refetch()} />}
             {limits.data && (
@@ -97,7 +104,7 @@ export function AccountsAdminPage() {
                 ))}
               </ul>
             )}
-          </Panel>
+          </Panel>}
         </div>
       )}
     </>

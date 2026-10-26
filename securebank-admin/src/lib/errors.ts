@@ -53,6 +53,13 @@ const messages: Record<string, string> = {
   USER_ALREADY_EXISTS: 'Já existe um usuário com este e-mail.',
   CANNOT_DISABLE_SELF: 'Você não pode desativar o seu próprio usuário.',
   WEAK_PASSWORD: 'A senha não atende à política de segurança.',
+  MFA_REQUIRED: 'Ligue a verificação em duas etapas e entre de novo para usar o painel.',
+  APPROVAL_ALREADY_PENDING: 'Já existe um pedido aguardando decisão para este item.',
+  APPROVAL_NOT_PENDING: 'Este pedido já foi decidido.',
+  CANNOT_DECIDE_OWN_REQUEST: 'Você não pode decidir um pedido que você mesmo fez.',
+  ACCOUNT_NOT_BLOCKED: 'Esta conta não está bloqueada.',
+  CANNOT_CHANGE_SELF: 'Você não pode mudar a sua própria posição na equipe.',
+  FORBIDDEN: 'O seu perfil não tem permissão para isto.',
 }
 
 /** O servidor recusa a senha com INVALID_VALUE e um texto em inglês: aqui vira o motivo, em português. */

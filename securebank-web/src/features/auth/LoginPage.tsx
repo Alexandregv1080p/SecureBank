@@ -26,13 +26,16 @@ export function LoginPage() {
   const first = useForm({ resolver: zodResolver(credentials), defaultValues: { email: '', password: '' } })
   const mfa = useForm({ resolver: zodResolver(second), defaultValues: { code: '' } })
 
-  if (status === 'authenticated') return <Navigate to={from} replace />
+  // a equipe que acertou a senha fica "autenticada" por um instante até o enter() desconectá-la: não redirecionar, senão o aviso se perde
+  const customer = useAuth((s) => !!s.claims?.roles.includes('CUSTOMER'))
+  if (status === 'authenticated' && customer) return <Navigate to={from} replace />
 
   /** Este app é só dos clientes: a equipe entra pelo painel Admin. */
   async function enter() {
     if (!useAuth.getState().claims?.roles.includes('CUSTOMER')) {
       await logout().catch(() => undefined)
-      throw new Error('Este acesso é para clientes. A equipe do banco entra pelo painel Admin.')
+      setError('Este acesso é para clientes. A equipe do banco entra pelo painel Admin.')
+      return
     }
     navigate(from, { replace: true })
   }

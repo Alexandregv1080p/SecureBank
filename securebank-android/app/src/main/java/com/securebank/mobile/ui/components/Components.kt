@@ -74,6 +74,8 @@ fun SbTextField(
     onDone: (() -> Unit)? = null,
     enabled: Boolean = true,
     mask: ((String) -> String)? = null,
+    /** Tamanho máximo do texto digitado ou colado; o padrão acompanha o servidor (senha 128, demais 254). */
+    maxLength: Int = if (password) 128 else 254,
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
     // Texto com cursor próprio. A máscara (CPF, telefone, conta, valor) é aplicada aqui mesmo e o cursor vai para o fim;
@@ -101,7 +103,7 @@ fun SbTextField(
         OutlinedTextField(
             value = field,
             onValueChange = { next ->
-                val text = mask?.invoke(next.text) ?: next.text
+                val text = (mask?.invoke(next.text) ?: next.text).take(maxLength)
                 field = if (text != next.text) TextFieldValue(text, TextRange(text.length)) else next
                 emitted.addLast(text)
                 if (emitted.size > 16) emitted.removeFirst()

@@ -47,7 +47,7 @@ fun NewPiggyScreen(viewModel: NewPiggyViewModel, onCreated: (String) -> Unit, on
 @Composable
 private fun Form(s: NewPiggyState, accounts: List<Account>, vm: NewPiggyViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SbTextField("Nome", s.name, vm::onName, error = s.errors[PiggyField.Name], hint = "Ex.: Viagem, Reserva de emergência", enabled = !s.loading)
+        SbTextField("Nome", s.name, vm::onName, error = s.errors[PiggyField.Name], hint = "Ex.: Viagem, Reserva de emergência", enabled = !s.loading, maxLength = 40)
         SbTextField(
             "Meta (opcional)", s.goal, vm::onGoal, error = s.errors[PiggyField.Goal], mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Done, onDone = vm::create, hint = "Deixe em branco para guardar sem meta", enabled = !s.loading,

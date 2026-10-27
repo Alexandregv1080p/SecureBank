@@ -61,7 +61,9 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   { className = '', ...props },
   ref,
 ) {
-  return <input ref={ref} {...props} aria-invalid={props['aria-invalid']} className={`${inputClass} ${className}`} />
+  // teto padrão: 128 numa senha (o limite do servidor), 254 num e-mail ou texto; datas e campos com maxLength próprio não mudam
+  const maxLength = props.maxLength ?? (props.type === 'date' ? undefined : props.type === 'password' ? 128 : 254)
+  return <input ref={ref} {...props} maxLength={maxLength} aria-invalid={props['aria-invalid']} className={`${inputClass} ${className}`} />
 })
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(

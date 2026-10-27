@@ -25,6 +25,7 @@ fun LoginScreen(viewModel: LoginViewModel, sessionExpired: Boolean, onRegister: 
                 state.error?.let { Banner(it) }
                 SbTextField(
                     label = "Código",
+                    maxLength = 6,
                     value = state.code,
                     onValueChange = viewModel::onCode, // envia sozinho ao completar 6 dígitos
                     keyboardType = KeyboardType.NumberPassword,

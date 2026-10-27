@@ -51,9 +51,9 @@ fun PaymentScreen(container: AppContainer, viewModel: PaymentViewModel, onOpenAc
                     s.error?.let { Banner(it) }
                     s.ok?.let { Banner(it, isError = false) }
                     AccountPicker("Pagar com", accounts.value, s.accountId, viewModel::onAccount, s.errors[PaymentField.Account])
-                    SbTextField("Código de barras ou linha digitável", s.barcode, viewModel::onBarcode, error = s.errors[PaymentField.Barcode], keyboardType = KeyboardType.Number, hint = "44, 47 ou 48 dígitos")
+                    SbTextField("Código de barras ou linha digitável", s.barcode, viewModel::onBarcode, error = s.errors[PaymentField.Barcode], keyboardType = KeyboardType.Number, hint = "44, 47 ou 48 dígitos", maxLength = 48)
                     SbTextField("Valor (R$)", s.amount, viewModel::onAmount, error = s.errors[PaymentField.Amount], keyboardType = KeyboardType.Decimal, hint = com.securebank.mobile.core.util.Validation.limitHint(s.limit), mask = com.securebank.mobile.core.util.Validation::sanitizeAmount)
-                    SbTextField("Descrição (opcional)", s.description, viewModel::onDescription, error = s.errors[PaymentField.Description], imeAction = ImeAction.Done, onDone = { submit() })
+                    SbTextField("Descrição (opcional)", s.description, viewModel::onDescription, error = s.errors[PaymentField.Description], imeAction = ImeAction.Done, onDone = { submit() }, maxLength = 140)
                     PrimaryButton("Pagar", onClick = { submit() }, loading = s.loading)
 
                     Text("Pagamentos recentes", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))

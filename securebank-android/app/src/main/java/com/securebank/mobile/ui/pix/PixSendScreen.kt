@@ -145,7 +145,7 @@ private fun Details(s: PixSendState, accounts: List<Account>, vm: PixSendViewMod
             hint = if (s.fixedAmount) "Valor definido pelo código" else com.securebank.mobile.core.util.Validation.limitHint(s.limit), enabled = !s.fixedAmount,
         )
         if (s.charge == null) {
-            SbTextField("Mensagem (opcional)", s.message, vm::onMessage, error = s.errors[PixField.Message], imeAction = ImeAction.Done, onDone = vm::review)
+            SbTextField("Mensagem (opcional)", s.message, vm::onMessage, error = s.errors[PixField.Message], imeAction = ImeAction.Done, onDone = vm::review, maxLength = 140)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Agendar para outra data", style = MaterialTheme.typography.titleSmall)

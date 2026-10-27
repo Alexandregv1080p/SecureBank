@@ -73,7 +73,7 @@ fun PixChargesScreen(viewModel: PixChargesViewModel) {
                 is Load.Ready -> {
                     if (accounts.value.size > 1) AccountPicker("Receber na conta", accounts.value, s.sourceId, viewModel::onSource, null)
                     SbTextField("Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal)
-                    SbTextField("Descrição (opcional)", s.description, viewModel::onDescription, error = s.descriptionError, imeAction = ImeAction.Done, onDone = viewModel::create)
+                    SbTextField("Descrição (opcional)", s.description, viewModel::onDescription, error = s.descriptionError, imeAction = ImeAction.Done, onDone = viewModel::create, maxLength = 140)
                     Text("Validade", style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ChargeValidity.entries.forEach { v ->

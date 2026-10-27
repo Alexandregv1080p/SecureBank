@@ -278,7 +278,7 @@ internal fun LimitAndAdditionalPanels(s: CardDetailState, viewModel: CardDetailV
                 "Peça um cartão com outro nome (até ${CreditValidation.MAX_ADDITIONAL} por conta, junto com os cartões de crédito dela). Ele usa o mesmo limite e as compras entram na sua fatura. Para cancelar este cartão, cancele os adicionais antes.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SbTextField("Nome no cartão", s.additionalName, viewModel::onAdditionalName, error = s.additionalError, enabled = !s.loading)
+            SbTextField("Nome no cartão", s.additionalName, viewModel::onAdditionalName, error = s.additionalError, enabled = !s.loading, maxLength = 40)
             com.securebank.mobile.ui.components.PrimaryButton("Pedir cartão adicional", onClick = { viewModel.addAdditional() }, loading = s.loading)
         }
     }

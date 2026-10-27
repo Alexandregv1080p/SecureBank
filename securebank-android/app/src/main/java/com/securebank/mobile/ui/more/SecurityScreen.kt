@@ -185,6 +185,7 @@ private fun MfaPanel(vm: MfaViewModel) {
 private fun CodeField(s: MfaState, vm: MfaViewModel) {
     SbTextField(
         label = "Código",
+        maxLength = 6,
         value = s.code,
         onValueChange = vm::onCode,
         keyboardType = KeyboardType.NumberPassword,

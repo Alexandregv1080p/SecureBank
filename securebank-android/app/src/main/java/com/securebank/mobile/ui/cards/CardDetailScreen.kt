@@ -134,7 +134,7 @@ fun CardDetailScreen(container: AppContainer, viewModel: CardDetailViewModel, on
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            SbTextField("Estabelecimento", s.merchant, viewModel::onMerchant, error = s.merchantError, hint = "Ex.: Mercado Central", enabled = !s.loading)
+                            SbTextField("Estabelecimento", s.merchant, viewModel::onMerchant, error = s.merchantError, hint = "Ex.: Mercado Central", enabled = !s.loading, maxLength = 60)
                             SbTextField(
                                 "Valor (R$)", s.amount, viewModel::onAmount, error = s.amountError, mask = Validation::sanitizeAmount,
                                 keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done, enabled = !s.loading,

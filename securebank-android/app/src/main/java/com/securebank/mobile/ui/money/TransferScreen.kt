@@ -94,11 +94,11 @@ private fun Form(s: TransferState, accounts: List<Account>, vm: TransferViewMode
         s.error?.let { Banner(it) }
         AccountPicker("Conta de origem", accounts, s.sourceId, vm::onSource, s.errors[TransferField.Source])
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SbTextField("Agência", s.branch, vm::onBranch, modifier = Modifier.weight(1f), error = s.errors[TransferField.Branch], keyboardType = KeyboardType.Number)
-            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Ex.: 123456-0 (o hífen entra sozinho)", mask = Validation::maskAccountNumber)
+            SbTextField("Agência", s.branch, vm::onBranch, modifier = Modifier.weight(1f), error = s.errors[TransferField.Branch], keyboardType = KeyboardType.Number, maxLength = 4)
+            SbTextField("Conta de destino", s.number, vm::onNumber, modifier = Modifier.weight(2f), error = s.errors[TransferField.Number], keyboardType = KeyboardType.Number, hint = "Ex.: 123456-0 (o hífen entra sozinho)", mask = Validation::maskAccountNumber, maxLength = 14)
         }
         SbTextField("Valor (R$)", s.amount, vm::onAmount, error = s.errors[TransferField.Amount], keyboardType = KeyboardType.Decimal, hint = Validation.limitHint(s.limit), mask = Validation::sanitizeAmount)
-        SbTextField("Descrição (opcional)", s.description, vm::onDescription, error = s.errors[TransferField.Description], imeAction = ImeAction.Done, onDone = vm::review)
+        SbTextField("Descrição (opcional)", s.description, vm::onDescription, error = s.errors[TransferField.Description], imeAction = ImeAction.Done, onDone = vm::review, maxLength = 140)
         PrimaryButton("Revisar", onClick = vm::review, loading = s.loading)
     }
 }

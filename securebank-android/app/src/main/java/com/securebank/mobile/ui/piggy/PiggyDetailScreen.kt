@@ -78,7 +78,7 @@ fun PiggyDetailScreen(viewModel: PiggyDetailViewModel, onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Editar", style = MaterialTheme.typography.titleMedium)
                         s.editError?.let { Banner(it) }
-                        SbTextField("Nome", s.editName, viewModel::onEditName, enabled = !s.loading)
+                        SbTextField("Nome", s.editName, viewModel::onEditName, enabled = !s.loading, maxLength = 40)
                         SbTextField(
                             "Meta (R$)", s.editGoal, viewModel::onEditGoal, mask = com.securebank.mobile.core.util.Validation::sanitizeAmount, keyboardType = KeyboardType.Decimal,
                             hint = "Em branco = sem meta", enabled = !s.loading,

@@ -24,11 +24,11 @@ fun RegisterScreen(viewModel: RegisterViewModel, onBack: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             s.error?.let { Banner(it) }
             SbTextField("Nome completo", s.name, { viewModel.onChange(RegisterField.Name, it) },
-                error = s.errors[RegisterField.Name], enabled = !s.loading)
+                error = s.errors[RegisterField.Name], enabled = !s.loading, maxLength = 120)
             SbTextField("CPF", s.document, { viewModel.onChange(RegisterField.Document, it) },
-                error = s.errors[RegisterField.Document], keyboardType = KeyboardType.Number, hint = "000.000.000-00", mask = Validation::maskCpf, enabled = !s.loading)
+                error = s.errors[RegisterField.Document], keyboardType = KeyboardType.Number, hint = "000.000.000-00", mask = Validation::maskCpf, enabled = !s.loading, maxLength = 14)
             SbTextField("Celular", s.phone, { viewModel.onChange(RegisterField.Phone, it) },
-                error = s.errors[RegisterField.Phone], keyboardType = KeyboardType.Phone, hint = "Com DDD, ex.: (11) 99999-8888", mask = Validation::maskPhone, enabled = !s.loading)
+                error = s.errors[RegisterField.Phone], keyboardType = KeyboardType.Phone, hint = "Com DDD, ex.: (11) 99999-8888", mask = Validation::maskPhone, enabled = !s.loading, maxLength = 16)
             SbTextField("E-mail", s.email, { viewModel.onChange(RegisterField.Email, it) },
                 error = s.errors[RegisterField.Email], keyboardType = KeyboardType.Email, enabled = !s.loading)
             SbTextField("Senha", s.password, { viewModel.onChange(RegisterField.Password, it) },

@@ -219,7 +219,7 @@ export function PixSendPage() {
               }}
             >
               <Field label="Chave ou código" htmlFor="key" error={inputError ?? undefined}>
-                <Input id="key" value={input} autoComplete="off" aria-invalid={!!inputError} onChange={(e) => { setInput(e.target.value); setInputError(null) }} />
+                <Input id="key" maxLength={100} value={input} autoComplete="off" aria-invalid={!!inputError} onChange={(e) => { setInput(e.target.value); setInputError(null) }} />
               </Field>
               <Button type="submit" loading={resolving}>Continuar</Button>
             </form>

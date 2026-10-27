@@ -72,10 +72,10 @@ export function RegisterPage() {
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="CPF" htmlFor="document" error={errors.document?.message}>
-            <Input id="document" inputMode="numeric" placeholder="000.000.000-00" aria-invalid={!!errors.document} {...withMask(form.register('document'), maskCpf)} />
+            <Input id="document" inputMode="numeric" maxLength={14} placeholder="000.000.000-00" aria-invalid={!!errors.document} {...withMask(form.register('document'), maskCpf)} />
           </Field>
           <Field label="Celular" htmlFor="phone" error={errors.phone?.message}>
-            <Input id="phone" type="tel" autoComplete="tel" placeholder="(11) 99999-8888" aria-invalid={!!errors.phone} {...withMask(form.register('phone'), maskPhone)} />
+            <Input id="phone" type="tel" maxLength={16} autoComplete="tel" placeholder="(11) 99999-8888" aria-invalid={!!errors.phone} {...withMask(form.register('phone'), maskPhone)} />
           </Field>
         </div>
         <Field label="E-mail" htmlFor="email" error={errors.email?.message}>

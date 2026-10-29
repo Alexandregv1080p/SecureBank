@@ -79,7 +79,7 @@ function MfaPanel() {
             </div>
           </div>
           <Field label="Código" htmlFor="mfa-code" error={form.formState.errors.code?.message}>
-            <Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="num w-40 text-center tracking-[0.3em]" aria-invalid={!!form.formState.errors.code} {...form.register('code')} />
+            <Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="num w-40 text-center tracking-[0.3em]" aria-invalid={!!form.formState.errors.code} {...form.register('code', { onChange: (e) => { e.target.value = e.target.value.replace(/\D/g, '') } })} />
           </Field>
           <div className="flex gap-3">
             <Button type="submit" loading={form.formState.isSubmitting}>Confirmar e ativar</Button>
@@ -92,7 +92,7 @@ function MfaPanel() {
         <form onSubmit={form.handleSubmit(finish)} noValidate className="flex flex-col items-start gap-4">
           <p className="text-sm text-muted">Para desativar, confirme com um código válido do aplicativo.</p>
           <Field label="Código" htmlFor="mfa-off" error={form.formState.errors.code?.message}>
-            <Input id="mfa-off" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="num w-40 text-center tracking-[0.3em]" aria-invalid={!!form.formState.errors.code} {...form.register('code')} />
+            <Input id="mfa-off" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="num w-40 text-center tracking-[0.3em]" aria-invalid={!!form.formState.errors.code} {...form.register('code', { onChange: (e) => { e.target.value = e.target.value.replace(/\D/g, '') } })} />
           </Field>
           <Button type="submit" variant="danger" loading={form.formState.isSubmitting}>Desativar</Button>
         </form>

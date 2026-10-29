@@ -78,7 +78,7 @@ export function LoginPage() {
               autoFocus
               className="num text-center text-lg tracking-[0.4em]"
               aria-invalid={!!mfa.formState.errors.code}
-              {...mfa.register('code')}
+              {...mfa.register('code', { onChange: (e) => { e.target.value = e.target.value.replace(/\D/g, '') } })}
             />
           </Field>
           <Button type="submit" loading={mfa.formState.isSubmitting}>

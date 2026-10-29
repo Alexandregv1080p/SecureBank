@@ -111,6 +111,15 @@ fun MainShell(container: AppContainer) {
     val nav = rememberNavController()
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val scope = rememberCoroutineScope()
+    // Ir a uma aba sempre pelo mesmo caminho da barra inferior. Abrir uma aba por um atalho normal (navigate) a deixava empilhada
+    // sobre o Início, e tocar em "Início" depois restaurava essa pilha salva: o Início abria a tela de Pagar.
+    val goTab: (String) -> Unit = { tab ->
+        nav.navigate(tab) {
+            popUpTo("home") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -130,13 +139,7 @@ fun MainShell(container: AppContainer) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = route == tab.route,
-                            onClick = {
-                                nav.navigate(tab.route) {
-                                    popUpTo("home") { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { goTab(tab.route) },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(
@@ -158,12 +161,12 @@ fun MainShell(container: AppContainer) {
                 HomeScreen(
                     vm,
                     onOpenAccount = { nav.navigate("accounts/$it") },
-                    onOpenAccounts = { nav.navigate("accounts") { launchSingleTop = true } },
+                    onOpenAccounts = { goTab("accounts") },
                     onOpenPiggy = { nav.navigate("piggies/$it") },
                     onOpenPiggies = { nav.navigate("piggies") },
-                    onPix = { nav.navigate("pix") },
+                    onPix = { goTab("pix") },
                     onTransfer = { nav.navigate("transfer") },
-                    onPay = { nav.navigate("pay") },
+                    onPay = { goTab("pay") },
                 )
             }
             composable("accounts") {
@@ -190,7 +193,7 @@ fun MainShell(container: AppContainer) {
             }
             composable("transfer") {
                 val vm: TransferViewModel = viewModel(factory = viewModelFactory { initializer { TransferViewModel(container.banking) } })
-                TransferScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") }, onBack = { nav.popBackStack() })
+                TransferScreen(container, vm, onOpenAccounts = { goTab("accounts") }, onBack = { nav.popBackStack() })
             }
             composable("more") {
                 MoreScreen(
@@ -223,7 +226,7 @@ fun MainShell(container: AppContainer) {
                 PixSendScreen(
                     container, vm,
                     onHistory = { nav.navigate("pix/history") { popUpTo("pix") } },
-                    onOpenAccounts = { nav.navigate("accounts") },
+                    onOpenAccounts = { goTab("accounts") },
                 )
             }
             composable("pix/receive") {
@@ -317,7 +320,7 @@ fun MainShell(container: AppContainer) {
             }
             composable("pay") {
                 val vm: PaymentViewModel = viewModel(factory = viewModelFactory { initializer { PaymentViewModel(container.banking) } })
-                PaymentScreen(container, vm, onOpenAccounts = { nav.navigate("accounts") })
+                PaymentScreen(container, vm, onOpenAccounts = { goTab("accounts") })
             }
         }
     }

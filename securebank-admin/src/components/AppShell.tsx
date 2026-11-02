@@ -77,7 +77,8 @@ export function AppShell() {
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-ui focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg">
         Ir para o conteúdo
       </a>
-      <aside className="border-b border-line bg-[color-mix(in_srgb,var(--panel-solid)_55%,transparent)] backdrop-blur-xl md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:border-b-0 md:border-r">
+      <div className="border-b border-line bg-[color-mix(in_srgb,var(--panel-solid)_55%,transparent)] backdrop-blur-xl md:border-b-0 md:border-r">
+      <aside className="md:sticky md:top-0 md:flex md:h-dvh md:flex-col">
         <div className="flex h-16 items-center justify-between px-5 md:h-20 md:px-6">
           <Logo />
           <span className="flex items-center gap-1 md:hidden">
@@ -127,6 +128,7 @@ export function AppShell() {
           </button>
         </div>
       </aside>
+      </div>
       <main id="conteudo" className="mx-auto w-full max-w-[84rem] px-4 py-8 md:px-10 md:py-10">
         <TopBar />
         <Outlet />

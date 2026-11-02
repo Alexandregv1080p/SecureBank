@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { AreaChart, Donut, ProgressRing } from '../../components/charts'
-import { ErrorState, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
+import { ArrowsClockwise, Info } from '@phosphor-icons/react'
+import { Button, ErrorState, PageHeader, Panel, Select, Skeleton } from '../../components/ui'
 import { staffApi, type Overview } from '../../services/staff'
 import { messageFor } from '../../lib/errors'
 import { compactBRL } from '../../lib/dashboard'
@@ -42,12 +43,12 @@ export function OverviewPage() {
       />
       {overview.isPending && <Skeleton className="h-96" />}
       {overview.isError && <ErrorState message={messageFor(overview.error)} onRetry={() => overview.refetch()} />}
-      {overview.data && <Body days={days} data={overview.data} />}
+      {overview.data && <Body days={days} data={overview.data} refreshing={overview.isFetching} onRefresh={() => overview.refetch()} />}
     </>
   )
 }
 
-function Body({ days, data }: { days: number; data: Overview }) {
+function Body({ days, data, refreshing, onRefresh }: { days: number; data: Overview; refreshing: boolean; onRefresh: () => unknown }) {
   const { customers, accounts, activity, credit, security } = data
   const labels = activity.days.map((d) => dayLabel(d.date))
   const shares = typeShares(activity.byType)
@@ -160,7 +161,24 @@ function Body({ days, data }: { days: number; data: Overview }) {
           </div>
         </Panel>
       )}
-      <p className="text-xs text-muted">Atualizado em {formatDateTime(data.generatedAt)} · renova sozinho a cada minuto. Volume conta só o dinheiro que saiu (cada operação uma vez); câmbio em outras moedas não entra.</p>
+      <footer className="flex flex-col gap-4 border-t border-line pt-5 pb-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted">
+            Atualizado em <span className="font-medium text-ink">{formatDateTime(data.generatedAt)}</span>
+            <span className="hidden sm:inline"> · renova sozinho a cada minuto</span>
+          </p>
+          <Button variant="secondary" loading={refreshing} onClick={() => onRefresh()}>
+            <ArrowsClockwise size={16} aria-hidden /> Atualizar agora
+          </Button>
+        </div>
+        <div className="flex items-start gap-3 rounded-ui bg-surface-2/60 px-4 py-3 text-sm text-muted">
+          <Info size={18} weight="duotone" className="mt-0.5 shrink-0 text-accent" aria-hidden />
+          <p>
+            <span className="font-medium text-ink">Como ler os números:</span> o volume conta só o dinheiro que saiu (cada operação uma vez).
+            Câmbio em outras moedas não entra na soma.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

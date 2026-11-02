@@ -33,6 +33,10 @@ export interface AccountAdmin {
   status: 'ACTIVE' | 'BLOCKED' | 'CLOSED'
 }
 
+export interface AccountListItem extends AccountAdmin {
+  customerName: string
+}
+
 export interface LimitAdmin {
   type: string
   perOperation: Money
@@ -143,6 +147,7 @@ export const staffApi = {
     api<Page<CustomerView>>(`/admin/customers?${new URLSearchParams({ q, page: String(page), size: '10' })}`),
   customerAccounts: (id: string) => api<AccountAdmin[]>(`/admin/customers/${id}/accounts`),
   account: (id: string) => api<AccountAdmin>(`/admin/accounts/${id}`),
+  allAccounts: (page: number) => api<Page<AccountListItem>>(`/admin/accounts?page=${page}&size=10`),
   limits: (accountId: string) => api<LimitAdmin[]>(`/admin/accounts/${accountId}/limits`),
   changeLimit: (accountId: string, type: string, perOperation: string, daily: string) =>
     api<unknown>(`/admin/accounts/${accountId}/limits/${type}`, { method: 'PUT', body: { perOperation, daily } }),

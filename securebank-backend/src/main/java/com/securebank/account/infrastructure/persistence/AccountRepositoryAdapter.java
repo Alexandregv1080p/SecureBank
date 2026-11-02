@@ -43,6 +43,15 @@ class AccountRepositoryAdapter implements AccountRepository {
     }
 
     @Override
+    public com.securebank.shared.application.PageResult<Account> findAll(int page, int size) {
+        List<Account> items = em.createQuery("select a from AccountEntity a order by a.createdAt, a.id", AccountEntity.class)
+                .setFirstResult(page * size).setMaxResults(size)
+                .getResultList().stream().map(AccountEntity::toDomain).toList();
+        long total = em.createQuery("select count(a) from AccountEntity a", Long.class).getSingleResult();
+        return new com.securebank.shared.application.PageResult<>(items, page, size, total);
+    }
+
+    @Override
     public void save(Account account) {
         AccountEntity entity = em.find(AccountEntity.class, account.id().value());
         if (entity == null) {

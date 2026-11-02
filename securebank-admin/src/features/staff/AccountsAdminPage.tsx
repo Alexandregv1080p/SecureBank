@@ -5,9 +5,9 @@ import { staffApi, type LimitAdmin } from '../../services/staff'
 import { accountLabel, accountTypeLabel } from '../../lib/format'
 import { formatBRL, parseAmount } from '../../lib/money'
 import { messageFor } from '../../lib/errors'
-import { can, isUuid, limitLabels, reasonIssue } from '../../lib/staff'
+import { accountStatusLabel, can, isUuid, limitLabels, reasonIssue } from '../../lib/staff'
 import { useAuth } from '../../stores/auth'
-import { Alert, Badge, Button, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
+import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, PageHeader, Panel, Skeleton } from '../../components/ui'
 import { ConfirmButton } from '../../components/ConfirmButton'
 import { DataList, DataRow } from './parts'
 import { useIdParam } from './useIdParam'
@@ -18,6 +18,9 @@ export function AccountsAdminPage() {
   const canBlock = can(roles, 'MANAGE_ACCOUNTS')
   const canLimits = can(roles, 'MANAGE_LIMITS')
   const [sentForApproval, setSentForApproval] = useState(false)
+  const [listPage, setListPage] = useState(0)
+  const all = useQuery({ queryKey: ['staff', 'accounts', listPage], queryFn: () => staffApi.allAccounts(listPage) })
+  const listPages = all.data ? Math.max(1, Math.ceil(all.data.totalElements / all.data.size)) : 1
   const [input, setInput] = useState(id)
   const valid = isUuid(id)
   const client = useQueryClient()
@@ -38,7 +41,7 @@ export function AccountsAdminPage() {
   const blocked = account.data?.status === 'BLOCKED'
   return (
     <>
-      <PageHeader title="Contas e limites" description={canBlock && canLimits ? 'Bloqueie ou desbloqueie uma conta e ajuste os limites. O cliente é avisado do bloqueio.' : canBlock ? 'Bloqueie ou desbloqueie uma conta. O cliente é avisado do bloqueio. Desbloquear pede a aprovação de um gerente de Risco.' : 'Veja a conta e ajuste os limites de operação.'} />
+      <PageHeader title="Contas e limites" description={(valid ? '' : 'Todas as contas do banco. Escolha uma para ver e ajustar. ') + (canBlock && canLimits ? 'Bloqueie ou desbloqueie uma conta e ajuste os limites. O cliente é avisado do bloqueio.' : canBlock ? 'Bloqueie ou desbloqueie uma conta. O cliente é avisado do bloqueio. Desbloquear pede a aprovação de um gerente de Risco.' : 'Veja a conta e ajuste os limites de operação.')} />
       <form className="mb-6 flex max-w-xl items-end gap-3" onSubmit={(e) => { e.preventDefault(); setId(input.trim()) }}>
         <div className="flex-1">
           <Field label="Identificador da conta" htmlFor="account" error={id && !valid ? 'Informe um identificador completo (UUID).' : undefined}>
@@ -47,6 +50,42 @@ export function AccountsAdminPage() {
         </div>
         <Button type="submit">Buscar</Button>
       </form>
+
+      {!valid && (
+        <div className="mb-8">
+          {all.isPending && <Skeleton className="h-32" />}
+          {all.isError && <ErrorState message={messageFor(all.error)} onRetry={() => all.refetch()} />}
+          {all.data?.items.length === 0 && <EmptyState title="Nenhuma conta aberta ainda">As contas aparecem aqui assim que os clientes as abrirem.</EmptyState>}
+          {!!all.data?.items.length && (
+            <>
+              <ul className="divide-y divide-line card overflow-hidden">
+                {all.data.items.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onClick={() => { setInput(a.id); setId(a.id) }}
+                      className="flex w-full flex-wrap items-center justify-between gap-2 px-5 py-3 text-left hover:bg-surface-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-medium">{a.customerName}</span>
+                        <span className="block text-sm text-muted">{accountTypeLabel(a.type)} · {accountLabel(a)}</span>
+                      </span>
+                      <Badge tone={a.status === 'ACTIVE' ? 'ok' : a.status === 'BLOCKED' ? 'danger' : 'warn'}>{accountStatusLabel(a.status)}</Badge>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+                <span>{all.data.totalElements} conta(s) · página {listPage + 1} de {listPages}</span>
+                <span className="flex gap-2">
+                  <Button variant="secondary" disabled={listPage === 0} onClick={() => setListPage(listPage - 1)}>Anterior</Button>
+                  <Button variant="secondary" disabled={listPage + 1 >= listPages} onClick={() => setListPage(listPage + 1)}>Próxima</Button>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {valid && account.isPending && <Skeleton className="h-40" />}
       {account.isError && <ErrorState message={messageFor(account.error)} onRetry={() => account.refetch()} />}

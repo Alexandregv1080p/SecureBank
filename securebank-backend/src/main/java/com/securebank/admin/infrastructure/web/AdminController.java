@@ -57,6 +57,11 @@ class AdminController {
 
     record CustomerPage(List<CustomerView> items, int page, int size, long totalElements) {}
 
+    /** Linha da listagem de contas: a conta e o nome do titular (sem CPF nem contato). */
+    record AccountListItem(UUID id, UUID customerId, String customerName, String branch, String accountNumber, String type, String status) {}
+
+    record AccountPage(List<AccountListItem> items, int page, int size, long totalElements) {}
+
     record LimitRequest(
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal perOperation,
             @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal daily) {}
@@ -120,11 +125,24 @@ class AdminController {
 
     /** Busca por nome, e-mail, telefone ou CPF completo (mínimo 3 caracteres). */
     @GetMapping("/customers")
-    CustomerPage searchCustomers(@RequestParam String q, @RequestParam(defaultValue = "0") int page,
+    CustomerPage searchCustomers(@RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         var result = customerSearch.search(q, page, size);
         return new CustomerPage(result.items().stream().map(CustomerView::of).toList(), result.page(), result.size(),
                 result.totalElements());
+    }
+
+    /** Todas as contas, paginadas, com o nome do titular. */
+    @GetMapping("/accounts")
+    AccountPage listAccounts(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        var result = accounts.listAllForStaff(page, size);
+        java.util.Map<UUID, String> names = new java.util.HashMap<>();
+        List<AccountListItem> items = result.items().stream().map(a -> {
+            String name = names.computeIfAbsent(a.customerId().value(), id -> customers.get(a.customerId()).name());
+            return new AccountListItem(a.id().value(), a.customerId().value(), name, a.branch().value(), a.accountNumber().value(),
+                    a.type().name(), a.status().name());
+        }).toList();
+        return new AccountPage(items, result.page(), result.size(), result.totalElements());
     }
 
     @GetMapping("/customers/{id}/accounts")

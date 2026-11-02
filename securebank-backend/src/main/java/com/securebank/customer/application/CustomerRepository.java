@@ -26,4 +26,7 @@ public interface CustomerRepository {
      * % e _ valem como texto). DOCUMENT: igual.
      */
     PageResult<Customer> search(SearchField field, String value, int page, int size);
+
+    /** Todos os clientes, por nome. */
+    PageResult<Customer> listAll(int page, int size);
 }

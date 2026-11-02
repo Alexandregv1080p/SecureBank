@@ -16,6 +16,9 @@ public interface AccountRepository {
 
     List<Account> findByCustomer(CustomerId customerId);
 
+    /** Todas as contas, as mais antigas primeiro (listagem da equipe). */
+    com.securebank.shared.application.PageResult<Account> findAll(int page, int size);
+
     /** Persiste o estado do aggregate; a versão otimista é conferida no flush (conflito → 409). */
     void save(Account account);
 }

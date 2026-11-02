@@ -18,7 +18,7 @@ export function CustomersPage() {
   const [input, setInput] = useState(q || id)
   const [page, setPage] = useState(0)
   const [touched, setTouched] = useState(false)
-  const error = touched ? searchError(input) : null
+  const error = touched && input.trim() !== '' ? searchError(input) : null
 
   function submit() {
     setTouched(true)
@@ -27,22 +27,22 @@ export function CustomersPage() {
       setParams({ id: text }, { replace: true })
       return
     }
-    if (searchError(text)) return
+    if (text !== '' && searchError(text)) return
     setPage(0)
-    setParams({ q: text }, { replace: true })
+    setParams(text === '' ? {} : { q: text }, { replace: true }) // vazio = todos os clientes
   }
 
   const results = useQuery({
     queryKey: ['staff', 'customers', q, page],
     queryFn: () => staffApi.searchCustomers(q, page),
-    enabled: !!q && !searchError(q),
+    enabled: q === '' || !searchError(q),
   })
   const pages = results.data ? Math.max(1, Math.ceil(results.data.totalElements / results.data.size)) : 1
   const select = (customerId: string) => setParams(q ? { q, id: customerId } : { id: customerId }, { replace: true })
 
   return (
     <>
-      <PageHeader title="Clientes" description="Busque por nome, e-mail, telefone ou CPF completo (o CPF aparece mascarado). Cada busca fica na auditoria." />
+      <PageHeader title="Clientes" description="Todos os clientes, por nome. Para achar um, busque por nome, e-mail, telefone ou CPF completo (o CPF aparece mascarado). Cada consulta fica na auditoria." />
       <form
         className="mb-6 flex max-w-xl flex-col gap-3 sm:flex-row sm:items-start"
         onSubmit={(e) => {
@@ -60,9 +60,9 @@ export function CustomersPage() {
         </Button>
       </form>
 
-      {q && results.isPending && <Skeleton className="h-32" />}
+      {results.isPending && <Skeleton className="h-32" />}
       {results.isError && <ErrorState message={messageFor(results.error)} onRetry={() => results.refetch()} />}
-      {results.data && results.data.items.length === 0 && <EmptyState title="Nenhum cliente encontrado">Confira a grafia, ou use o CPF completo.</EmptyState>}
+      {results.data && results.data.items.length === 0 && <EmptyState title={q ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado ainda'}>{q ? 'Confira a grafia, ou use o CPF completo.' : 'Os clientes aparecem aqui assim que se cadastrarem.'}</EmptyState>}
       {!!results.data?.items.length && (
         <div className="mb-8">
           <ul className="divide-y divide-line card overflow-hidden">
@@ -87,7 +87,7 @@ export function CustomersPage() {
           </ul>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
             <span>
-              {results.data.totalElements} resultado(s) · página {page + 1} de {pages}
+              {q ? `${results.data.totalElements} resultado(s)` : `${results.data.totalElements} cliente(s)`} · página {page + 1} de {pages}
             </span>
             <span className="flex gap-2">
               <Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>

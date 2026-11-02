@@ -68,6 +68,15 @@ class CustomerRepositoryAdapter implements CustomerRepository {
         return new PageResult<>(items, page, size, total);
     }
 
+    @Override
+    public PageResult<Customer> listAll(int page, int size) {
+        List<Customer> items = em.createQuery("select c from CustomerEntity c order by c.name, c.id", CustomerEntity.class)
+                .setFirstResult(page * size).setMaxResults(size)
+                .getResultList().stream().map(CustomerEntity::toDomain).toList();
+        long total = em.createQuery("select count(c) from CustomerEntity c", Long.class).getSingleResult();
+        return new PageResult<>(items, page, size, total);
+    }
+
     /** % e _ digitados pela equipe valem como texto, não como curinga (nem uma busca "%%" varre a base inteira). */
     static String escapeLike(String text) {
         return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");

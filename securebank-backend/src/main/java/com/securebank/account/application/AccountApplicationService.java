@@ -214,6 +214,13 @@ public class AccountApplicationService {
         return account;
     }
 
+    /** Todas as contas, paginadas, para a equipe (VIEW_CUSTOMER). */
+    @Transactional(readOnly = true)
+    public com.securebank.shared.application.PageResult<Account> listAllForStaff(int page, int size) {
+        com.securebank.shared.application.PageResult.validate(page, size);
+        return accounts.findAll(page, size);
+    }
+
     /** Contas de um cliente, para a equipe (VIEW_CUSTOMER). */
     @Transactional(readOnly = true)
     public List<Account> listForStaff(CustomerId customerId) {

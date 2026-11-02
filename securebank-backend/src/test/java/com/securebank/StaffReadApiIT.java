@@ -97,4 +97,18 @@ class StaffReadApiIT {
         mvc.perform(TestUsers.bearer(customer.accessToken(), get(basics))).andExpect(status().isForbidden());
         mvc.perform(get(basics)).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void theStaffListsEveryAccountWithTheHolderName() throws Exception {
+        var customer = TestUsers.registerAndLogin(mvc);
+        String account = openAccount(customer.accessToken());
+        String support = TestUsers.staffToken(mvc, "SUPPORT");
+
+        mvc.perform(TestUsers.bearer(support, get("/api/v1/admin/accounts")).param("size", "100")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[?(@.id == '" + account + "')].customerName").value(hasItem("Cliente Teste")))
+                .andExpect(jsonPath("$.items[?(@.id == '" + account + "')].document").doesNotExist());
+        mvc.perform(TestUsers.bearer(support, get("/api/v1/admin/accounts")).param("size", "0")).andExpect(status().isBadRequest());
+        mvc.perform(TestUsers.bearer(customer.accessToken(), get("/api/v1/admin/accounts"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/accounts")).andExpect(status().isUnauthorized());
+    }
 }

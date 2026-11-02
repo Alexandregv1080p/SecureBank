@@ -31,6 +31,11 @@ public class CustomerSearchService {
     public PageResult<Customer> search(String query, int page, int size) {
         PageResult.validate(page, size);
         String q = query == null ? "" : query.trim();
+        if (q.isEmpty()) { // sem texto: a listagem de todos os clientes, paginada
+            PageResult<Customer> all = customers.listAll(page, size);
+            audit.record(AuditEntry.of(AuditEvent.CUSTOMER_SEARCHED).detail("listagem: " + all.totalElements() + " resultado(s)"));
+            return all;
+        }
         if (q.length() < MIN_LENGTH) {
             throw new InvalidValueException("Search needs at least " + MIN_LENGTH + " characters");
         }

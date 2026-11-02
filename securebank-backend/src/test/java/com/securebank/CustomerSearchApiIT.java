@@ -92,13 +92,12 @@ class CustomerSearchApiIT {
     }
 
     @Test
-    void tooShortOrMissingQueriesAreRefused() throws Exception {
+    void tooShortQueriesAreRefused() throws Exception {
         String admin = TestUsers.adminToken(mvc);
 
         mvc.perform(search(admin, "ab")).andExpect(status().isBadRequest());
         mvc.perform(search(admin, "  a  ")).andExpect(status().isBadRequest());
         mvc.perform(search(admin, "12")).andExpect(status().isBadRequest());
-        mvc.perform(TestUsers.bearer(admin, get("/api/v1/admin/customers"))).andExpect(status().isBadRequest());
         mvc.perform(search(admin, "abc").param("size", "1000")).andExpect(status().isBadRequest());
     }
 
@@ -171,5 +170,24 @@ class CustomerSearchApiIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(0)))
                 .andExpect(jsonPath("$.items[*].id").value(not(hasItem("x"))));
+    }
+
+    @Test
+    void withoutQueryItListsEveryCustomerPaginatedAndAudited() throws Exception {
+        String admin = TestUsers.adminToken(mvc);
+        TestUsers.registerAndLogin(mvc);
+        TestUsers.registerAndLogin(mvc);
+
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/admin/customers")).param("size", "1")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.items[0].document").value(org.hamcrest.Matchers.startsWith("***.")));
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/admin/customers")).param("q", "   ")).andExpect(status().isOk());
+        mvc.perform(TestUsers.bearer(admin, get("/api/v1/audit?event=CUSTOMER_SEARCHED"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].detail", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.startsWith("listagem:"))));
+        String support = TestUsers.staffToken(mvc, "SUPPORT");
+        mvc.perform(TestUsers.bearer(support, get("/api/v1/admin/customers"))).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/customers")).andExpect(status().isUnauthorized());
+        mvc.perform(TestUsers.bearer(TestUsers.registerAndLogin(mvc).accessToken(), get("/api/v1/admin/customers"))).andExpect(status().isForbidden());
     }
 }
